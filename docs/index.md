@@ -24,6 +24,8 @@ This site is the long-form handbook. The repository root has the same material i
 | Stay legal and in scope | [12 — Safety & legal](12-safety-legal.md) |
 | Fix a failure | [13 — Troubleshooting](13-troubleshooting.md) |
 | See the sources | [14 — References](14-references.md) |
+| Go beyond SFT | [15 — Agentic methods](15-agentic-methods.md) |
+| Test networks, not just web apps | [16 — Network security](16-network-security.md) |
 
 ---
 

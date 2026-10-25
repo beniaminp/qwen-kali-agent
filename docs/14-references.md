@@ -118,3 +118,8 @@
 3. Prefer primary sources for licenses and prices.
 4. When a source disappears, mark it **UNVERIFIED** rather than guessing.
 5. Update the handbook’s “last verified” line when you change a command or a number.
+
+## Advanced topics
+
+- [Agentic methods](15-agentic-methods.md) — SFT, rejection sampling, DPO, RL.
+- [Network security](16-network-security.md) — asset inventory, TLS, segmentation, packet evidence.

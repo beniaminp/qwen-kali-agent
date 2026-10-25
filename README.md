@@ -48,6 +48,8 @@ This repository is documentation first, with runnable configs and scripts second
 │   ├── 12-safety-legal.md     authorization, law, licenses, release
 │   ├── 13-troubleshooting.md  symptom → cause → fix
 │   ├── 14-references.md       annotated source list
+│   ├── 15-agentic-methods.md  SFT, rejection sampling, DPO, RL
+│   ├── 16-network-security.md asset inventory, TLS, segmentation, packet evidence
 │   ├── appendix-a-configs.md  every config, explained
 │   ├── appendix-b-scripts.md  what each script does
 │   └── appendix-c-runbook.md  day-by-day execution plan
