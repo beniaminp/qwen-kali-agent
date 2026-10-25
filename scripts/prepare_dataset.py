@@ -20,7 +20,7 @@ def clean_name(name: str) -> str:
     return TOOL_NAME.sub("_", str(name)).strip("_") or "tool"
 
 
-def norm_row(row: dict) -> dict | None:
+def norm_row(row: dict, arguments_format: str = "string") -> dict | None:
     msgs = row.get("messages")
     if not isinstance(msgs, list) or not msgs:
         return None
@@ -56,7 +56,10 @@ def norm_row(row: dict) -> dict | None:
                         return None
                 if not isinstance(raw, dict):
                     return None
-                fn["arguments"] = json.dumps(raw, ensure_ascii=False, separators=(",", ":"))
+                if arguments_format == "dict":
+                    fn["arguments"] = raw
+                else:
+                    fn["arguments"] = json.dumps(raw, ensure_ascii=False, separators=(",", ":"))
                 c["function"] = fn
                 c.setdefault("type", "function")
                 new_calls.append(c)
@@ -92,6 +95,8 @@ def main() -> int:
     ap.add_argument("--split", nargs=3, type=float, default=[0.9, 0.05, 0.05],
                     metavar=("TRAIN", "VALID", "TEST"))
     ap.add_argument("--seed", type=int, default=42)
+    ap.add_argument("--arguments-format", choices=["string", "dict"], default="string",
+                    help="string for Qwen3/OpenAI JSONL; dict for Qwen2.5-Coder's template")
     args = ap.parse_args()
 
     if abs(sum(args.split) - 1.0) > 1e-6:
@@ -116,7 +121,7 @@ def main() -> int:
             except json.JSONDecodeError:
                 dropped["invalid_json"] += 1
                 continue
-            row = norm_row(row)
+            row = norm_row(row, args.arguments_format)
             if not row:
                 dropped["normalize_failed"] += 1
                 continue
@@ -150,6 +155,7 @@ def main() -> int:
         "created": datetime.now(timezone.utc).isoformat(),
         "input": str(Path(args.input)),
         "seed": args.seed,
+        "arguments_format": args.arguments_format,
         "split": args.split,
         "counts": {k: len(v) for k, v in splits.items()},
         "dropped": dict(dropped),

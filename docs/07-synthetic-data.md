@@ -2,6 +2,8 @@
 
 *Last verified: 25 October 2026. Prices and model IDs change; re-check the official pages before a large run.*
 
+> This chapter uses the Kali/agent pipeline. For the **Java/Quarkus** variant — repo-grounded tasks, Maven tests and ArchUnit — see [21 — Java synthetic data](21-java-synthetic.md); the API, OpenCode and cost model carry over.
+
 Public datasets teach general tool calling. They do not know **your** tool names, **your** scope policy, **your** lab, or the way a Kali command actually fails on your target. Synthetic data fills that gap — but only if it is generated and verified rigorously. Ungrounded synthetic data teaches a model to hallucinate confident command output, which is worse than no fine-tune.
 
 This chapter describes a pipeline that generates candidate tasks and trajectories with a strong teacher (DeepSeek V4.1 Flash or V4-Pro), executes the commands in a disposable lab, keeps only verified trajectories, and converts them to the canonical JSONL from [`06-data-format.md`](06-data-format.md).

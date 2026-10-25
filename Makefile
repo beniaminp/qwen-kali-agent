@@ -7,10 +7,18 @@ ADAPTER ?= adapters/qwen3-14b-all-layers
 FUSED ?= fused/qwen3-14b-pentest-4bit
 DATA ?= data/processed
 TOOLS ?= examples/tools/kali-tools.json
+JAVA_MODEL ?= mlx-community/Qwen2.5-Coder-14B-Instruct-4bit
+JAVA_DATA ?= data/java/processed
+JAVA_TOOLS ?= examples/java/tools.json
+JAVA_ADAPTER ?= adapters/qwen25-coder-14b-java
+JAVA_FUSED ?= fused/qwen25-coder-14b-java-4bit
+JAVA_REPO ?= ../quarkus-quickstarts
 MKDOCS ?= $(PYTHON) -m mkdocs
 
 .PHONY: help setup check data-check stats train-8b train-8b-all train-14b train-14b-last16 \
-        check-lora sweep eval fuse serve serve-llama tunnel docs-install docs docs-serve clean
+        check-lora sweep eval fuse serve serve-llama tunnel \
+        java-check java-mine java-train-7b java-train-14b java-check-lora java-fuse \
+        docs-install docs docs-serve clean
 
 help: ## Show this help
 	@grep -E '^[a-zA-Z0-9_-]+:.*?## .*$$' $(MAKEFILE_LIST) | sort | \
@@ -45,6 +53,27 @@ train-14b-last16: ## 14B baseline (last 16 blocks)
 
 check-lora: ## Verify which modules the adapter actually targets
 	$(PYTHON) scripts/check_lora.py --model $(MODEL) --num-layers -1 --rank 16 --scale 2
+
+java-check: ## Validate the Java/Quarkus splits and token lengths
+	$(PYTHON) scripts/validate_dataset.py $(JAVA_DATA)/train.jsonl --tools $(JAVA_TOOLS)
+	$(PYTHON) scripts/validate_java_dataset.py $(JAVA_DATA)/train.jsonl --tools $(JAVA_TOOLS) --require-dict-arguments --strict
+	$(PYTHON) scripts/token_stats.py $(JAVA_DATA)/train.jsonl --model Qwen/Qwen2.5-Coder-14B-Instruct
+
+java-mine: ## Mine Java commit seeds from a permissive repo
+	$(PYTHON) scripts/mine_java_commits.py --repo $(JAVA_REPO) \
+	  --out data/java/interim/commit-seeds.jsonl --limit 300 --only-with-tests --license Apache-2.0
+
+java-train-7b: ## Java/Quarkus 7B smoke run
+	mlx_lm.lora --config configs/qwen2.5-coder-7b-java.yaml
+
+java-train-14b: ## Java/Quarkus 14B run (24/48 blocks)
+	mlx_lm.lora --config configs/qwen2.5-coder-14b-java.yaml
+
+java-check-lora: ## Verify the Java adapter covers MLP projections
+	$(PYTHON) scripts/check_lora.py --model $(JAVA_MODEL) --num-layers 24 --rank 16 --scale 2
+
+java-fuse: ## Fuse the Java adapter
+	mlx_lm.fuse --model $(JAVA_MODEL) --adapter-path $(JAVA_ADAPTER) --save-path $(JAVA_FUSED)
 
 sweep: ## Generate a small rank/LR/layer sweep
 	$(PYTHON) scripts/make_sweep.py --base configs/qwen3-14b-all-layers.yaml \

@@ -1,0 +1,19 @@
+# Java/Quarkus verification container.
+# JDK 25 + Maven 3.9 + git. Build it once, then run a disposable copy of the repo.
+FROM eclipse-temurin:25-jdk
+
+ARG MAVEN_VERSION=3.9.9
+RUN apt-get update \
+ && apt-get install -y --no-install-recommends git curl ca-certificates \
+ && rm -rf /var/lib/apt/lists/* \
+ && curl -fsSL "https://archive.apache.org/dist/maven/maven-3/${MAVEN_VERSION}/binaries/apache-maven-${MAVEN_VERSION}-bin.tar.gz" \
+    | tar -xz -C /opt \
+ && ln -s "/opt/apache-maven-${MAVEN_VERSION}/bin/mvn" /usr/local/bin/mvn
+
+RUN useradd --create-home --uid 10001 lab
+USER lab
+WORKDIR /workspace
+
+# Mount a Maven cache at $HOME/.m2. The examples set HOME=/tmp and mount the
+# host cache at /tmp/.m2, then use `-o` (offline) for reproducible runs.
+ENTRYPOINT ["/bin/bash"]

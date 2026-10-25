@@ -60,7 +60,7 @@ This is exactly the format MLX-LM's `ChatDataset` passes to `tokenizer.apply_cha
 
 1. **One assistant turn per example is the training unit.** A trajectory with five assistant turns becomes five examples (prefix expansion), because `--mask-prompt` only computes loss on the final assistant message. See §8.
 2. **Every `tool` message must follow an assistant message with a matching tool call.** Qwen templates ignore `tool_call_id`, but the server and your validator should not.
-3. **`arguments` is a JSON object encoded as a string** in the JSONL (OpenAI convention). MLX/Qwen also accept a dict; the string form is portable across servers. Validate that it parses.
+3. **`arguments` is a JSON object encoded as a string** by default (OpenAI convention). **Qwen2.5-Coder is the exception:** its template applies `tojson` to `arguments`, so it must be a JSON **object**, not a string. Store the form your target template expects; `prepare_dataset.py --arguments-format dict` handles Qwen2.5-Coder.
 4. **`content` may be `null`** on an assistant message that only calls tools. The Qwen3 template handles `None` by rendering an empty string.
 5. **Do not put `<think>` tags in `content`.** Use `reasoning_content` (see §6). Inline tags cause the Qwen3 template to double-open the think block.
 6. **Tool names must match `[A-Za-z0-9_-]+`.** Spaces and quotes break XML templates (Qwen3.5/3.6/Coder) and tool parsers.
@@ -208,6 +208,20 @@ Implications for your JSONL:
 
 If you train Qwen3-14B (the local default), you do not need this syntax. If you later move to Qwen3.5/3.6, **re-render the entire dataset**; do not mix the two call styles in one adapter.
 
+### 4.1 Qwen2.5-Coder: ChatML with JSON calls
+
+Qwen2.5-Coder uses ChatML and the same JSON `<tool_call>` shape as Qwen3, but with one important difference: its template renders `tool_call.arguments | tojson`.
+
+- **Store `arguments` as an object**, not a JSON string. A string becomes an escaped string in the prompt and teaches the wrong shape.
+- There is no thinking block and no `reasoning_content`.
+- Tool results still use `<tool_response>` inside a user turn; `tool_call_id` is ignored.
+- The template supports `tools`, `tool_calls` and `tool` roles.
+
+```bash
+python scripts/prepare_dataset.py data/java/interim/all.jsonl \
+  --out data/java/processed --arguments-format dict
+```
+
 ### Model → call syntax
 
 | Model family | Tool definitions | Tool call | Thinking |
@@ -217,6 +231,7 @@ If you train Qwen3-14B (the local default), you do not need this syntax. If you 
 | Qwen3.6-35B-A3B | JSON in `<tools>` | XML | adds `preserve_thinking` |
 | Qwen3-Coder-30B-A3B | XML `<function><name>...` | XML | no thinking |
 | Qwen3-Coder-Next | XML | XML | no thinking |
+| Qwen2.5-Coder-7B/14B/32B | JSON in `<tools>` | JSON in `<tool_call>`; **arguments object** | none |
 
 ---
 
@@ -338,8 +353,11 @@ Most sources already use OpenAI roles. The work is usually in the tool schema an
 ```python
 import json
 
-def to_canonical(row, tools):
-    """Minimal converter: parse string arguments, normalize tool names."""
+def to_canonical(row, tools, arguments_format="string"):
+    """Minimal converter: parse arguments, normalize tool names.
+
+    arguments_format="dict" for Qwen2.5-Coder; "string" for Qwen3/OpenAI.
+    """
     messages = []
     for m in row["messages"]:
         m = dict(m)
@@ -355,7 +373,7 @@ def to_canonical(row, tools):
                     "type": "function",
                     "function": {
                         "name": fn["name"].replace(" ", "_"),
-                        "arguments": json.dumps(args, ensure_ascii=False),
+                        "arguments": args if arguments_format == "dict" else json.dumps(args, ensure_ascii=False),
                     },
                 })
             m["tool_calls"] = calls
@@ -373,7 +391,8 @@ For source-specific mappings (xLAM, ToolACE, Hermes, APIGen-MT, terminus-2, Kali
 | Symptom | Likely cause | Fix |
 |---|---|---|
 | Model emits plain text instead of a tool call | Trained without `tools`, or tool block not rendered | Include `tools` in every tool-use example; inspect the rendered prompt. |
-| Model emits JSON with single quotes / trailing commas | Trained on malformed calls | Validate every `arguments` string; reject bad rows. |
+| Model emits JSON with single quotes / trailing commas | Trained on malformed calls | Validate every `arguments` value; reject bad rows. |
+| Qwen2.5-Coder arguments are a quoted string | Stored as a string instead of an object | Re-render with `--arguments-format dict`. |
 | Model calls a tool that does not exist | Hallucinated names in training data | Enforce name membership; add negative examples. |
 | XML template produces empty parameters | Passed a JSON string where Qwen3.5 expects a mapping | Parse arguments to a dict before rendering. |
 | Double ` thinking` | Inline ` thinking` in `content` | Use `reasoning_content`. |
@@ -391,4 +410,5 @@ For source-specific mappings (xLAM, ToolACE, Hermes, APIGen-MT, terminus-2, Kali
 - Qwen3-14B tokenizer template — <https://huggingface.co/Qwen/Qwen3-14B/blob/main/tokenizer_config.json>
 - Qwen3.5-9B tokenizer template — <https://huggingface.co/Qwen/Qwen3.5-9B/blob/main/tokenizer_config.json>
 - Qwen3-Coder-30B tokenizer template — <https://huggingface.co/Qwen/Qwen3-Coder-30B-A3B-Instruct/blob/main/tokenizer_config.json>
+- Qwen2.5-Coder-14B tokenizer template — <https://huggingface.co/Qwen/Qwen2.5-Coder-14B-Instruct/blob/main/tokenizer_config.json>
 - OpenAI chat/tool format — <https://platform.openai.com/docs/guides/function-calling>

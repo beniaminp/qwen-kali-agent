@@ -75,13 +75,13 @@ def extract_json(text: str):
     return None
 
 
-async def call(client, model, prompt, sem, stats, attempts=4):
+async def call(client, model, prompt, system, sem, stats, attempts=4):
     async with sem:
         for n in range(attempts):
             try:
                 r = await client.chat.completions.create(
                     model=model,
-                    messages=[{"role": "system", "content": SYSTEM},
+                    messages=[{"role": "system", "content": system},
                               {"role": "user", "content": prompt}],
                     response_format={"type": "json_object"},
                     temperature=0.8,
@@ -115,9 +115,15 @@ async def run(args, stats):
     out.parent.mkdir(parents=True, exist_ok=True)
 
     if args.mode == "tasks":
+        system = Path(args.system_file).read_text() if args.system_file else SYSTEM
+        if args.prompt_file:
+            template = Path(args.prompt_file).read_text()
+            prompt = template.replace("{n}", str(args.batch))
+        else:
+            prompt = task_prompt(args.batch)
         batches = max(1, (args.tasks + args.batch - 1) // args.batch)
         results = await asyncio.gather(*[
-            call(client, args.model, task_prompt(args.batch), sem, stats)
+            call(client, args.model, prompt, system, sem, stats)
             for _ in range(batches)
         ])
         tasks = []
@@ -139,8 +145,9 @@ async def run(args, stats):
     # plans: one task per line in --input
     tasks = [json.loads(line) for line in Path(args.input).read_text().splitlines() if line.strip()]
     tasks = tasks[:args.tasks]
+    system = Path(args.system_file).read_text() if args.system_file else SYSTEM
     results = await asyncio.gather(*[
-        call(client, args.model, plan_prompt(t), sem, stats) for t in tasks
+        call(client, args.model, plan_prompt(t), system, sem, stats) for t in tasks
     ])
     kept = 0
     with out.open("w") as fh:
@@ -167,6 +174,8 @@ def main() -> int:
     ap.add_argument("--concurrency", type=int, default=8)
     ap.add_argument("--out", default="data/interim/generated.jsonl")
     ap.add_argument("--input", help="tasks JSONL for --mode plans")
+    ap.add_argument("--system-file", help="Override the system prompt (e.g. examples/java/teacher-system.md)")
+    ap.add_argument("--prompt-file", help="Override the task prompt; {n} is replaced with --batch")
     ap.add_argument("--dry-run", action="store_true")
     args = ap.parse_args()
 
@@ -175,7 +184,10 @@ def main() -> int:
         return 2
 
     if args.dry_run:
-        p = task_prompt(args.batch) if args.mode == "tasks" else plan_prompt({"goal": "example", "target": "10.10.10.5"})
+        if args.mode == "tasks" and args.prompt_file:
+            p = Path(args.prompt_file).read_text().replace("{n}", str(args.batch))
+        else:
+            p = task_prompt(args.batch) if args.mode == "tasks" else plan_prompt({"goal": "example", "target": "10.10.10.5"})
         print("=== prompt preview ===\n" + p)
         print(f"\napprox. requests: {max(1, (args.tasks + args.batch - 1) // args.batch)}")
         print("no API call was made (--dry-run)")

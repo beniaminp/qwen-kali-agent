@@ -9,6 +9,8 @@ All scripts live in `scripts/` and are run from the repository root with the pro
 | `token_stats.py` | Token-length distribution; recommends `max_seq_length`. | `python scripts/token_stats.py data/processed/train.jsonl --model Qwen/Qwen3-14B` |
 | `check_lora.py` | Print adapted blocks, projection counts and trainable params before training. | `python scripts/check_lora.py --model mlx-community/Qwen3-14B-4bit --num-layers -1 --rank 16 --scale 2` |
 | `make_sweep.py` | Generate rank/LR/layer configs and a `commands.sh`. | `python scripts/make_sweep.py --base configs/qwen3-14b-all-layers.yaml --out configs/sweeps/r1 --rank 16,32 --lr 5e-5,1e-4` |
+| `validate_java_dataset.py` | Java/Quarkus-specific lint: javax, Spring, version tags, secrets, argument shape. | `python scripts/validate_java_dataset.py data/java/processed/train.jsonl --tools examples/java/tools.json --require-dict-arguments --strict` |
+| `mine_java_commits.py` | Mine Java commit seeds (base commit, task, patch, test command) from a git repo. | `python scripts/mine_java_commits.py --repo ~/src/quarkus-quickstarts --out data/java/interim/seeds.jsonl --limit 300 --only-with-tests` |
 | `prepare_dataset.py` | Normalize a canonical JSONL, split train/valid/test, write a manifest. | `python scripts/prepare_dataset.py data/interim/all.jsonl --out data/processed --split 0.9 0.05 0.05` |
 | `split_dataset.py` | Deterministic split with exact/near-dup filtering. | `python scripts/split_dataset.py data/interim/all.jsonl --out data/processed` |
 | `generate_synthetic.py` | DeepSeek/OpenAI-compatible generation with retries, cost tracking and JSON validation. | `python scripts/generate_synthetic.py --tasks 50 --out data/interim/gen.jsonl` |
@@ -91,11 +93,17 @@ data/processed/
 It:
 
 - normalizes tool names to `[A-Za-z0-9_-]`;
-- parses string `arguments` to objects and re-serializes them;
+- parses `arguments` and writes them in the target shape: JSON string by default,
+  or a JSON object with `--arguments-format dict` for Qwen2.5-Coder;
 - drops rows missing a tool definition;
 - exact-dedups on normalized messages;
 - splits deterministically by hash (no RNG);
 - writes counts, token estimates, and a SHA-256 for each split.
+
+```bash
+python scripts/prepare_dataset.py data/java/interim/all.jsonl \
+  --out data/java/processed --arguments-format dict
+```
 
 It does **not** near-dedup by default; use `split_dataset.py --minhash` for that.
 
@@ -124,7 +132,17 @@ A **scaffold**, not a turnkey data factory. It:
 - tracks input/output tokens and estimated USD;
 - writes one JSON object per line with provenance (`teacher`, `prompt_hash`, `created`).
 
-It does **not** execute commands. Pair it with `execute_verified.py`.
+`--system-file` and `--prompt-file` override the built-in Kali prompts. The prompt file may use `{n}` for the batch size; this is how the Java/Quarkus task generator is wired:
+
+```bash
+python scripts/generate_synthetic.py --mode tasks --tasks 300 --batch 10 \
+  --model deepseek-flash \
+  --system-file examples/java/teacher-system.md \
+  --prompt-file examples/java/task-prompt.md \
+  --out data/java/interim/tasks.jsonl
+```
+
+It does **not** execute commands. Pair it with `execute_verified.py` for Kali or the Maven sandbox in [21 — Java synthetic data](21-java-synthetic.md) for Java.
 
 ```bash
 export DEEPSEEK_API_KEY=...
@@ -262,7 +280,45 @@ Each run gets a unique `adapter_path` under `adapters/sweeps/`. It does not laun
 
 ---
 
-## B.13 Shell helpers
+## B.13 `validate_java_dataset.py`
+
+A Java/Quarkus linter for canonical chat JSONL. It checks assistant text and tool arguments for:
+
+- legacy `javax.persistence/ws.rs/inject/enterprise/transaction/validation`;
+- Spring idioms (`org.springframework`, `@Autowired`);
+- legacy `quarkus-resteasy-reactive`;
+- Quarkus/Java version tags other than the target;
+- `System.out`, `printStackTrace`, `TODO`/`FIXME`, Lombok;
+- probable secrets;
+- unbalanced code fences;
+- tool arguments stored as strings when `--require-dict-arguments` is set (Qwen2.5-Coder).
+
+It does not compile Java. Pair it with `./mvnw test`.
+
+---
+
+## B.14 `mine_java_commits.py`
+
+Reads a git repository and writes Java commit seeds:
+
+```json
+{"schema":"java-commit-task-v1","repo":"...","base_commit":"...","commit":"...",
+ "task":"...","files":["..."],"patch":"diff --git ...","test_command":"./mvnw -q -DskipITs test"}
+```
+
+Options:
+
+- `--limit` — number of commits to inspect;
+- `--since` — git date filter;
+- `--only-with-tests` — require a change under `src/test`;
+- `--max-patch-bytes`, `--max-files` — skip huge commits;
+- `--license` — record the source license.
+
+It is read-only and does not execute code. The seeds are inputs for the LLM + sandbox pipeline in [21 — Java synthetic data](21-java-synthetic.md), not training rows by themselves.
+
+---
+
+## B.15 Shell helpers
 
 `export_gguf.sh`:
 
@@ -282,7 +338,7 @@ Each run gets a unique `adapter_path` under `adapters/sweeps/`. It does not laun
 
 ---
 
-## B.14 Exit codes
+## B.16 Exit codes
 
 | Code | Meaning |
 |---|---|

@@ -1,0 +1,32 @@
+# Qwen2.5-Coder 14B — 4K repository context, last 24 blocks.
+# Only use this if token_stats shows a real need; 4K doubles activation memory vs 2K.
+model: mlx-community/Qwen2.5-Coder-14B-Instruct-4bit
+train: true
+data: data/java/processed-long
+fine_tune_type: lora
+optimizer: adamw
+num_layers: 24
+batch_size: 1
+iters: 250
+val_batches: 20
+learning_rate: 8.0e-5
+steps_per_report: 10
+steps_per_eval: 100
+save_every: 50
+max_seq_length: 4096
+grad_checkpoint: true
+grad_accumulation_steps: 8
+mask_prompt: true
+adapter_path: adapters/qwen25-coder-14b-java-longctx
+seed: 42
+lora_parameters:
+  rank: 16
+  dropout: 0.05
+  scale: 2.0
+lr_schedule:
+  name: cosine_decay
+  warmup: 25
+  arguments: [8.0e-5, 250, 1.0e-6]
+optimizer_config:
+  adamw:
+    weight_decay: 0.01

@@ -29,7 +29,13 @@ data/raw/
 data/interim/
 data/processed/
 data/exports/
+data/java/raw/
+data/java/interim/
+data/java/processed/
+data/java/processed-*/
+data/java/golden/
 !data/README.md
+!data/java/README.md
 !data/examples/
 
 # Logs and reports

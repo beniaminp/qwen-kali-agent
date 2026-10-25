@@ -10,7 +10,7 @@ A fine-tune that lowers training loss has proven almost nothing. The questions t
 4. Does it **refuse** out-of-scope or destructive requests?
 5. Is it fast enough to be usable in an agent loop?
 
-This chapter defines the evaluation stack: external benchmarks for context, a private golden set for decisions, deterministic graders where possible, and release gates that block a bad adapter.
+This chapter defines the evaluation stack for the Kali/agent track: external benchmarks for context, a private golden set for decisions, deterministic graders where possible, and release gates that block a bad adapter. For the Java/Quarkus coder, the compiler, Maven tests and ArchUnit replace most of the tool-call graders; see [20 — Java fine-tuning](20-java-finetuning.md) §8.
 
 ---
 

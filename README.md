@@ -22,6 +22,7 @@ This repository is documentation first, with runnable configs and scripts second
 | **What do I use as a teacher/judge?** | **Qwen3.8-27B-4bit** (best quality that fits for inference on 32 GB) and **Qwen3.6-35B-A3B-4bit** (much faster bulk generation). Do not try to train either locally. |
 | **Training framework** | **MLX-LM** (`mlx_lm.lora`). Native Apple Silicon, quantized LoRA (QLoRA), no CUDA. |
 | **LoRA recipe (Oct 2026)** | **All layers**, rank 16, `scale: 2.0` (= PEFT alpha 32), LR `1e-4`, effective batch 8, one to two epochs. Verify with `scripts/check_lora.py`; details in [`docs/17-finetune-2026-update.md`](docs/17-finetune-2026-update.md). |
+| **Java/Quarkus track** | **Qwen2.5-Coder-14B-Instruct 4-bit**, 24/48 blocks, Java 25 LTS + Quarkus 3.40 LTS. Qwen3-Coder-30B-A3B is the teacher/judge, not a local training target. Start at [`docs/18-java-quarkus.md`](docs/18-java-quarkus.md). |
 | **Dataset size** | **2–5M tokens** for a first serious adapter; 10M+ only if evaluation proves it helps. Quality and trajectory realism dominate raw row count. |
 | **Serving** | **`llama-server`** (llama.cpp) for the best tool-call fidelity; **`mlx_lm.server`** for the fastest local iteration; **Ollama** for convenience. All are unauthenticated — put them behind loopback + SSH, never on an untrusted LAN. |
 | **Agent harness** | **OpenCode + MCP-Kali-Server** (small, typed tool surface) or **hackingBuddyGPT** (minimal research baseline). Avoid mega-tool MCP servers with a 14B. |
@@ -71,6 +72,10 @@ Or use `make docs-serve` / `make docs`. `site/` is generated and git-ignored.
 │   ├── 15-agentic-methods.md  SFT, rejection sampling, DPO, RL
 │   ├── 16-network-security.md asset inventory, TLS, segmentation, packet evidence
 │   ├── 17-finetune-2026-update.md all-layer LoRA, scale/LR correction, new configs
+│   ├── 18-java-quarkus.md     Java 25 / Quarkus 3.40, architecture, model choice
+│   ├── 19-java-datasets.md    Java/Quarkus datasets, licenses, quality filters
+│   ├── 20-java-finetuning.md  Qwen2.5-Coder Java/Quarkus runbook
+│   ├── 21-java-synthetic.md   generating verified Java/Quarkus data with an LLM
 │   ├── appendix-a-configs.md  every config, explained
 │   ├── appendix-b-scripts.md  what each script does
 │   └── appendix-c-runbook.md  day-by-day execution plan
@@ -181,6 +186,40 @@ Then install OpenCode + MCP-Kali-Server inside the VM. Architecture, configs and
 
 ---
 
+## Java / Quarkus track
+
+The second track specialises **Qwen2.5-Coder-14B-Instruct** in Java 25 LTS, Quarkus 3.40 LTS, hexagonal architecture and SOLID. It uses the same MLX setup, but a different base model, data layout and verifier (Maven tests + ArchUnit).
+
+```bash
+mkdir -p data/java/{raw,interim,processed,golden}
+
+# 1. Mine commit seeds from a permissive Quarkus repo
+python scripts/mine_java_commits.py \
+  --repo ~/src/quarkus-quickstarts \
+  --out data/java/interim/commit-seeds.jsonl \
+  --limit 300 --only-with-tests --license Apache-2.0
+
+# 2. Normalize the merged/verified rows for Qwen2.5-Coder
+#    (tool arguments are objects, not strings)
+python scripts/prepare_dataset.py data/java/interim/all.jsonl \
+  --out data/java/processed --arguments-format dict
+
+# 3. Validate Java/Quarkus idioms and tool-argument shape
+python scripts/validate_java_dataset.py data/java/processed/train.jsonl \
+  --tools examples/java/tools.json --require-dict-arguments --strict
+
+# 4. Verify the adapter covers MLP projections, then train
+python scripts/check_lora.py \
+  --model mlx-community/Qwen2.5-Coder-14B-Instruct-4bit \
+  --num-layers 24 --rank 16 --scale 2
+
+mlx_lm.lora --config configs/qwen2.5-coder-14b-java.yaml
+```
+
+Read in order: [18 — Java landscape](docs/18-java-quarkus.md), [19 — Java datasets](docs/19-java-datasets.md), [20 — Java fine-tuning](docs/20-java-finetuning.md), [21 — Java synthetic data](docs/21-java-synthetic.md).
+
+---
+
 ## The data strategy in one table
 
 | Bucket | Share | What it teaches | Example sources |
@@ -202,7 +241,8 @@ Do **not** train on BFCL, KaliBench test, Cybench, NYU CTF or CyberMetric. Hold 
 | GPU | 16-core, ~5.2 TFLOPS FP32, ~200 GB/s |
 | Default GPU working set | ~21.3 GiB (macOS reserves the rest) |
 | Qwen3-14B 4-bit weights | ~8.3 GB |
-| Realistic QLoRA peak (seq 2K, batch 1, grad-checkpoint) | ~18–22 GB |
+| Qwen2.5-Coder-14B 4-bit weights | ~8.7 GB |
+| Realistic QLoRA peak (seq 2K, batch 1, grad-checkpoint) | ~18–23 GB |
 | Practical ceiling before macOS swaps/panics | ~24–26 GB wired |
 | Qwen3-14B QLoRA throughput (estimate) | 20–30 tokens/s |
 | 5M tokens at 25 tok/s | ~56 hours |

@@ -2,6 +2,8 @@
 
 *Last verified: 25 October 2026.*
 
+> This chapter is the Kali/agent track. If you are specialising in **Java/Quarkus**, the base model and data are different: start at [18 — Java landscape](18-java-quarkus.md).
+
 The Qwen family moves fast. This chapter fixes the vocabulary, lays out the open-weight options as they exist today, and explains why the rest of the handbook trains **Qwen3-14B** locally rather than a newer, larger, or more fashionable model.
 
 The short version: **the best model you can train is not the best model you can run.** On a 32 GB M1 Pro, the training ceiling is much lower than the inference ceiling, and the newest Qwen architectures are the *least* mature in MLX's training path.

@@ -123,4 +123,8 @@
 
 - [Agentic methods](15-agentic-methods.md) — SFT, rejection sampling, DPO, RL.
 - [Fine-tuning update](17-finetune-2026-update.md) — all-layer LoRA, scale/LR correction, new configs.
+- [Java & Quarkus](18-java-quarkus.md) — Java 25 / Quarkus 3.40, architecture, model choice.
+- [Java datasets](19-java-datasets.md) — Java/Quarkus corpora, licenses, quality filters.
+- [Java fine-tuning](20-java-finetuning.md) — Qwen2.5-Coder Java/Quarkus runbook.
+- [Java synthetic data](21-java-synthetic.md) — verified Java/Quarkus generation.
 - [Network security](16-network-security.md) — asset inventory, TLS, segmentation, packet evidence.

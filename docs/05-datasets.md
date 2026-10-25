@@ -6,6 +6,8 @@ This chapter is the shopping list. It covers general tool calling, agentic traje
 
 > **Read [`04-data-strategy.md`](04-data-strategy.md) first.** This catalog is not a recommendation to train on everything. Most of these sets are raw material; the mix decides what enters a run.
 
+> Looking for **Java/Quarkus** data? It has its own catalog in [19 — Java datasets](19-java-datasets.md).
+
 ---
 
 ## 1. General function-calling datasets

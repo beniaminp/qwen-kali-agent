@@ -1,0 +1,112 @@
+[
+  {
+    "type": "function",
+    "function": {
+      "name": "read_file",
+      "description": "Read a UTF-8 text file inside the repository. Use before changing code; do not read secrets or generated build output.",
+      "parameters": {
+        "type": "object",
+        "properties": {
+          "path": {"type": "string", "description": "Repository-relative path, e.g. src/main/java/com/example/OrderResource.java."},
+          "start_line": {"type": "integer", "minimum": 1},
+          "end_line": {"type": "integer", "minimum": 1}
+        },
+        "required": ["path"],
+        "additionalProperties": false
+      }
+    }
+  },
+  {
+    "type": "function",
+    "function": {
+      "name": "search_code",
+      "description": "Search Java, Kotlin, XML and properties files for a literal string or regular expression. Read-only.",
+      "parameters": {
+        "type": "object",
+        "properties": {
+          "query": {"type": "string"},
+          "glob": {"type": "string", "description": "Optional glob, e.g. src/main/java/**/*.java.", "default": "**/*.{java,kt,xml,properties}"},
+          "max_results": {"type": "integer", "minimum": 1, "maximum": 100, "default": 20}
+        },
+        "required": ["query"],
+        "additionalProperties": false
+      }
+    }
+  },
+  {
+    "type": "function",
+    "function": {
+      "name": "write_file",
+      "description": "Create or replace a file inside the repository. Prefer apply_patch for existing files. Never write outside the repository or into .git.",
+      "parameters": {
+        "type": "object",
+        "properties": {
+          "path": {"type": "string"},
+          "content": {"type": "string"}
+        },
+        "required": ["path", "content"],
+        "additionalProperties": false
+      }
+    }
+  },
+  {
+    "type": "function",
+    "function": {
+      "name": "apply_patch",
+      "description": "Apply a unified diff to the repository. The patch must apply cleanly to the current working tree. Use for multi-file changes.",
+      "parameters": {
+        "type": "object",
+        "properties": {
+          "patch": {"type": "string", "description": "Unified diff starting with diff --git or ---/+++ headers."}
+        },
+        "required": ["patch"],
+        "additionalProperties": false
+      }
+    }
+  },
+  {
+    "type": "function",
+    "function": {
+      "name": "run_maven",
+      "description": "Run a bounded Maven goal in the project. Use test or verify after changes. Never use this to install arbitrary software or run shell commands.",
+      "parameters": {
+        "type": "object",
+        "properties": {
+          "goal": {"type": "string", "enum": ["compile", "test", "verify", "package"], "default": "test"},
+          "module": {"type": "string", "description": "Optional Maven module path, e.g. services/orders."},
+          "skip_it": {"type": "boolean", "default": true},
+          "timeout_s": {"type": "integer", "minimum": 30, "maximum": 900, "default": 300}
+        },
+        "required": ["goal"],
+        "additionalProperties": false
+      }
+    }
+  },
+  {
+    "type": "function",
+    "function": {
+      "name": "arch_check",
+      "description": "Run the project's ArchUnit architecture tests. Use after refactors that change package boundaries or dependencies.",
+      "parameters": {
+        "type": "object",
+        "properties": {
+          "test_class": {"type": "string", "default": "ArchitectureTest"},
+          "timeout_s": {"type": "integer", "minimum": 30, "maximum": 600, "default": 180}
+        },
+        "additionalProperties": false
+      }
+    }
+  },
+  {
+    "type": "function",
+    "function": {
+      "name": "git_diff",
+      "description": "Show the current uncommitted diff. Read-only; use before summarizing changes.",
+      "parameters": {
+        "type": "object",
+        "properties": {"stat": {"type": "boolean", "default": false}},
+        "additionalProperties": false
+      }
+    }
+  }
+]

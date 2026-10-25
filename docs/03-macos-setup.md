@@ -251,6 +251,28 @@ Ollama runs a background service on `127.0.0.1:11434`. It is convenient for GGUF
 
 ---
 
+### Java / Quarkus toolchain (optional track)
+
+The MLX environment does not need a JDK, but the Java/Quarkus track does:
+
+```bash
+# Temurin 25 LTS (or install the JDK 25 package from Adoptium)
+brew install --cask temurin@25
+brew install maven
+
+java -version      # 25.x
+mvn -version       # 3.9+
+```
+
+Quarkus projects should use their Maven wrapper (`./mvnw`), so the system Maven is only a fallback. The Quarkus CLI is optional:
+
+```bash
+brew install quarkusio/tap/quarkus
+quarkus --version
+```
+
+You do not need the CLI to build or test; `./mvnw quarkus:dev` and `./mvnw test` are enough.
+
 ### Documentation site
 
 Material for MkDocs is separate from the MLX environment, but installs cleanly into the same venv:

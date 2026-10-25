@@ -1,0 +1,33 @@
+# Qwen2.5-Coder 14B — recommended Java/Quarkus run on 32 GB.
+# 48 blocks; adapt the last 24 to keep peak memory below ~23 GB.
+# If you have headroom, test the all-layer variant.
+model: mlx-community/Qwen2.5-Coder-14B-Instruct-4bit
+train: true
+data: data/java/processed
+fine_tune_type: lora
+optimizer: adamw
+num_layers: 24
+batch_size: 1
+iters: 300
+val_batches: 25
+learning_rate: 1.0e-4
+steps_per_report: 10
+steps_per_eval: 100
+save_every: 50
+max_seq_length: 2048
+grad_checkpoint: true
+grad_accumulation_steps: 8
+mask_prompt: true
+adapter_path: adapters/qwen25-coder-14b-java
+seed: 42
+lora_parameters:
+  rank: 16
+  dropout: 0.05
+  scale: 2.0
+lr_schedule:
+  name: cosine_decay
+  warmup: 30
+  arguments: [1.0e-4, 300, 1.0e-6]
+optimizer_config:
+  adamw:
+    weight_decay: 0.01

@@ -31,6 +31,13 @@ A GitBook-style table of contents, mirrored by the site navigation.
 - [Safety and legal](12-safety-legal.md)
 - [Troubleshooting](13-troubleshooting.md)
 
+## Java & Quarkus
+
+- [Java landscape](18-java-quarkus.md)
+- [Java datasets](19-java-datasets.md)
+- [Java fine-tuning](20-java-finetuning.md)
+- [Java synthetic data](21-java-synthetic.md)
+
 ## Reference
 
 - [References](14-references.md)

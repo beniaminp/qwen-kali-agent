@@ -194,7 +194,20 @@ Last 16 layers, rank 16, `scale: 2.0`, seq 4096, 250 iters. 4K roughly doubles a
 
 ---
 
-## A.9 Config validation
+## A.9 Java/Quarkus configs
+
+| Config | Role | Layers | Rank | Scale | LR |
+|---|---|---|---:|---:|---:|
+| `qwen2.5-coder-7b-java.yaml` | 7B smoke | -1 (28) | 16 | 2.0 | 1.5e-4 |
+| `qwen2.5-coder-14b-java.yaml` | **recommended 14B** | 24/48 | 16 | 2.0 | 1e-4 |
+| `qwen2.5-coder-14b-java-all-layers.yaml` | capacity test | -1 (48) | 16 | 2.0 | 8e-5 |
+| `qwen2.5-coder-14b-java-longctx.yaml` | 4K context | 24/48 | 16 | 2.0 | 8e-5 |
+
+The Java configs point at `data/java/processed` and use `arguments` objects for the Qwen2.5-Coder template. Details: [18 — Java landscape](18-java-quarkus.md) and [20 — Java fine-tuning](20-java-finetuning.md).
+
+---
+
+## A.10 Config validation
 
 ```bash
 python - <<'PY'

@@ -2,6 +2,8 @@
 
 *Last verified: 25 October 2026 against mlx-lm 0.32.2 and current llama.cpp/Ollama docs.*
 
+> The serving mechanics are shared. For the **Qwen2.5-Coder Java/Quarkus** model, note that it has no thinking block and its template expects tool `arguments` as objects; see [20 — Java fine-tuning](20-java-finetuning.md) §9.
+
 You have three deployment paths:
 
 | Path | Best for | Tool-call fidelity | Speed on M1 Pro |

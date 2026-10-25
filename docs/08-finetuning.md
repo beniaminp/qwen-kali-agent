@@ -10,6 +10,8 @@ This is the chapter you run. It assumes:
 
 The default path is **Qwen3-14B 4-bit QLoRA**. The 8B path is for debugging. Do not start with the 14B.
 
+> Training a **Java/Quarkus coder** instead? Use [20 — Java fine-tuning](20-java-finetuning.md); the base is Qwen2.5-Coder-14B and the data format differs (`arguments` as objects).
+
 ---
 
 ## 0. Preflight (10 minutes)

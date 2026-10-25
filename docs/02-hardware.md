@@ -97,6 +97,8 @@ Qwen3-14B: `H=5120`, `I=17408`, 40 layers, `V=151936`.
 
 Peak ≈ **19–21 GB** — fits under the default 21.3 GiB only if nothing else is running, which is not a safe assumption.
 
+**Java/Quarkus note.** Qwen2.5-Coder-14B has 48 layers (hidden 5120, intermediate 13824). A 24-block rank-16 adapter is roughly 34M parameters; peak is in the same 18–23 GB range as Qwen3-14B. Adapting all 48 blocks raises activations and can exceed 24 GB, so the Java runbook starts at 24/48.
+
 With `--grad-checkpoint`:
 
 - Activations ≈ `B × L × N_lora × 2H × 2` ≈ **0.67 GB**.
