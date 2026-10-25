@@ -26,6 +26,9 @@ All scripts live in `scripts/` and are run from the repository root with the pro
 | `eval_toolcall.py` | Run a golden set against an OpenAI-compatible endpoint; schema/tool/refusal graders; JSON report. | `python scripts/eval_toolcall.py --base-url http://127.0.0.1:8080/v1 --golden data/golden/golden.jsonl --out reports/eval.json` |
 | `smoke_test.py` | 10 canonical prompts to verify tool-call fidelity. | `python scripts/smoke_test.py --base-url http://127.0.0.1:8080/v1` |
 | `make_dataset_card.py` | Generate a dataset card skeleton from a manifest. | `python scripts/make_dataset_card.py data/processed/manifest.json --out data/cards/dataset-card.md` |
+| `generate_distill_data.py` | Teacher traces → canonical JSONL; preserves reasoning/tool calls; resume and dry-run. | `python scripts/generate_distill_data.py --prompts examples/distill/prompts.jsonl --out data/distill/raw/deepseek.jsonl` |
+| `distill_logits.py` | GPU reference for CE + top-k KL logit distillation with LoRA. | `python scripts/distill_logits.py --teacher google/gemma-4-12B-it --student google/gemma-4-E4B-it --data ... --out ... --dry-run` |
+| `check_math_examples.py` | Assert the arithmetic in the worked-examples chapter. | `python scripts/check_math_examples.py` |
 | `export_gguf.sh` | Fuse, dequantize, convert, quantize. | `bash scripts/export_gguf.sh` |
 | `serve_mlx.sh` | Launch `mlx_lm.server` with safe defaults. | `bash scripts/serve_mlx.sh` |
 
@@ -456,7 +459,7 @@ Presets: `qwen3-14b`, `qwen25-coder-14b`, `gemma4-12b`, `tiny-100m`, `small-1b`.
 
 ```bash
 python scripts/estimate_pretraining.py --preset gemma4-12b --tokens 10e12 \
-  --gpus 1000 --peak-tflops 989 --mfu 0.4 --cost-per-gpu-hour 2.5
+  --gpus 1000 --peak-tflops 495 --mfu 0.4 --cost-per-gpu-hour 2.5
 ```
 
 Replace default peak/MFU with measured numbers. Real runs add 20–50% for failures, checkpointing, data loading and evaluation.
@@ -505,7 +508,7 @@ python scripts/inspect_architecture.py --config config.json --json
 
 Presets: `qwen3-14b`, `qwen25-coder-14b`, `gemma4-12b`, `qwen3-30b-a3b`.
 
-The KV estimate is an upper bound for full attention; it does not model sliding windows or K=V sharing. See [37 — Architecture anatomy](37-architecture.md).
+The KV estimate models local sliding windows and global K=V sharing when the config provides `layer_types`, `sliding_window`, `num_global_key_value_heads`, `global_head_dim` and `attention_k_eq_v`. Otherwise it is a full-attention upper bound. See [37 — Architecture anatomy](37-architecture.md) and [43 — Worked examples](43-math-examples.md).
 
 ---
 
@@ -550,7 +553,20 @@ and saves the adapter plus `distill_config.json`. It is not an MLX trainer; on
 
 ---
 
-## B.25 Shell helpers
+## B.25 `check_math_examples.py`
+
+Pure-stdlib assertions for the worked examples in [43 — Worked examples](43-math-examples.md):
+
+```bash
+python scripts/check_math_examples.py
+# all 38 checks passed
+```
+
+It checks 38 values: softmax/CE, the Jacobian, RMSNorm, attention, GQA, KV cache (including the Gemma hybrid), RoPE, SwiGLU, MoE, GDN, speculative decoding, parameter counts, FLOPs, quantization, AdamW, LoRA and KD. No model or network is loaded.
+
+---
+
+## B.26 Shell helpers
 
 `export_gguf.sh`:
 
@@ -570,7 +586,7 @@ and saves the adapter plus `distill_config.json`. It is not an MLX trainer; on
 
 ---
 
-## B.26 Exit codes
+## B.27 Exit codes
 
 | Code | Meaning |
 |---|---|

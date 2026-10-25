@@ -94,6 +94,7 @@ Or use `make docs-serve` / `make docs`. `site/` is generated and git-ignored.
 │   ├── 32-mathematics.md      transformer, attention, RoPE, MoE, GDN, FLOPs
 │   ├── 37-architecture.md     config.json to tensors, shapes, cache, trade-offs
 │   ├── 38-derivations.md      softmax/attention/RMSNorm/RoPE/GDN proofs
+│   ├── 43-math-examples.md    every formula on a toy model, with numbers
 │   ├── 39-gemma-distillation.md  teacher/student directions and memory
 │   ├── 40-distill-data.md     teacher traces, logits, filtering and data cards
 │   ├── 41-distill-training.md sequence KD, logit KD and on-policy loops
@@ -378,6 +379,7 @@ The internals section covers the mathematics and the public training pipelines:
 - [32 — Mathematics](docs/32-mathematics.md): tokenization, cross-entropy, RMSNorm, GQA, RoPE/p-RoPE, SwiGLU/GeGLU, MoE routing, Gated DeltaNet, hybrid attention, MTP, parameter/FLOP/KV-cache formulas, quantization.
 - [37 — Architecture anatomy](docs/37-architecture.md): config keys, exact tensor shapes for Qwen3-14B and Gemma 4 12B, GQA/cache, stack patterns and design trade-offs.
 - [38 — Derivations and proofs](docs/38-derivations.md): softmax gradient, attention backward, RMSNorm Jacobian, RoPE relative proof, GDN as gradient descent, quantization error, speculative decoding, scaling laws.
+- [43 — Worked examples](docs/43-math-examples.md): every formula on a toy model with real numbers, including the corrected Gemma 12B parameter count and hybrid KV cache.
 - [33 — How Qwen was built](docs/33-qwen-creation.md): Qwen2.5 (18T tokens), Qwen2.5-Coder (5.5T code), Qwen3 (36T, 119 languages, three-stage pretraining, GRPO, thinking fusion, distillation), Qwen3-Coder, Qwen3.5.
 - [34 — How Gemma 4 was built](docs/34-gemma4-creation.md): encoder-free 12B, 5:1 local/global attention, K=V, p-RoPE, QAT, MTP, TPU infrastructure, instruction tuning.
 - [35 — From zero](docs/35-from-zero.md): a 125M–1.2B model you can actually train, tokenizer, data, stability and evaluation.

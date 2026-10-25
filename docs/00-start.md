@@ -159,6 +159,7 @@
 | Understand the mathematics | [32 — Mathematics](32-mathematics.md) |
 | Map math to real tensor shapes | [37 — Architecture anatomy](37-architecture.md) |
 | Read the proofs | [38 — Derivations and proofs](38-derivations.md) |
+| Check the math with numbers | [43 — Worked examples](43-math-examples.md) |
 | See how Qwen was built | [33 — How Qwen was built](33-qwen-creation.md) |
 | See how Gemma 4 was built | [34 — How Gemma 4 was built](34-gemma4-creation.md) |
 | Train a model from zero | [35 — From zero](35-from-zero.md) |

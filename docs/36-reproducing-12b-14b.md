@@ -59,14 +59,14 @@ C = 6 \times 14.77\times10^9 \times 36\times10^{12}
 \approx 3.2\times10^{24}\ \text{FLOPs}.
 \]
 
-At 40% MFU on 10,000 H100-class GPUs (989 TFLOP/s peak):
+At 40% MFU on 10,000 H100-class GPUs (494.5 TFLOP/s **dense** BF16 peak; 989 TFLOP/s is the sparse number):
 
 \[
-\text{GPU-hours}\approx2.24\times10^6,
+\text{GPU-hours}\approx4.48\times10^6,
 \qquad
-\text{wall time}\approx9.3\ \text{days},
+\text{wall time}\approx18.7\ \text{days},
 \qquad
-\text{cost}\approx\$5.6\text{M}
+\text{cost}\approx\$11.2\text{M}
 \]
 
 at $2.50/GPU-hour, before failures, data, evaluation and staff.
@@ -74,7 +74,7 @@ at $2.50/GPU-hour, before failures, data, evaluation and staff.
 ### 2.2 What changes the number
 
 - **MFU**: 25% vs 45% is nearly a 2× cost difference.
-- **Sequence length**: long-context attention adds \(O(LT^2d)\) and lowers MFU.
+- **Sequence length**: long-context attention adds \(O(LT^2Hd_h)\) and lowers MFU.
 - **Model FLOPs**: MoE uses active parameters for compute but stores all experts.
 - **Failures**: add 20–50% for restarts, checkpoints and stragglers.
 - **Data**: pipeline compute and storage are separate.

@@ -35,9 +35,9 @@ where \(N\) is parameters and \(D\) is training tokens. The factor 6 is forward 
 | 336M | 20B | \(4.0\times10^{19}\) | ~309 days | ~0.5 days | ~$205 |
 | 1.2B | 20B | \(1.5\times10^{20}\) | ~1,124 days | ~1.9 days | ~$741 |
 | 1.2B | 100B | \(7.3\times10^{20}\) | ~15 years | ~9.3 days | ~$3,700 |
-| 14B | 36T | \(3.2\times10^{24}\) | ~67,000 years | ~9.3 days on 10,000 GPUs | ~$5.6M |
+| 14B | 36T | \(3.2\times10^{24}\) | ~67,000 years | ~18.7 days on 10,000 H100s (40% MFU) | ~$9.0M |
 
-The last row is Qwen3-14B’s disclosed token count. It is not a laptop project. Even the 1.2B/20B run needs a serious GPU and a clean data pipeline.
+The last row is Qwen3-14B’s disclosed token count and uses 10,000 H100s, not 8×A100s. It is not a laptop project. Even the 1.2B/20B run needs a serious GPU and a clean data pipeline.
 
 > The M1 Pro number is intentionally brutal: local training is for **LoRA adapters**, not pretraining. The rest of this handbook is about adapters for a reason.
 

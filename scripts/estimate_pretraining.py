@@ -27,47 +27,72 @@ class Config:
     kv_heads: int
     head_dim: int
     tie_embeddings: bool
+    global_kv_heads: int = 0
+    global_head_dim: int = 0
+    global_layers: int = 0
+    sliding_window: int = 0
+    attention_k_eq_v: bool = False
 
 
 PRESETS = {
     "qwen3-14b": Config("Qwen3-14B", 151936, 5120, 40, 17408, 40, 8, 128, False),
     "qwen25-coder-14b": Config("Qwen2.5-Coder-14B", 152064, 5120, 48, 13824, 40, 8, 128, False),
-    "gemma4-12b": Config("Gemma 4 12B", 262144, 3840, 48, 15360, 16, 8, 256, True),
+    "gemma4-12b": Config("Gemma 4 12B", 262144, 3840, 48, 15360, 16, 8, 256, True,
+                         global_kv_heads=1, global_head_dim=512, global_layers=8,
+                         sliding_window=1024, attention_k_eq_v=True),
     "tiny-100m": Config("tiny-100M", 32000, 768, 12, 2048, 12, 4, 64, True),
     "small-1b": Config("small-1B", 32000, 2048, 24, 5632, 16, 4, 128, True),
 }
 
 
+def _attn(d: int, heads: int, kv_heads: int, head_dim: int) -> int:
+    q = d * heads * head_dim
+    kv = 2 * d * kv_heads * head_dim
+    o = heads * head_dim * d
+    return q + kv + o
+
+
 def params(c: Config) -> dict:
-    q_dim = c.heads * c.head_dim
-    kv_dim = c.kv_heads * c.head_dim
-    attn = c.d_model * q_dim + 2 * c.d_model * kv_dim + q_dim * c.d_model
+    local_layers = c.layers - c.global_layers
+    attn_local = _attn(c.d_model, c.heads, c.kv_heads, c.head_dim)
+    attn_global = _attn(c.d_model, c.heads, c.global_kv_heads or c.kv_heads,
+                        c.global_head_dim or c.head_dim) if c.global_layers else attn_local
     mlp = 3 * c.d_model * c.ffn
-    per_layer = attn + mlp
+    norms = 2 * c.d_model
+    per_local = attn_local + mlp + norms
+    per_global = attn_global + mlp + norms
+    layer_params = local_layers * per_local + c.global_layers * per_global
     embed = c.vocab * c.d_model
     lm_head = 0 if c.tie_embeddings else c.vocab * c.d_model
-    total = c.layers * per_layer + embed + lm_head + c.d_model
+    total = layer_params + embed + lm_head + c.d_model
+    attn_total = local_layers * attn_local + c.global_layers * attn_global
     return {
-        "attention_per_layer": attn,
+        "attention_per_layer": attn_total / c.layers,
+        "attention_local": attn_local,
+        "attention_global": attn_global,
+        "attention_total": attn_total,
         "mlp_per_layer": mlp,
-        "per_layer": per_layer,
+        "per_layer": layer_params / c.layers,
+        "per_layer_local": per_local,
+        "per_layer_global": per_global,
         "embedding": embed,
         "lm_head": lm_head,
         "total": total,
-        "non_embedding": c.layers * per_layer,
+        "active": total,
+        "non_embedding": layer_params,
     }
 
 
-def kv_cache_bytes(c: Config, seq: int, bytes_per_value: float = 2.0, kv_shared_global: bool = False) -> int:
-    """Rough KV cache: 2 (K,V) * layers * kv_heads * head_dim * seq * bytes.
-
-    `kv_shared_global` halves the global-layer V cache (K=V), a Gemma 4 trick.
-    """
-    per_layer = 2 * c.kv_heads * c.head_dim * seq * bytes_per_value
-    total = c.layers * per_layer
-    if kv_shared_global:
-        total *= 0.75  # illustrative; real saving depends on local/global ratio
-    return int(total)
+def kv_cache_bytes(c: Config, seq: int, bytes_per_value: float = 2.0) -> int:
+    """KV cache, modelling local windows and global K=V when configured."""
+    if c.global_layers:
+        local_layers = c.layers - c.global_layers
+        local = local_layers * 2 * c.kv_heads * c.head_dim * min(seq, c.sliding_window or seq)
+        glob = c.global_layers * (c.global_kv_heads or c.kv_heads) * (c.global_head_dim or c.head_dim) * seq
+        if not c.attention_k_eq_v:
+            glob *= 2
+        return int((local + glob) * bytes_per_value)
+    return int(2 * c.layers * c.kv_heads * c.head_dim * seq * bytes_per_value)
 
 
 def fmt(n: float) -> str:
@@ -93,8 +118,8 @@ def main() -> int:
                     help="Training tokens (default 36T, Qwen3 scale)")
     ap.add_argument("--seq", type=int, default=32768)
     ap.add_argument("--gpus", type=int, default=1024)
-    ap.add_argument("--peak-tflops", type=float, default=989.0,
-                    help="Per-GPU peak dense BF16 TFLOP/s (default H100 SXM ~989)")
+    ap.add_argument("--peak-tflops", type=float, default=495.0,
+                    help="Per-GPU peak dense BF16 TFLOP/s (default H100 SXM ~495; 989 is sparse)")
     ap.add_argument("--mfu", type=float, default=0.40, help="Model FLOPs utilization 0-1")
     ap.add_argument("--cost-per-gpu-hour", type=float, default=2.5)
     ap.add_argument("--json", action="store_true")
@@ -114,7 +139,7 @@ def main() -> int:
 
     p = params(c)
     train_flops = 6 * p["total"] * args.tokens
-    infer_flops = 2 * p["total"]
+    infer_flops = 2 * p["active"]
     effective = args.peak_tflops * 1e12 * args.mfu
     gpu_seconds = train_flops / effective
     gpu_hours = gpu_seconds / 3600
@@ -136,7 +161,6 @@ def main() -> int:
         "wall_days": wall_days,
         "cost_usd": cost,
         "kv_cache_gb_seq": kv_cache_bytes(c, args.seq) / 1e9,
-        "kv_cache_gb_seq_kv_shared": kv_cache_bytes(c, args.seq, kv_shared_global=True) / 1e9,
     }
 
     if args.json:
@@ -152,7 +176,12 @@ def main() -> int:
     print()
     print(f"total params         : {p['total']:,} ({fmt(p['total'])})")
     print(f"non-embedding params : {p['non_embedding']:,} ({fmt(p['non_embedding'])})")
-    print(f"attention / layer    : {p['attention_per_layer']:,}")
+    if c.global_layers:
+        print(f"attention / local    : {p['attention_local']:,}")
+        print(f"attention / global   : {p['attention_global']:,}")
+        print(f"local / global layers: {c.layers - c.global_layers} / {c.global_layers}")
+    else:
+        print(f"attention / layer    : {p['attention_per_layer']:,}")
     print(f"MLP / layer          : {p['mlp_per_layer']:,}")
     print()
     print(f"training tokens      : {args.tokens:,.0f} ({fmt(args.tokens)})")
@@ -167,8 +196,7 @@ def main() -> int:
     print(f"wall time            : {wall_days:.1f} days")
     print(f"compute cost         : ${cost:,.0f}")
     print()
-    print(f"KV cache @ {args.seq:,} tokens : {result['kv_cache_gb_seq']:.1f} GB (bf16, no sharing)")
-    print(f"KV cache, K=V global : {result['kv_cache_gb_seq_kv_shared']:.1f} GB (illustrative)")
+    print(f"KV cache @ {args.seq:,} tokens : {result['kv_cache_gb_seq']:.2f} GB (bf16)")
     print()
     print("Reality check: add 20-50% for failures, checkpointing, data loading and")
     print("evaluation. MFU above ~45% is hard on long-context training.")

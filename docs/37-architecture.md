@@ -74,16 +74,19 @@ The output logits for Gemma are even larger: \(1\cdot2048\cdot262{,}144\approx53
 
 | Component | Qwen3-14B | Gemma 4 12B |
 |---|---:|---:|
-| attention / layer | 62.91M | 47.19M |
+| attention / local layer | 62.91M | 47.19M |
+| attention / global layer | — | 66.85M |
 | MLP / layer | 267.39M | 176.95M |
-| total / layer | 330.32M | 224.15M |
+| total / local layer | 330.32M | 224.15M |
+| total / global layer | — | 243.79M |
+| layers | 40 full | 40 local + 8 global |
 | embedding | 777.91M | 1,006.63M |
 | LM head | 777.91M (untied) | 0 (tied) |
-| **total** | **14.77B** | **11.77B** |
+| **total** | **14.77B** | **11.92B** |
 | official total | 14.8B | 11.95B |
-| 4-bit weights (approx.) | ~8.3 GB | ~6.6–7.6 GB |
+| 4-bit weights (approx.) | ~8.3 GB | ~7.65 GB |
 
-The formula count for Gemma is 11.77B; the official figure is 11.95B because fused projections and implementation-specific parameters are not all represented in the simple per-layer formula. Treat the table as a decomposition, not a replacement for the model card.
+Gemma’s global layers use `num_global_key_value_heads = 1` and `global_head_dim = 512`, so their attention block is larger than a local layer (66.85M vs 47.19M). Counting all 48 layers as local gives 11.77B and undercounts by ~0.15B. The official figure is 11.95B; the remaining 0.03B is norms and implementation-specific parameters. Treat the table as a decomposition, not a replacement for the model card.
 
 Gemma’s larger vocabulary costs ~1.0B parameters in the embedding; Qwen’s untied head costs another ~0.78B. The MLP is the largest per-layer block in both models: 81% of Qwen3-14B’s layer parameters and 79% of Gemma 4 12B’s.
 
@@ -140,28 +143,31 @@ Qwen3-14B at \(T=32{,}768\), bf16:
 2\cdot40\cdot8\cdot128\cdot32{,}768\cdot2=5.37\text{ GB}.
 \]
 
-Gemma 4 12B full-attention upper bound:
+Gemma 4 12B is hybrid, so the single-formula number is only an upper bound:
 
 \[
 2\cdot48\cdot8\cdot256\cdot32{,}768\cdot2=12.88\text{ GB}.
 \]
 
-Gemma’s real cache is lower because:
-
-- 5 of 6 layers are local with window \(W=1024\), so their cache is bounded by \(W\);
-- global layers reuse \(K=V\);
-- int8 KV halves the bytes.
-
-Approximate the hybrid cache as
+The real cache is
 
 \[
-\text{KV}\approx
-L_{\text{local}}\cdot 2Gd_hWb
+\underbrace{L_{\text{local}}\cdot2G_{\text{local}}d_{h,\text{local}}Wb}_{\text{local, capped at }W}
 +
-L_{\text{global}}\cdot G d_h T b.
+\underbrace{L_{\text{global}}\cdot G_{\text{global}}d_{h,\text{global}}Tb}_{\text{global, }K=V}.
 \]
 
-With \(L_{\text{local}}\approx40\), \(L_{\text{global}}\approx8\), \(W=1024\), the local part is small and the global part dominates only at very long \(T\).
+With \(L_{\text{local}}=40\), \(G_{\text{local}}=8\), \(d_{h,\text{local}}=256\), \(W=1024\), \(L_{\text{global}}=8\), \(G_{\text{global}}=1\), \(d_{h,\text{global}}=512\), bf16:
+
+\[
+2\cdot40\cdot8\cdot256\cdot1024\cdot2 = 335.5\text{ MB}
+\]
+
+\[
+8\cdot1\cdot512\cdot32{,}768\cdot2 = 268.4\text{ MB}
+\]
+
+Total at 32K: **604 MB**, not 12.9 GB. At 256K the local term is unchanged and the global term is 2.15 GB, so the cache is **2.48 GB**. Int8 KV halves both. This is the actual reason a 12B model can serve 256K context; the sliding window and the single global KV head do the work.
 
 ### 2.2 Why GQA matters
 
@@ -169,7 +175,8 @@ With \(L_{\text{local}}\approx40\), \(L_{\text{global}}\approx8\), \(W=1024\), t
 |---|---:|---:|---:|---:|
 | Qwen3-14B | 40 | 8 | 5:1 | 1/5 |
 | Qwen2.5-Coder-14B | 40 | 8 | 5:1 | 1/5 |
-| Gemma 4 12B | 16 | 8 | 2:1 | 1/2 |
+| Gemma 4 12B (local) | 16 | 8 | 2:1 | 1/2 |
+| Gemma 4 12B (global) | 16 | 1 | 16:1 | 1/16 |
 
 A 5:1 GQA model has one fifth of the KV cache of an MHA model with the same \(d_h\). That is the difference between serving 32K and 128K on one machine.
 

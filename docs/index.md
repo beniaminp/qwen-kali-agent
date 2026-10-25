@@ -17,7 +17,7 @@ hide:
   <div class="gb-stats">
     <div class="gb-stat"><strong>3</strong><span>specializations</span></div>
     <div class="gb-stat"><strong>2</strong><span>model families</span></div>
-    <div class="gb-stat"><strong>44</strong><span>chapters</span></div>
+    <div class="gb-stat"><strong>45</strong><span>chapters</span></div>
     <div class="gb-stat"><strong>32 GB</strong><span>target hardware</span></div>
   </div>
 </div>
@@ -175,6 +175,11 @@ hide:
     <span class="gb-new__date">25 Oct 2026</span>
     <strong><a href="39-gemma-distillation/">Gemma 12B distillation</a></strong>
     <p>A three-direction track: teacher → 12B, 12B → E4B/E2B, and 12B as a data teacher, with sequence and logit KD.</p>
+  </div>
+  <div class="gb-new__item">
+    <span class="gb-new__date">25 Oct 2026</span>
+    <strong><a href="43-math-examples/">Math, checked with numbers</a></strong>
+    <p>Every formula on a toy model, including the corrected Gemma parameter count, hybrid KV cache and dense-vs-sparse H100 peak.</p>
   </div>
 </div>
 

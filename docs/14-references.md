@@ -148,4 +148,5 @@
 - [Teachers and distillation data](40-distill-data.md) — prompt mix, teacher traces, top-k logits, filtering and data cards.
 - [Distillation training](41-distill-training.md) — sequence KD with MLX, logit KD with the reference trainer, on-policy loops.
 - [Distillation evaluation](42-distill-eval.md) — teacher/base/SFT/distilled comparison, gates and deployment.
+- [43 — Worked examples](43-math-examples.md) — numeric checks for softmax, attention, RMSNorm, RoPE, GQA, KV, MoE, GDN, FLOPs, quantization, AdamW, LoRA, KD and evaluation math.
 - [Network security](16-network-security.md) — asset inventory, TLS, segmentation, packet evidence.

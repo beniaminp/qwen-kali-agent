@@ -45,7 +45,7 @@ MKDOCS ?= $(PYTHON) -m mkdocs
         gemma4-train-unified gemma4-check-lora gemma4-fuse gemma4-serve \
         distill-generate distill-check distill-train-12b distill-train-e4b \
         distill-train-e2b distill-check-lora distill-dry-logits distill-fuse \
-        docs-install docs docs-serve clean
+        math-check docs-install docs docs-serve clean
 
 help: ## Show this help
 	@grep -E '^[a-zA-Z0-9_-]+:.*?## .*$$' $(MAKEFILE_LIST) | sort | \
@@ -122,6 +122,9 @@ react-check-lora: ## Verify the React adapter covers MLP projections
 
 react-fuse: ## Fuse the React adapter
 	mlx_lm.fuse --model $(REACT_MODEL) --adapter-path $(REACT_ADAPTER) --save-path $(REACT_FUSED)
+
+math-check: ## Verify the arithmetic in the worked-examples chapter
+	$(PYTHON) scripts/check_math_examples.py
 
 distill-generate: ## Generate teacher traces for sequence distillation
 	$(PYTHON) scripts/generate_distill_data.py \

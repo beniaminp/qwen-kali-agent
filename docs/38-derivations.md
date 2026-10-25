@@ -4,6 +4,8 @@
 
 Notation follows chapter 32. \(B\) is batch, \(T\) sequence, \(d\) hidden size, \(H\) query heads, \(G\) KV heads, \(d_h\) head dimension, \(V\) vocabulary.
 
+For numeric checks of every result in this chapter, see [43 — Worked examples](43-math-examples.md).
+
 ---
 
 ## 1. Cross-entropy and its gradient
@@ -132,13 +134,13 @@ dP=dO\,V^\top,
 dV=P^\top dO.
 \]
 
-For softmax row \(p\):
+For **each row** \(i\) with softmax row \(p_i\), let \(s_i=\sum_j dP_{ij}p_{ij}\). Then
 
 \[
-dS = p\odot\left(dP-\mathbf{1}\,(dP^\top p)\right),
+dS_{ij}=p_{ij}\left(dP_{ij}-s_i\right),
 \]
 
-i.e. subtract the dot product of \(dP\) with the probability row, then multiply elementwise by \(p\). Then
+or in matrix form \(dS=p\odot(dP-\mathbf{1}s^\top)\), where \(s_i=dP_i\cdot p_i\). Subtract the row’s probability-weighted \(dP\), then multiply elementwise by \(p\). Then
 
 \[
 dQ=\frac{dS\,K}{\sqrt{d_h}},
@@ -148,7 +150,7 @@ dK=\frac{dS^\top Q}{\sqrt{d_h}}.
 
 The mask sets \(dS_{ij}=0\) for \(j>i\). In practice, FlashAttention fuses these steps and never materialises the \(T\times T\) matrix in global memory; it recomputes tiles in the backward pass. That is why long-context training is feasible at all.
 
-### 2.3 Why \(\sqrt{d_h}\)
+### 2.3 Why scale by the square root of the head dimension
 
 If \(q_i,k_i\) are independent with mean 0 and variance 1, then
 
@@ -292,18 +294,21 @@ For
 y=W_d\big(\operatorname{SiLU}(W_gx)\odot W_ux\big),
 \]
 
-let \(a=W_gx\), \(b=W_ux\), \(g=\operatorname{SiLU}(a)=a\sigma(a)\). Then
+let \(a=W_gx\), \(b=W_ux\), \(g=\operatorname{SiLU}(a)=a\sigma(a)\), and let \(\bar y=\partial\mathcal{L}/\partial y\) be the upstream gradient. The correct backward pass is
 
 \[
-\frac{\partial y}{\partial a}
-=W_d^\top\left(\sigma(a)+a\sigma(a)(1-\sigma(a))\right)\odot b,
+\frac{\partial\mathcal{L}}{\partial a}
+=\left(W_d^\top\bar y\right)\odot b\odot g'(a),
+\qquad
+g'(a)=\sigma(a)+a\sigma(a)\big(1-\sigma(a)\big),
 \]
 
 \[
-\frac{\partial y}{\partial b}=W_d^\top g.
+\frac{\partial\mathcal{L}}{\partial b}
+=\left(W_d^\top\bar y\right)\odot g.
 \]
 
-The gate’s derivative has the extra \(a\sigma(a)(1-\sigma(a))\) term, which is why SiLU is smooth and avoids the dead-unit behaviour of ReLU. GeGLU replaces \(\operatorname{SiLU}\) with \(\operatorname{GELU}\):
+Do not confuse the scalar derivative \(g'(a)\) with the vector gradient: the upstream gradient \(W_d^\top\bar y\) must be multiplied elementwise by \(b\) and \(g'(a)\). The gate’s derivative has the extra \(a\sigma(a)(1-\sigma(a))\) term, which is why SiLU is smooth and avoids the dead-unit behaviour of ReLU. GeGLU replaces \(\operatorname{SiLU}\) with \(\operatorname{GELU}\):
 
 \[
 \operatorname{GELU}(a)=a\Phi(a),
@@ -399,7 +404,7 @@ and
 o_t=S_t^\top q_t.
 \]
 
-This is exactly the recurrence in chapter 32. \(\alpha_t\) is a forget gate; \(\beta_t\) is the learning rate for the current association.
+This is exactly the recurrence in chapter 32. \(\alpha_t\) is a forget gate; \(\beta_t\) is the learning rate for the current association. In the actual GDN layer \(k_t\) is L2-normalised and \(\beta_t\in(0,1)\), which keeps the rank-one update bounded; without normalisation, a large \(\|k_t\|^2\) can make \(I-\beta_tk_tk_t^\top\) unstable.
 
 ### 8.1 Why it is not just “linear attention”
 
@@ -419,7 +424,7 @@ The per-token transition is
 S_t=\alpha_tS_{t-1}(I-\beta_tk_tk_t^\top)+\beta_tv_tk_t^\top.
 \]
 
-The matrix \((I-\beta_tk_tk_t^\top)\) is a rank-one update of the identity (a generalised Householder reflection). A product of such updates over a chunk can be written as
+The matrix \((I-\beta_tk_tk_t^\top)\) is a rank-one update of the identity. It is a Householder reflection only when \(k_t\) is unit norm and \(\beta_t=2\); in GDN it is a damped rank-one update. A product of such updates over a chunk can be written as
 
 \[
 \prod_{t=1}^{C}(I-\beta_tk_tk_t^\top)=I-K^\top W K,
@@ -557,11 +562,11 @@ The \(6ND\) estimate counts matrix multiplications but not attention scores. A m
 \[
 C_{\text{layer}}\approx
 \underbrace{24d^2T}_{\text{projections}}
-+\underbrace{12dT^2}_{\text{attention scores/values}}
++\underbrace{12\,H\,d_h\,T^2}_{\text{attention scores/values}}
 +\underbrace{18dd_{\text{ff}}T}_{\text{MLP}}
 \]
 
-for a dense block (the exact constants depend on whether biases/norms are counted). The attention term is why long-context training is more expensive than \(6ND\) suggests.
+for a dense block (the exact constants depend on whether biases/norms are counted). The attention term uses the total query width \(H d_h\), not \(d\); they are equal for Qwen3-14B but not for Gemma’s global layers. The attention term is why long-context training is more expensive than \(6ND\) suggests.
 
 For a 14B model at 32K, attention is a significant fraction of compute; at 2K, it is small. Always measure tokens/sec rather than trusting a formula.
 

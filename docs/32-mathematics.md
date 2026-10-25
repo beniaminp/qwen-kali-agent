@@ -8,6 +8,7 @@ It is deliberately equation-heavy. There are three companion pages:
 
 - **[37 — Architecture anatomy](37-architecture.md)** maps every equation to actual tensor shapes and `config.json` keys.
 - **[38 — Derivations and proofs](38-derivations.md)** proves the softmax gradient, the RoPE relative property, the RMSNorm Jacobian, the GDN recurrence and the quantization error bound.
+- **[43 — Worked examples](43-math-examples.md)** runs every formula on a toy model with real numbers, so you can check the arithmetic yourself.
 - **[35 — From zero](35-from-zero.md)** and **[36 — Reproducing 12B–14B](36-reproducing-12b-14b.md)** turn the math into a training plan.
 
 If you only want the practical fine-tuning recipe, skip to [08 — Fine-tuning](08-finetuning.md).
@@ -101,6 +102,8 @@ p(x_{t+1}=j\mid x_{\le t}) =
 \frac{\exp(z_j)}{\sum_{k=1}^{V}\exp(z_k)}.
 \]
 
+> **Worked example:** [43 §1–3](43-math-examples.md) computes the softmax, the CE and the gradient for \(z=(2,1,0,-1)\).
+
 That is why a 262k vocabulary is expensive at inference even when the model is only 12B.
 
 ### 2.3 Special tokens
@@ -191,7 +194,7 @@ RMSNorm drops the mean subtraction:
 \frac{x}{\sqrt{\frac{1}{d}\sum_{i=1}^{d}x_i^2+\epsilon}}.
 \]
 
-It has one vector \(\gamma\in\mathbb{R}^d\) and no bias. Why it works: the residual stream’s scale is what matters, not its mean; removing the mean subtraction saves a reduction and a broadcast, and empirically trains stably. Qwen3, Qwen2.5 and Gemma 4 all use RMSNorm.
+It has one vector \(\gamma\in\mathbb{R}^d\) and no bias. [43 §4](43-math-examples.md) runs it on \(x=(1,2,3,4)\). Why it works: the residual stream’s scale is what matters, not its mean; removing the mean subtraction saves a reduction and a broadcast, and empirically trains stably. Qwen3, Qwen2.5 and Gemma 4 all use RMSNorm.
 
 **QK-norm.** Qwen3 introduces QK-Norm to stabilise attention: normalise \(q\) and \(k\) per head before the dot product,
 
@@ -233,7 +236,7 @@ M_{ij} =
 \end{cases}
 \]
 
-The \(\sqrt{d_k}\) scaling keeps the logits at unit variance if \(q,k\) have unit variance: \(\operatorname{Var}(q\cdot k)=d_k\).
+The \(\sqrt{d_k}\) scaling keeps the logits at unit variance if \(q,k\) have unit variance: \(\operatorname{Var}(q\cdot k)=d_k\). [43 §5](43-math-examples.md) computes a full \(3\times3\) attention example, including the causal mask and the backward pass.
 
 ### 6.1 Multi-head attention
 
@@ -262,7 +265,7 @@ K,V\in\mathbb{R}^{G\times d_h},\quad
 
 Qwen3-14B: \(H=40\), \(G=8\), ratio 5. Qwen2.5-Coder-14B: \(H=40\), \(G=8\), ratio 5. Gemma 4 12B: \(H=16\), \(G=8\), ratio 2.
 
-GQA reduces the KV cache and memory bandwidth with a small quality cost. Multi-query attention is the extreme \(G=1\); multi-head attention is \(G=H\).
+GQA reduces the KV cache and memory bandwidth with a small quality cost. Multi-query attention is the extreme \(G=1\); multi-head attention is \(G=H\). [43 §6–7](43-math-examples.md) compares the parameter counts and computes the Gemma hybrid cache.
 
 ![Multi-head vs grouped-query attention](assets/diagrams/gqa.svg)
 
@@ -278,17 +281,24 @@ The factor 2 is for K and V. For Qwen3-14B at \(T=32{,}768\), bf16 (\(b=2\)):
 
 \[
 2\cdot40\cdot8\cdot128\cdot32{,}768\cdot2
-\approx 5.4\ \text{GB}.
+\approx 5.37\ \text{GB}.
 \]
 
-For Gemma 4 12B at \(T=32{,}768\):
+For Gemma 4 12B, do **not** apply that formula to all 48 layers. The architecture is hybrid:
+
+- 40 local layers: \(G=8\), \(d_h=256\), cache bounded by \(W=1024\);
+- 8 global layers: \(G=1\), \(d_h=512\), full context, and \(K=V\).
+
+At \(T=32{,}768\):
 
 \[
-2\cdot48\cdot8\cdot256\cdot32{,}768\cdot2
-\approx 12.9\ \text{GB},
+\underbrace{2\cdot40\cdot8\cdot256\cdot1024\cdot2}_{335.5\ \text{MB local}}
++
+\underbrace{8\cdot1\cdot512\cdot32{,}768\cdot2}_{268.4\ \text{MB global, K only}}
+\approx 604\ \text{MB}.
 \]
 
-before the K=V optimisation. Gemma 4 reuses keys as values in global layers, removing the V cache there; the report estimates up to a **37.5% reduction** in global KV cache. That is why a 12B model can serve 256K context at all.
+At 256K the local term is unchanged and the global term is 2.15 GB, so the cache is about **2.48 GB**. The naive “48 layers, \(G=8\), \(d_h=256\), full context” calculation gives 12.9 GB; it is a useful upper bound, not the real cache. The architecture gets its long context from the sliding window and the single global KV head, not from a huge cache.
 
 **Rule:** long-context serving is a KV-cache problem, not just a weight problem. GQA, K=V, sliding windows, p-RoPE and quantized KV are all cache optimisations.
 
@@ -320,7 +330,7 @@ The key property is relative:
 R_t^\top R_s = R_{t-s}.
 \]
 
-So the dot product \(q_t^\top k_s\) depends on \(t-s\), not absolute position. RoPE has no learned position table, extrapolates better than absolute embeddings, and is the default in Qwen3, Qwen2.5, Qwen3.5 and Gemma 4 local layers.
+So the dot product \(q_t^\top k_s\) depends on \(t-s\), not absolute position. RoPE has no learned position table, extrapolates better than absolute embeddings, and is the default in Qwen3, Qwen2.5, Qwen3.5 and Gemma 4 local layers. [43 §8](43-math-examples.md) rotates two actual vectors.
 
 ### 7.1 Base frequency and long context
 
@@ -380,7 +390,7 @@ Qwen3/Qwen2.5 use SwiGLU. Gemma 4 uses GeGLU. A SwiGLU layer has three matrices,
 P_{\text{MLP}} = 3\,d\,d_{\text{ff}}.
 \]
 
-For Qwen3-14B: \(3\cdot5120\cdot17{,}408\approx267\text{M}\) per layer. For Gemma 4 12B: \(3\cdot3840\cdot15{,}360\approx177\text{M}\).
+For Qwen3-14B: \(3\cdot5120\cdot17{,}408\approx267\text{M}\) per layer. For Gemma 4 12B: \(3\cdot3840\cdot15{,}360\approx177\text{M}\). [43 §9](43-math-examples.md) computes a full SwiGLU/GeGLU forward and backward on a \(2\times3\) toy layer.
 
 The expansion ratio is \(d_{\text{ff}}/d\): Qwen3-14B is 3.4, Qwen2.5-Coder-14B is 2.7, Gemma 4 12B is 4.0.
 
@@ -427,7 +437,7 @@ For a dense model, inference FLOPs per token are \(2N\). For an MoE, use the **a
 N_{\text{active}} \approx N_{\text{attention}} + N_{\text{router}} + \frac{k}{E}N_{\text{experts}} + N_{\text{embed}}.
 \]
 
-That is why Qwen3-30B-A3B generates at roughly 3B speed while storing 30B weights.
+That is why Qwen3-30B-A3B generates at roughly 3B speed while storing 30B weights. [43 §10](43-math-examples.md) routes four tokens through two experts and computes the load-balancing loss.
 
 ---
 
@@ -451,7 +461,7 @@ S_t = S_{t-1} + \beta_t\big(v_t - S_{t-1}^\top k_t\big)k_t^\top,
 o_t = S_t^\top q_t.
 \]
 
-This is one online gradient step on the associative memory loss
+This is one online gradient step on the associative memory loss. [43 §11](43-math-examples.md) runs two scalar updates and checks the gradient.
 
 \[
 \mathcal{L}(S)=\|S^\top k_t - v_t\|_2^2.
@@ -474,7 +484,7 @@ S_t = \alpha_t S_{t-1}
 + \beta_t\big(v_t-\alpha_t S_{t-1}^\top k_t\big)k_t^\top.
 \]
 
-\(\alpha_t\) forgets stale associations; \(\beta_t\) controls how strongly the new key/value overwrites. Qwen3.5 uses GDN for most layers and standard gated attention every fourth layer (3:1). The chunkwise parallel form uses the WY representation of the product of rank-one Householder-like updates, so training is not strictly sequential.
+\(\alpha_t\) forgets stale associations; \(\beta_t\) controls how strongly the new key/value overwrites. In the real layer, \(k_t\) is L2-normalised and \(\beta_t\in(0,1)\); without normalisation the update can become unstable. Qwen3.5 uses GDN for most layers and standard gated attention every fourth layer (3:1). The chunkwise parallel form uses the WY representation of the product of rank-one Householder-like updates, so training is not strictly sequential.
 
 ![Gated DeltaNet state update](assets/diagrams/gdn.svg)
 
@@ -532,20 +542,21 @@ For a dense decoder with \(L\) layers, hidden size \(d\), FFN size \(d_{\text{ff
 
 \[
 P_{\text{attn per layer}} =
-dH d_h + 2dG d_h + H d_h d
-= d^2 + 2dG d_h + d^2,
+\underbrace{d\,H\,d_h}_{Q}
++\underbrace{2\,d\,G\,d_h}_{K,V}
++\underbrace{H\,d_h\,d}_{O}.
 \]
 
-assuming \(H d_h=d\),
+Do **not** assume \(H d_h=d\). It holds for Qwen3-14B, but not for Gemma 4 12B: local layers have \(H d_h=16\cdot256=4096\) while \(d=3840\), and global layers have \(H d_h=16\cdot512=8192\). The same asymmetry appears in the MLP input and output, so use the actual dimensions.
 
 \[
 P_{\text{MLP per layer}} = 3 d d_{\text{ff}},
-\]
-
-\[
+\qquad
 P_{\text{total}} \approx L(P_{\text{attn}}+P_{\text{MLP}})
 + (1+\mathbf{1}[\text{untied}])Vd.
 \]
+
+[43 §14](43-math-examples.md) counts a 328-parameter toy model by hand, then reconciles the Qwen and Gemma numbers.
 
 Qwen3-14B: \(d=5120\), \(L=40\), \(d_{\text{ff}}=17408\), \(H=40\), \(G=8\), \(d_h=128\), \(V=151{,}936\), untied:
 
@@ -555,15 +566,23 @@ P_{\text{MLP}}=267.4\text{M},\quad
 P_{\text{total}}\approx14.77\text{B}.
 \]
 
-Gemma 4 12B: \(d=3840\), \(L=48\), \(d_{\text{ff}}=15360\), \(H=16\), \(G=8\), \(d_h=256\), \(V=262{,}144\), tied:
+Gemma 4 12B has two attention shapes:
+
+| Layer type | \(H\) | \(G\) | \(d_h\) | \(P_{\text{attn}}\) | \(P_{\text{MLP}}\) | layers |
+|---|---:|---:|---:|---:|---:|---:|
+| local (sliding window) | 16 | 8 | 256 | 47.19M | 176.95M | 40 |
+| global (full attention) | 16 | **1** | **512** | 66.85M | 176.95M | 8 |
+
+The global layers use `num_global_key_value_heads = 1` and `global_head_dim = 512` in the checkpoint config. With tied embeddings:
 
 \[
-P_{\text{attn}}\approx47.2\text{M},\quad
-P_{\text{MLP}}\approx176.9\text{M},\quad
-P_{\text{total}}\approx11.8\text{B}
+40(47.19+176.95) + 8(66.85+176.95) + 3840\cdot262{,}144
+\approx 11.92\text{B}.
 \]
 
-(the official figure is 11.95B; projection shapes and fused parameters account for the difference).
+The official figure is 11.95B; norms, fused kernels and implementation-specific parameters account for the 0.03B difference. A naive count that uses 48 local layers would give 11.77B and undercount the global attention by about 0.15B.
+
+Run `scripts/inspect_architecture.py` for any config.
 
 Qwen2.5-Coder-14B: \(d=5120\), \(L=48\), \(d_{\text{ff}}=13824\), \(H=40\), \(G=8\), \(V=152{,}064\), untied: about 14.7B.
 
@@ -575,7 +594,7 @@ Run `scripts/estimate_pretraining.py` for any config.
 
 ### 14.1 Training compute
 
-For a dense model with \(N\) parameters and \(D\) tokens, the standard estimate is
+For a dense model with \(N\) parameters and \(D\) tokens, the standard estimate is below. [43 §15](43-math-examples.md) checks the units and the attention term on the toy model.
 
 \[
 C_{\text{train}} \approx 6ND.
@@ -584,10 +603,10 @@ C_{\text{train}} \approx 6ND.
 Why 6: forward is \(2ND\) (one multiply-add per weight per token), backward is \(4ND\) (two matmuls: input gradient and weight gradient). Attention score/value FLOPs add roughly
 
 \[
-12\,L\,T^2\,d
+12\,L\,T^2\,H\,d_h
 \]
 
-for training (forward + backward), which is negligible at 2K context and significant at 32K. The exact constant depends on the implementation; measure tokens/sec rather than trusting a formula. See [38 — Derivations and proofs](38-derivations.md) §13.
+for training (forward + backward), where \(H d_h\) is the total query width. This equals \(12LT^2d\) only when \(H d_h=d\), which is true for Qwen3-14B but not for Gemma’s global layers. It is negligible at 2K and significant at 32K. The exact constant depends on the implementation; measure tokens/sec rather than trusting a formula. See [38 — Derivations and proofs](38-derivations.md) §13 and [43 — Worked examples](43-math-examples.md) §17.
 
 ### 14.2 Inference compute
 
@@ -607,7 +626,7 @@ As above:
 \text{KV bytes} \approx 2LGd_hTb.
 \]
 
-At 32K, Qwen3-14B bf16 is ~5.4 GB; Gemma 4 12B is ~12.9 GB before K=V, ~8 GB after the global-layer sharing (estimate). Quantizing the cache to int8 halves it again.
+At 32K, Qwen3-14B bf16 is ~5.37 GB. Gemma 4 12B is hybrid, not full attention: 40 local layers with \(W=1024\) plus 8 global layers with \(G=1\), \(d_h=512\), and \(K=V\), for about **604 MB** at 32K and **2.48 GB** at 256K. The 12.9 GB full-attention calculation is only an upper bound. Quantizing the cache to int8 halves either number. See [37 — Architecture anatomy](37-architecture.md) §2.1 and [43 — Worked examples](43-math-examples.md) §7.
 
 ### 14.4 Wall time and cost
 
@@ -619,7 +638,7 @@ At 32K, Qwen3-14B bf16 is ~5.4 GB; Gemma 4 12B is ~12.9 GB before K=V, ~8 GB aft
 \text{cost} = \text{GPU-hours}\times\text{price}.
 \]
 
-MFU (model FLOPs utilisation) is typically 30–50% for large training, lower at long context. Example: Qwen3-14B on 36T tokens at 40% MFU on 10,000 H100-class GPUs is ~2.24M GPU-hours, ~9.3 days, ~$5.6M at $2.50/GPU-hour — before failures and data. Real frontier runs are larger.
+MFU (model FLOPs utilisation) is typically 30–50% for large training, lower at long context. Example: Qwen3-14B on 36T tokens at 40% MFU on 10,000 H100-class GPUs (494.5 TFLOP/s dense BF16) is ~4.48M GPU-hours, ~18.7 days, ~$11.2M at $2.50/GPU-hour — before failures and data. If you quote the 989 TFLOP/s sparse peak, use roughly 20% MFU to get the same effective throughput.
 
 ---
 
@@ -641,13 +660,15 @@ For symmetric weights, \(z=0\). A **blockwise** format (Q4_0, GGUF) uses one sca
 s_b = \frac{\max_{i\in b}|w_i|}{2^{k-1}-1}.
 \]
 
+This is the clean symmetric grid \(-(2^{k-1}-1)\ldots(2^{k-1}-1)\). Real Q4_0 uses the code range \(-8\ldots7\) and a scale of \(\max/8\), so its positive maximum is represented by 7 rather than 8. The error bound below is therefore a good approximation, not the exact GGML quantizer behaviour; see [43 — Worked examples](43-math-examples.md) §18.
+
 Quantization-aware training (QAT) inserts the quantize/dequantize function in the forward pass and uses a straight-through estimator for the gradient:
 
 \[
 \frac{\partial \hat x}{\partial x}\approx 1.
 \]
 
-Gemma 4 uses QAT for mobile int2/int4 weights with int8 activations and for Q4_0; the report’s 12B memory goes from 24.0 GB bf16 to 7.65 GB Q4_0, and int8 KV at 32K adds 0.28 GB. That is how a 12B model fits a laptop.
+Gemma 4 uses QAT for mobile int2/int4 weights with int8 activations and for Q4_0; the report’s 12B memory goes from 24.0 GB bf16 to 7.65 GB Q4_0, and int8 KV at 32K adds 0.28 GB. That is how a 12B model fits a laptop. [43 §16](43-math-examples.md) quantizes five weights and shows the blockwise error reduction.
 
 ---
 
@@ -682,7 +703,7 @@ The learning rate schedule is usually warmup + cosine:
 \end{cases}
 \]
 
-Qwen3 develops scaling laws for learning rate and batch size across its three pretraining stages; you should not copy a 14B LR to a 100M model.
+Qwen3 develops scaling laws for learning rate and batch size across its three pretraining stages; you should not copy a 14B LR to a 100M model. [43 §17](43-math-examples.md) runs two AdamW steps and one cosine-schedule point.
 
 ### 16.1 Initialisation
 
