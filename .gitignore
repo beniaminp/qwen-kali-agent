@@ -57,3 +57,6 @@ reports/*.csv
 site/
 dist/
 build/
+
+# Agent/tool state
+.cortexkit/
