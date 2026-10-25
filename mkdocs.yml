@@ -65,6 +65,8 @@ markdown_extensions:
   - pymdownx.highlight:
       anchor_linenums: true
   - pymdownx.inlinehilite
+  - pymdownx.arithmatex:
+      generic: true
   - pymdownx.snippets
   - pymdownx.tasklist:
       custom_checkbox: true
@@ -75,6 +77,10 @@ markdown_extensions:
 
 extra_css:
   - stylesheets/gitbook.css
+
+extra_javascript:
+  - javascripts/mathjax.js
+  - https://unpkg.com/mathjax@3/es5/tex-mml-chtml.js
 
 extra:
   generator: false
@@ -124,6 +130,12 @@ nav:
       - Gemma fine-tuning: 29-gemma4-finetuning.md
       - Gemma synthetic data: 30-gemma4-synthetic.md
       - Gemma vs Qwen: 31-gemma-vs-qwen.md
+  - Model internals:
+      - Mathematics: 32-mathematics.md
+      - How Qwen was built: 33-qwen-creation.md
+      - How Gemma 4 was built: 34-gemma4-creation.md
+      - From zero: 35-from-zero.md
+      - Reproducing 12B–14B: 36-reproducing-12b-14b.md
   - Reference:
       - References: 14-references.md
       - Appendix A — configs: appendix-a-configs.md

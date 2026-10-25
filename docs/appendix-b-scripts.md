@@ -16,6 +16,8 @@ All scripts live in `scripts/` and are run from the repository root with the pro
 | `mix_datasets.py` | Mix track JSONL with weights, convert tool arguments, split deterministically. | `python scripts/mix_datasets.py --source kali=... --source java=... --source react=... --out data/unified/processed --arguments-format string` |
 | `validate_gemma4_dataset.py` | Gemma 4 lint: object arguments, tool ids, native call syntax, thinking history. | `python scripts/validate_gemma4_dataset.py data/gemma4/react/processed/train.jsonl --tools examples/react/tools.json --strict` |
 | `compare_models.py` | Send the same prompts/tools to two OpenAI-compatible endpoints and record both. | `python scripts/compare_models.py --a-base-url ... --b-base-url ... --prompts ... --tools ... --out reports/compare.jsonl` |
+| `estimate_pretraining.py` | Parameters, FLOPs, GPU-hours, cost and KV cache from an architecture config. | `python scripts/estimate_pretraining.py --preset qwen3-14b --tokens 36e12 --gpus 10000 --mfu 0.4` |
+| `train_tiny_transformer.py` | Runnable tiny Llama-style model with RMSNorm, RoPE, GQA and SwiGLU. | `python scripts/train_tiny_transformer.py --data data/tiny/corpus.txt --out runs/tiny --dim 256 --layers 6` |
 | `prepare_dataset.py` | Normalize a canonical JSONL, split train/valid/test, write a manifest. | `python scripts/prepare_dataset.py data/interim/all.jsonl --out data/processed --split 0.9 0.05 0.05` |
 | `split_dataset.py` | Deterministic split with exact/near-dup filtering. | `python scripts/split_dataset.py data/interim/all.jsonl --out data/processed` |
 | `generate_synthetic.py` | DeepSeek/OpenAI-compatible generation with retries, cost tracking and JSON validation. | `python scripts/generate_synthetic.py --tasks 50 --out data/interim/gen.jsonl` |
@@ -439,7 +441,51 @@ It records content, tool calls, latency, usage and errors. It does not judge; ap
 
 ---
 
-## B.20 Shell helpers
+## B.20 `estimate_pretraining.py`
+
+A planning calculator, not a benchmark. It computes:
+
+- parameters from \(V,d,L,d_{\text{ff}},H,G,d_h\) and tied/untied embeddings;
+- training FLOPs \(C\approx6ND\);
+- inference FLOPs per token \(2N\);
+- GPU-hours, wall time and cost from peak TFLOP/s and MFU;
+- KV-cache size at a given context.
+
+Presets: `qwen3-14b`, `qwen25-coder-14b`, `gemma4-12b`, `tiny-100m`, `small-1b`.
+
+```bash
+python scripts/estimate_pretraining.py --preset gemma4-12b --tokens 10e12 \
+  --gpus 1000 --peak-tflops 989 --mfu 0.4 --cost-per-gpu-hour 2.5
+```
+
+Replace default peak/MFU with measured numbers. Real runs add 20–50% for failures, checkpointing, data loading and evaluation.
+
+---
+
+## B.21 `train_tiny_transformer.py`
+
+A dependency-light PyTorch reference implementation of a modern decoder:
+
+- byte-level tokens (vocab 256), so no tokenizer training is needed;
+- RMSNorm;
+- RoPE;
+- GQA;
+- SwiGLU;
+- causal cross-entropy;
+- AdamW, cosine schedule, warmup, gradient clipping;
+- validation and sampling.
+
+```bash
+python scripts/train_tiny_transformer.py --data data/tiny/corpus.txt \
+  --out runs/tiny --dim 256 --layers 6 --heads 8 --kv-heads 2 \
+  --ffn 768 --seq 256 --batch 16 --steps 2000
+```
+
+For a GPU: `--device cuda --dtype bf16`. It is a teaching implementation, not a production trainer; use FSDP/Megatron for real runs. See [35 — From zero](35-from-zero.md).
+
+---
+
+## B.22 Shell helpers
 
 `export_gguf.sh`:
 
@@ -459,7 +505,7 @@ It records content, tool calls, latency, usage and errors. It does not judge; ap
 
 ---
 
-## B.21 Exit codes
+## B.23 Exit codes
 
 | Code | Meaning |
 |---|---|

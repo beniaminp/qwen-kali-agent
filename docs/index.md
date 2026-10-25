@@ -18,6 +18,8 @@ This site is the long-form handbook. The repository root has the same material i
   <a class="gb-card" href="26-one-model-for-all/"><strong>One Qwen3 for all</strong><span>Qwen3-14B + three adapters, or one mixed adapter for Kali, Java and React.</span></a>
   <a class="gb-card" href="27-gemma4-12b/"><strong>Gemma 4 12B track</strong><span>Apache-2.0, 256K context, vision, native tool calls and a separate MLX runbook.</span></a>
   <a class="gb-card" href="31-gemma-vs-qwen/"><strong>Compare Gemma vs Qwen</strong><span>Keep both stacks, same prompts and tools, and decide with the real verifier.</span></a>
+  <a class="gb-card" href="32-mathematics/"><strong>The mathematics</strong><span>Attention, RoPE, GQA, MoE, Gated DeltaNet, FLOPs and KV cache, from first principles.</span></a>
+  <a class="gb-card" href="35-from-zero/"><strong>Build from zero</strong><span>Train a small model you can actually afford; the full budget and recipe.</span></a>
 </div>
 
 
@@ -56,6 +58,11 @@ This site is the long-form handbook. The repository root has the same material i
 | Try Gemma 4 12B | [27 — Gemma 4 12B](27-gemma4-12b.md) |
 | Fine-tune Gemma | [29 — Gemma fine-tuning](29-gemma4-finetuning.md) |
 | Compare Gemma and Qwen | [31 — Gemma vs Qwen](31-gemma-vs-qwen.md) |
+| Understand the mathematics | [32 — Mathematics](32-mathematics.md) |
+| See how Qwen was built | [33 — How Qwen was built](33-qwen-creation.md) |
+| See how Gemma 4 was built | [34 — How Gemma 4 was built](34-gemma4-creation.md) |
+| Train a model from zero | [35 — From zero](35-from-zero.md) |
+| Reproduce a 12B–14B | [36 — Reproducing 12B–14B](36-reproducing-12b-14b.md) |
 
 ---
 

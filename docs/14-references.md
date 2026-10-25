@@ -137,4 +137,9 @@
 - [Gemma fine-tuning](29-gemma4-finetuning.md) — the MLX Gemma runbook.
 - [Gemma synthetic data](30-gemma4-synthetic.md) — verified Gemma data generation.
 - [Gemma vs Qwen](31-gemma-vs-qwen.md) — side-by-side serving and comparison.
+- [Mathematics](32-mathematics.md) — transformer, attention, RoPE, MoE, GDN, FLOPs and memory.
+- [How Qwen was built](33-qwen-creation.md) — data, pretraining, post-training, RL and distillation.
+- [How Gemma 4 was built](34-gemma4-creation.md) — encoder-free 12B, hybrid attention, QAT, MTP and data.
+- [From zero](35-from-zero.md) — a small model you can actually train.
+- [Reproducing 12B–14B](36-reproducing-12b-14b.md) — the real compute, data and infrastructure.
 - [Network security](16-network-security.md) — asset inventory, TLS, segmentation, packet evidence.

@@ -57,6 +57,14 @@ A GitBook-style table of contents, mirrored by the site navigation.
 - [Gemma synthetic data](30-gemma4-synthetic.md)
 - [Gemma vs Qwen](31-gemma-vs-qwen.md)
 
+## Model internals
+
+- [Mathematics](32-mathematics.md)
+- [How Qwen was built](33-qwen-creation.md)
+- [How Gemma 4 was built](34-gemma4-creation.md)
+- [From zero](35-from-zero.md)
+- [Reproducing 12B–14B](36-reproducing-12b-14b.md)
+
 ## Reference
 
 - [References](14-references.md)

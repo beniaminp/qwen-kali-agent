@@ -1,0 +1,4 @@
+# Optional: from-scratch experiments. Not needed for MLX LoRA training.
+torch>=2.6
+sentencepiece>=0.2
+numpy

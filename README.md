@@ -89,6 +89,11 @@ Or use `make docs-serve` / `make docs`. `site/` is generated and git-ignored.
 │   ├── 29-gemma4-finetuning.md Gemma 4 12B MLX runbook
 │   ├── 30-gemma4-synthetic.md generating verified Gemma data
 │   ├── 31-gemma-vs-qwen.md    running both stacks and comparing
+│   ├── 32-mathematics.md      transformer, attention, RoPE, MoE, GDN, FLOPs
+│   ├── 33-qwen-creation.md    how Qwen2.5/3/3.5 were pretrained and post-trained
+│   ├── 34-gemma4-creation.md  how Gemma 4 was built, including the 12B
+│   ├── 35-from-zero.md        train a small model you can afford
+│   ├── 36-reproducing-12b-14b.md real budget for a 12B–14B from scratch
 │   ├── appendix-a-configs.md  every config, explained
 │   ├── appendix-b-scripts.md  what each script does
 │   └── appendix-c-runbook.md  day-by-day execution plan
@@ -322,6 +327,34 @@ python scripts/compare_models.py \
 ```
 
 The script records both outputs. Apply each patch and grade with the real verifier (Maven, Vitest/Playwright, or the Kali golden set).
+
+---
+
+## Model internals: how Qwen and Gemma 4 were built
+
+Five chapters cover the mathematics and the public training pipelines:
+
+- [32 — Mathematics](docs/32-mathematics.md): tokenization, cross-entropy, RMSNorm, GQA, RoPE/p-RoPE, SwiGLU/GeGLU, MoE routing, Gated DeltaNet, hybrid attention, MTP, parameter/FLOP/KV-cache formulas, quantization.
+- [33 — How Qwen was built](docs/33-qwen-creation.md): Qwen2.5 (18T tokens), Qwen2.5-Coder (5.5T code), Qwen3 (36T, 119 languages, three-stage pretraining, GRPO, thinking fusion, distillation), Qwen3-Coder, Qwen3.5.
+- [34 — How Gemma 4 was built](docs/34-gemma4-creation.md): encoder-free 12B, 5:1 local/global attention, K=V, p-RoPE, QAT, MTP, TPU infrastructure, instruction tuning.
+- [35 — From zero](docs/35-from-zero.md): a 125M–1.2B model you can actually train, tokenizer, data, stability and evaluation.
+- [36 — Reproducing 12B–14B](docs/36-reproducing-12b-14b.md): the real $5M+ compute, 100+ TB data, parallelism, team and timeline.
+
+Two planning tools:
+
+```bash
+# Parameters, FLOPs, GPU-hours, cost and KV cache
+python scripts/estimate_pretraining.py --preset qwen3-14b --tokens 36e12 \
+  --gpus 10000 --mfu 0.4
+
+# A tiny, runnable Llama-style model (requires PyTorch)
+uv pip install -r requirements-pretrain.txt
+python scripts/train_tiny_transformer.py --data data/tiny/corpus.txt \
+  --out runs/tiny --dim 256 --layers 6 --heads 8 --kv-heads 2 --ffn 768 \
+  --seq 256 --batch 16 --steps 2000
+```
+
+The honest conclusion: architecture is reproducible; the 36T-token data pipeline and 10,000-GPU budget are not a laptop project. Use LoRA on the released weights unless you need a new tokenizer, architecture or license.
 
 ---
 
