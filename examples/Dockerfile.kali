@@ -1,0 +1,9 @@
+FROM kalilinux/kali-rolling
+
+ENV DEBIAN_FRONTEND=noninteractive
+RUN apt-get update && apt-get install -y --no-install-recommends \
+      nmap curl dnsutils openssl nikto whatweb gobuster ffuf smbclient enum4linux \
+    && rm -rf /var/lib/apt/lists/*
+
+WORKDIR /tmp
+CMD ["sleep", "infinity"]

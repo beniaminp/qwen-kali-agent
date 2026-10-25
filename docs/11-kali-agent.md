@@ -105,6 +105,8 @@ Start the bridge on loopback only:
 ./server.py --ip 127.0.0.1 --port 5000
 ```
 
+For a reproducible tool image, build `examples/Dockerfile.kali` (nmap, curl, dig, openssl, nikto, whatweb, gobuster, ffuf, smbclient, enum4linux) and start the lab with `docker compose -f examples/docker-compose.lab.yml up -d`.
+
 ---
 
 ## 3. Connect the model

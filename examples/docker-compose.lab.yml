@@ -1,6 +1,9 @@
 services:
   kali:
-    image: kalilinux/kali-rolling
+    build:
+      context: .
+      dockerfile: Dockerfile.kali
+    image: qwen-kali-lab:latest
     command: ["sleep", "infinity"]
     container_name: kali-lab
     networks: [labnet]
