@@ -45,6 +45,10 @@ A GitBook-style table of contents, mirrored by the site navigation.
 - [React fine-tuning](24-react-finetuning.md)
 - [React synthetic data](25-react-synthetic.md)
 
+## One model for all
+
+- [Qwen3 for all three tracks](26-one-model-for-all.md)
+
 ## Reference
 
 - [References](14-references.md)

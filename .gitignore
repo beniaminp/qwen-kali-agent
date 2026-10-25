@@ -39,9 +39,15 @@ data/react/interim/
 data/react/processed/
 data/react/processed-*/
 data/react/golden/
+data/unified/raw/
+data/unified/interim/
+data/unified/processed/
+data/unified/processed-*/
+data/unified/golden/
 !data/README.md
 !data/java/README.md
 !data/react/README.md
+!data/unified/README.md
 !data/examples/
 
 # Logs and reports

@@ -24,6 +24,7 @@ This repository is documentation first, with runnable configs and scripts second
 | **LoRA recipe (Oct 2026)** | **All layers**, rank 16, `scale: 2.0` (= PEFT alpha 32), LR `1e-4`, effective batch 8, one to two epochs. Verify with `scripts/check_lora.py`; details in [`docs/17-finetune-2026-update.md`](docs/17-finetune-2026-update.md). |
 | **Java/Quarkus track** | **Qwen2.5-Coder-14B-Instruct 4-bit**, 24/48 blocks, Java 25 LTS + Quarkus 3.40 LTS. Qwen3-Coder-30B-A3B is the teacher/judge, not a local training target. Start at [`docs/18-java-quarkus.md`](docs/18-java-quarkus.md). |
 | **React/Tailwind track** | **Qwen2.5-Coder-14B-Instruct 4-bit**, 24/48 blocks at 3K, React 19.3 + Tailwind 4.3 + Vite 8 + Node 24 LTS. TypeScript 7-compatible source; TypeScript 6 API bridge for ESLint. Start at [`docs/22-react-tailwind.md`](docs/22-react-tailwind.md). |
+| **One Qwen3 for all** | **Qwen3-14B 4-bit** with **three LoRA adapters** (Kali, Java, React) is the best local “one model for all”. One mixed adapter is possible with [`docs/26-one-model-for-all.md`](docs/26-one-model-for-all.md). For training-free serving, Qwen3-Coder-30B-A3B or Qwen3-30B-A3B-2507 at 4-bit fits 32 GB. |
 | **Dataset size** | **2–5M tokens** for a first serious adapter; 10M+ only if evaluation proves it helps. Quality and trajectory realism dominate raw row count. |
 | **Serving** | **`llama-server`** (llama.cpp) for the best tool-call fidelity; **`mlx_lm.server`** for the fastest local iteration; **Ollama** for convenience. All are unauthenticated — put them behind loopback + SSH, never on an untrusted LAN. |
 | **Agent harness** | **OpenCode + MCP-Kali-Server** (small, typed tool surface) or **hackingBuddyGPT** (minimal research baseline). Avoid mega-tool MCP servers with a 14B. |
@@ -255,6 +256,26 @@ mlx_lm.lora --config configs/qwen2.5-coder-14b-react.yaml
 ```
 
 Read in order: [22 — React & Tailwind](docs/22-react-tailwind.md), [23 — React datasets](docs/23-react-datasets.md), [24 — React fine-tuning](docs/24-react-finetuning.md), [25 — React synthetic data](docs/25-react-synthetic.md).
+
+---
+
+## One Qwen3 for all three tracks
+
+If you want one base model instead of two, use **Qwen3-14B 4-bit** (40 layers, 32K native) with **three LoRA adapters** — one per track — rather than one mixed adapter. It is the only Qwen3 dense model that trains reliably in 32 GB and is strong enough for Kali tool use, Java/Quarkus and React/Tailwind.
+
+```bash
+# Build a mixed dataset only if you want one adapter
+python scripts/mix_datasets.py \
+  --source kali=data/processed/train.jsonl \
+  --source java=data/java/processed/train.jsonl \
+  --source react=data/react/processed/train.jsonl \
+  --weights kali=0.40,java=0.30,react=0.30 \
+  --out data/unified/processed --arguments-format string
+
+mlx_lm.lora --config configs/qwen3-14b-unified.yaml
+```
+
+`--arguments-format string` is required: Qwen3 expects JSON-string tool arguments, unlike Qwen2.5-Coder’s objects. Read [26 — One Qwen3 for all](docs/26-one-model-for-all.md) for the decision matrix, the three-adapter serving pattern, mixed-adapter ratios and the quality trade-offs.
 
 ---
 

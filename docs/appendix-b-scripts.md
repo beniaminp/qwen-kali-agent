@@ -13,6 +13,7 @@ All scripts live in `scripts/` and are run from the repository root with the pro
 | `mine_java_commits.py` | Mine Java commit seeds (base commit, task, patch, test command) from a git repo. | `python scripts/mine_java_commits.py --repo ~/src/quarkus-quickstarts --out data/java/interim/seeds.jsonl --limit 300 --only-with-tests` |
 | `validate_react_dataset.py` | React/Tailwind lint: v3 directives, legacy React, dynamic classes, XSS, a11y smells, argument shape. | `python scripts/validate_react_dataset.py data/react/processed/train.jsonl --tools examples/react/tools.json --require-dict-arguments --strict` |
 | `mine_react_commits.py` | Mine React/TS commit seeds from a git repo. | `python scripts/mine_react_commits.py --repo ~/src/shadcn-ui/ui --out data/react/interim/seeds.jsonl --limit 300 --only-with-tests` |
+| `mix_datasets.py` | Mix track JSONL with weights, convert tool arguments, split deterministically. | `python scripts/mix_datasets.py --source kali=... --source java=... --source react=... --out data/unified/processed --arguments-format string` |
 | `prepare_dataset.py` | Normalize a canonical JSONL, split train/valid/test, write a manifest. | `python scripts/prepare_dataset.py data/interim/all.jsonl --out data/processed --split 0.9 0.05 0.05` |
 | `split_dataset.py` | Deterministic split with exact/near-dup filtering. | `python scripts/split_dataset.py data/interim/all.jsonl --out data/processed` |
 | `generate_synthetic.py` | DeepSeek/OpenAI-compatible generation with retries, cost tracking and JSON validation. | `python scripts/generate_synthetic.py --tasks 50 --out data/interim/gen.jsonl` |
@@ -372,7 +373,33 @@ It detects npm/pnpm/yarn from `package.json` and builds a check command from the
 
 ---
 
-## B.17 Shell helpers
+## B.17 `mix_datasets.py`
+
+Builds one train/valid/test split from several track files:
+
+```bash
+python scripts/mix_datasets.py \
+  --source kali=data/processed/train.jsonl \
+  --source java=data/java/processed/train.jsonl \
+  --source react=data/react/processed/train.jsonl \
+  --weights kali=0.40,java=0.30,react=0.30 \
+  --out data/unified/processed --arguments-format string
+```
+
+It:
+
+- converts tool `arguments` to JSON strings (`string`) or objects (`dict`);
+- adds `meta.track` when missing;
+- exact-dedups rows;
+- samples each source to its weight relative to the total available;
+- splits each source, then shuffles the combined splits;
+- writes a manifest with per-track counts and SHA-256 per file.
+
+Use `--arguments-format string` for Qwen3 and `dict` for Qwen2.5-Coder. `--dry-run` prints counts without writing. It does not near-dedup; use `split_dataset.py --minhash` before mixing if needed.
+
+---
+
+## B.18 Shell helpers
 
 `export_gguf.sh`:
 
@@ -392,7 +419,7 @@ It detects npm/pnpm/yarn from `package.json` and builds a check command from the
 
 ---
 
-## B.18 Exit codes
+## B.19 Exit codes
 
 | Code | Meaning |
 |---|---|

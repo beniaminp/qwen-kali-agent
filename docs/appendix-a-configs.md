@@ -220,7 +220,17 @@ The React configs point at `data/react/processed` (or `processed-long`) and use 
 
 ---
 
-## A.11 Config validation
+## A.11 Unified Qwen3 config
+
+| Config | Base | Role | Layers | Rank | Scale | Seq | LR |
+|---|---|---|---|---:|---:|---:|---:|
+| `qwen3-14b-unified.yaml` | Qwen3-14B 4-bit | one adapter, Kali + Java + React | 24/40 | 16 | 2.0 | 2048 | 1e-4 |
+
+Data: `data/unified/processed`, built with `scripts/mix_datasets.py --arguments-format string`. Details and trade-offs: [26 — One Qwen3 for all](26-one-model-for-all.md).
+
+---
+
+## A.12 Config validation
 
 ```bash
 python - <<'PY'

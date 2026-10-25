@@ -19,12 +19,16 @@ REACT_TOOLS ?= examples/react/tools.json
 REACT_ADAPTER ?= adapters/qwen25-coder-14b-react
 REACT_FUSED ?= fused/qwen25-coder-14b-react-4bit
 REACT_REPO ?= ../shadcn-ui/ui
+UNIFIED_MODEL ?= mlx-community/Qwen3-14B-4bit
+UNIFIED_DATA ?= data/unified/processed
+UNIFIED_ADAPTER ?= adapters/qwen3-14b-unified
 MKDOCS ?= $(PYTHON) -m mkdocs
 
 .PHONY: help setup check data-check stats train-8b train-8b-all train-14b train-14b-last16 \
         check-lora sweep eval fuse serve serve-llama tunnel \
         java-check java-mine java-train-7b java-train-14b java-check-lora java-fuse \
         react-check react-mine react-train-7b react-train-14b react-check-lora react-fuse \
+        unified-mix unified-check unified-train unified-check-lora \
         docs-install docs docs-serve clean
 
 help: ## Show this help
@@ -102,6 +106,24 @@ react-check-lora: ## Verify the React adapter covers MLP projections
 
 react-fuse: ## Fuse the React adapter
 	mlx_lm.fuse --model $(REACT_MODEL) --adapter-path $(REACT_ADAPTER) --save-path $(REACT_FUSED)
+
+unified-mix: ## Mix Kali + Java + React data for one Qwen3 adapter
+	$(PYTHON) scripts/mix_datasets.py \
+	  --source kali=$(DATA)/train.jsonl \
+	  --source java=$(JAVA_DATA)/train.jsonl \
+	  --source react=$(REACT_DATA)/train.jsonl \
+	  --weights kali=0.40,java=0.30,react=0.30 \
+	  --out $(UNIFIED_DATA) --arguments-format string
+
+unified-check: ## Validate the unified split and token lengths
+	$(PYTHON) scripts/validate_dataset.py $(UNIFIED_DATA)/train.jsonl
+	$(PYTHON) scripts/token_stats.py $(UNIFIED_DATA)/train.jsonl --model Qwen/Qwen3-14B
+
+unified-train: ## One Qwen3-14B adapter for all three tracks
+	mlx_lm.lora --config configs/qwen3-14b-unified.yaml
+
+unified-check-lora: ## Verify the unified adapter covers MLP projections
+	$(PYTHON) scripts/check_lora.py --model $(UNIFIED_MODEL) --num-layers 24 --rank 16 --scale 2
 
 sweep: ## Generate a small rank/LR/layer sweep
 	$(PYTHON) scripts/make_sweep.py --base configs/qwen3-14b-all-layers.yaml \

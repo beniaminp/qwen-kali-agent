@@ -2,6 +2,8 @@
 
 *Last verified: 25 October 2026. Version facts were checked against the npm registry, React and Tailwind release posts, the TypeScript 7 announcement, the Vite 8 announcement, the React Router v8 changelog and Node's release index.*
 
+> If you want one Qwen3 base for Kali, Java and React instead of a React-specific coder, see [26 — One Qwen3 for all](26-one-model-for-all.md). The React-specific adapter here is still the higher-quality option for React.
+
 This is the start of the front-end track. It answers the same three questions as the Java track:
 
 1. **Which React and Tailwind versions should the model target?**

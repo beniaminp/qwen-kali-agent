@@ -2,6 +2,8 @@
 
 *Research pass: 25 October 2026. This chapter supersedes the hyperparameter defaults in chapter 08 where they disagree.*
 
+> Want one base model for Kali, Java/Quarkus and React/Tailwind? See [26 — One Qwen3 for all](26-one-model-for-all.md).
+
 The first edition of this handbook used the common MLX recipe: last 16 blocks, rank 16, `scale: 20`, learning rate `5e-5–1e-4`, and 400–600 iterations. That recipe works, but it is not the best-supported starting point in late 2026. Three findings matter:
 
 1. **LoRA should cover all layers, especially the MLP layers — not just the last N blocks.**

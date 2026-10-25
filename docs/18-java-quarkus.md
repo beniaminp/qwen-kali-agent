@@ -2,6 +2,8 @@
 
 *Last verified: 25 October 2026. Version facts were checked against the Quarkus releases page, the Quarkus 3.31/3.40/4.0 posts, OpenJDK and Oracle roadmaps.*
 
+> If you want one Qwen3 base for Kali, Java and React instead of a Java-specific coder, see [26 — One Qwen3 for all](26-one-model-for-all.md). The Java-specific adapter here is still the higher-quality option for Java.
+
 This is the start of the Java/Quarkus track. It answers three questions before any training:
 
 1. **Which Java and Quarkus versions should the model target?**

@@ -131,4 +131,5 @@
 - [React datasets](23-react-datasets.md) — React/Tailwind corpora, licenses, quality filters.
 - [React fine-tuning](24-react-finetuning.md) — Qwen2.5-Coder React/Tailwind runbook.
 - [React synthetic data](25-react-synthetic.md) — verified React/Tailwind generation.
+- [One Qwen3 for all](26-one-model-for-all.md) — one base, three adapters; single-adapter trade-offs.
 - [Network security](16-network-security.md) — asset inventory, TLS, segmentation, packet evidence.

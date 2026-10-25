@@ -15,6 +15,7 @@ This site is the long-form handbook. The repository root has the same material i
   <a class="gb-card" href="20-java-finetuning/"><strong>Fine-tune a coder</strong><span>Qwen2.5-Coder on Java/Quarkus data, evaluated with Maven and ArchUnit.</span></a>
   <a class="gb-card" href="22-react-tailwind/"><strong>React &amp; Tailwind</strong><span>React 19, Tailwind 4.3, accessible design systems and Vite 8.</span></a>
   <a class="gb-card" href="24-react-finetuning/"><strong>Fine-tune a UI coder</strong><span>Qwen2.5-Coder on React data, verified by TypeScript, Playwright and axe.</span></a>
+  <a class="gb-card" href="26-one-model-for-all/"><strong>One Qwen3 for all</strong><span>Qwen3-14B + three adapters, or one mixed adapter for Kali, Java and React.</span></a>
 </div>
 
 
@@ -49,6 +50,7 @@ This site is the long-form handbook. The repository root has the same material i
 | Find React datasets | [23 — React datasets](23-react-datasets.md) |
 | Fine-tune a UI coder | [24 — React fine-tuning](24-react-finetuning.md) |
 | Generate React data with an LLM | [25 — React synthetic data](25-react-synthetic.md) |
+| Use one Qwen3 for all tracks | [26 — One Qwen3 for all](26-one-model-for-all.md) |
 
 ---
 

@@ -192,6 +192,7 @@ The day-by-day plan above is the Kali/agent track. The two coding tracks reuse t
 |---|---|---|---|---|
 | **Java/Quarkus** | Qwen2.5-Coder-14B 4-bit | 7B all layers | 24/48, seq 2K | Maven tests + ArchUnit |
 | **React/Tailwind** | Qwen2.5-Coder-14B 4-bit | 7B all layers, seq 4K | 24/48, seq 3K | TypeScript + Vitest + Playwright + axe |
+| **One Qwen3 for all** | Qwen3-14B 4-bit | 8B all layers | 24/40, seq 2K (three adapters) | Per-track harnesses |
 
 Start with [18 — Java landscape](18-java-quarkus.md) or [22 — React & Tailwind](22-react-tailwind.md). Expect 2–4M tokens of verified data and a 2–4 day 14B run on the M1 Pro.
 

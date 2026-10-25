@@ -35,6 +35,7 @@ All models below are **Apache-2.0** unless noted. Benchmark numbers are vendor-r
 | [`Qwen3-14B`](https://huggingface.co/Qwen/Qwen3-14B) | 2025-04 | 14.8B | Dense, 40 layers, GQA 40Q/8KV | 32K (131K YaRN) | **Recommended local training target.** BFCL-v3 70.4. |
 | [`Qwen3-32B`](https://huggingface.co/Qwen/Qwen3-32B) | 2025-04 | 32.8B | Dense, 64 layers | 32K (131K YaRN) | Inference-only at 4-bit on 32 GB; training does not fit. |
 | [`Qwen3-30B-A3B`](https://huggingface.co/Qwen/Qwen3-30B-A3B) | 2025-04 | 30.5B / 3.3B | MoE, 128 experts, 8 active | 32K | Inference fits; training is marginal. |
+| [`Qwen3-30B-A3B-Instruct-2507`](https://huggingface.co/Qwen/Qwen3-30B-A3B-Instruct-2507) | 2025-07 | 30.5B / 3.3B | MoE, 48 layers, non-thinking | 262K | Strong general/agentic MoE; 4-bit inference ~17–18 GB; no local LoRA. |
 | [`Qwen3-Coder-30B-A3B-Instruct`](https://huggingface.co/Qwen/Qwen3-Coder-30B-A3B-Instruct) | 2025-07 | 30.5B / 3.3B | MoE, 48 layers, non-thinking | 262K | Strong CLI/coding specialist. 4-bit inference ~17 GB. |
 | [`Qwen3.5-4B`](https://huggingface.co/Qwen/Qwen3.5-4B) | 2026-02 | 4.7B | Hybrid GDN, 32 layers, vision | 262K | Strong small agent; training conditional. |
 | [`Qwen3.5-9B`](https://huggingface.co/Qwen/Qwen3.5-9B) | 2026-02 | 9.7B | Hybrid GDN, 32 layers, vision | 262K | **Best quality/time if you rent a GPU.** BFCL-v4 66.1, TAU2 79.1. |
