@@ -31,6 +31,9 @@ jobs:
           path: site
 
   deploy:
+    # GitHub Pages for private repositories needs a paid plan.
+    # On a private repo this job is skipped; the build still validates every push.
+    if: github.event.repository.private == false
     needs: build
     runs-on: ubuntu-latest
     environment:
