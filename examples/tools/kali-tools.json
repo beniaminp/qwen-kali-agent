@@ -1,0 +1,118 @@
+[
+  {
+    "type": "function",
+    "function": {
+      "name": "scope_check",
+      "description": "Check whether a target is inside the authorized engagement scope before any active action. Use this first when the target is unfamiliar or the request is ambiguous.",
+      "parameters": {
+        "type": "object",
+        "properties": {
+          "target": {"type": "string", "description": "IPv4 address, CIDR, or hostname to check."}
+        },
+        "required": ["target"],
+        "additionalProperties": false
+      }
+    }
+  },
+  {
+    "type": "function",
+    "function": {
+      "name": "nmap_scan",
+      "description": "Run a read-only nmap scan against a target explicitly inside the authorized scope. Use for host discovery and service/version detection. Never use against public IPs, public domains, or anything outside the scope file. Returns stdout, stderr and exit code.",
+      "parameters": {
+        "type": "object",
+        "properties": {
+          "target": {"type": "string", "description": "IPv4, hostname, or CIDR inside scope."},
+          "flags": {"type": "string", "enum": ["-sn", "-sV", "-sC", "-sV -sC", "-p-"], "default": "-sV"},
+          "timeout_s": {"type": "integer", "minimum": 5, "maximum": 300, "default": 120}
+        },
+        "required": ["target"],
+        "additionalProperties": false
+      }
+    }
+  },
+  {
+    "type": "function",
+    "function": {
+      "name": "http_probe",
+      "description": "Fetch HTTP response headers and basic metadata from an in-scope URL. Use for technology and status identification. Do not use for authentication attempts or fuzzing.",
+      "parameters": {
+        "type": "object",
+        "properties": {
+          "url": {"type": "string", "description": "HTTP(S) URL whose host is inside scope."},
+          "method": {"type": "string", "enum": ["GET", "HEAD"], "default": "HEAD"},
+          "timeout_s": {"type": "integer", "minimum": 1, "maximum": 30, "default": 10}
+        },
+        "required": ["url"],
+        "additionalProperties": false
+      }
+    }
+  },
+  {
+    "type": "function",
+    "function": {
+      "name": "dns_lookup",
+      "description": "Resolve DNS records for an in-scope name. Read-only.",
+      "parameters": {
+        "type": "object",
+        "properties": {
+          "name": {"type": "string", "description": "Hostname inside scope."},
+          "record_type": {"type": "string", "enum": ["A", "AAAA", "MX", "TXT", "NS", "CNAME"], "default": "A"}
+        },
+        "required": ["name"],
+        "additionalProperties": false
+      }
+    }
+  },
+  {
+    "type": "function",
+    "function": {
+      "name": "tls_info",
+      "description": "Inspect the TLS certificate and negotiated protocol for an in-scope host. Read-only.",
+      "parameters": {
+        "type": "object",
+        "properties": {
+          "host": {"type": "string", "description": "Hostname or IP inside scope."},
+          "port": {"type": "integer", "minimum": 1, "maximum": 65535, "default": 443}
+        },
+        "required": ["host"],
+        "additionalProperties": false
+      }
+    }
+  },
+  {
+    "type": "function",
+    "function": {
+      "name": "kali_exec",
+      "description": "Run an allowlisted Kali CLI command in the isolated lab container. Use only for read-only enumeration tools approved by the engagement. The policy layer rejects destructive commands and targets outside scope. Never use for shell pipelines that download and execute code.",
+      "parameters": {
+        "type": "object",
+        "properties": {
+          "command": {"type": "string", "description": "A single command using an allowlisted binary (nmap, curl, dig, openssl, nikto, whatweb, gobuster, ffuf, smbclient, enum4linux)."},
+          "timeout_s": {"type": "integer", "minimum": 5, "maximum": 300, "default": 60}
+        },
+        "required": ["command"],
+        "additionalProperties": false
+      }
+    }
+  },
+  {
+    "type": "function",
+    "function": {
+      "name": "report_finding",
+      "description": "Record a finding with evidence and remediation. Use after verifying an observation. Does not execute anything.",
+      "parameters": {
+        "type": "object",
+        "properties": {
+          "title": {"type": "string"},
+          "severity": {"type": "string", "enum": ["info", "low", "medium", "high", "critical"]},
+          "evidence": {"type": "string", "description": "Command(s) and observed output supporting the finding."},
+          "remediation": {"type": "string"},
+          "target": {"type": "string", "description": "In-scope target."}
+        },
+        "required": ["title", "severity", "evidence", "target"],
+        "additionalProperties": false
+      }
+    }
+  }
+]

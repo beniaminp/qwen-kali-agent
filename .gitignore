@@ -1,0 +1,59 @@
+# macOS
+.DS_Store
+.AppleDouble
+.LSOverride
+._*
+
+# Python
+.venv/
+venv/
+__pycache__/
+*.py[cod]
+*.egg-info/
+.pytest_cache/
+.mypy_cache/
+.ruff_cache/
+
+# ML artefacts (large, reproducible)
+adapters/
+fused/
+mlx_models/
+checkpoints/
+*.safetensors
+*.gguf
+*.npz
+*.bin
+
+# Data (never commit datasets)
+data/raw/
+data/interim/
+data/processed/
+data/exports/
+!data/README.md
+!data/examples/
+
+# Logs and reports
+logs/
+runs/
+wandb/
+*.log
+reports/*.json
+reports/*.csv
+
+# Secrets
+.env
+.env.*
+!.env.example
+*.pem
+*.key
+
+# Editors
+.idea/
+.vscode/
+*.swp
+*~
+
+# Build
+site/
+dist/
+build/

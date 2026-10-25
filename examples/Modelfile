@@ -1,0 +1,4 @@
+FROM ./models/qwen3-14b-pentest-Q4_K_M.gguf
+PARAMETER num_ctx 16384
+PARAMETER temperature 0.2
+PARAMETER stop "<|im_end|>"

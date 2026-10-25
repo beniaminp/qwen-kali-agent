@@ -1,0 +1,30 @@
+services:
+  kali:
+    image: kalilinux/kali-rolling
+    command: ["sleep", "infinity"]
+    container_name: kali-lab
+    networks: [labnet]
+    cap_drop: ["ALL"]
+    cap_add: ["NET_RAW"]
+    security_opt: ["no-new-privileges:true"]
+    read_only: true
+    tmpfs:
+      - /tmp:size=64m
+      - /root:size=64m
+    pids_limit: 128
+    mem_limit: 1g
+    cpus: 1.0
+
+  dvwa:
+    image: vulnerables/web-dvwa
+    container_name: lab-dvwa
+    networks: [labnet]
+
+  juice:
+    image: bkimminich/juice-shop
+    container_name: lab-juice
+    networks: [labnet]
+
+networks:
+  labnet:
+    internal: true

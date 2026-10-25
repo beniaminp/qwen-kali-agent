@@ -1,0 +1,57 @@
+site_name: Qwen Kali Agent Handbook
+site_description: Fine-tuning and deploying a Qwen agentic model for authorized Kali Linux and network-security work on a 32 GB M1 Pro.
+site_author: Beniamin Pantiru
+repo_url: https://github.com/beniaminp/qwen-kali-agent
+repo_name: beniaminp/qwen-kali-agent
+copyright: Apache-2.0
+
+theme:
+  name: material
+  features:
+    - navigation.sections
+    - navigation.top
+    - content.code.copy
+    - search.suggest
+  palette:
+    - scheme: slate
+      primary: deep purple
+      accent: amber
+      toggle:
+        icon: material/brightness-4
+        name: Switch to light mode
+    - scheme: default
+      primary: deep purple
+      accent: amber
+      toggle:
+        icon: material/brightness-7
+        name: Switch to dark mode
+
+markdown_extensions:
+  - admonition
+  - pymdownx.details
+  - pymdownx.superfences
+  - pymdownx.tabbed:
+      alternate_style: true
+  - tables
+  - toc:
+      permalink: true
+
+nav:
+  - Home: index.md
+  - Landscape: 01-landscape.md
+  - Hardware: 02-hardware.md
+  - macOS setup: 03-macos-setup.md
+  - Data strategy: 04-data-strategy.md
+  - Datasets: 05-datasets.md
+  - Data format: 06-data-format.md
+  - Synthetic data: 07-synthetic-data.md
+  - Fine-tuning: 08-finetuning.md
+  - Evaluation: 09-evaluation.md
+  - Export & serving: 10-export-serving.md
+  - Kali agent: 11-kali-agent.md
+  - Safety & legal: 12-safety-legal.md
+  - Troubleshooting: 13-troubleshooting.md
+  - References: 14-references.md
+  - Appendix A — configs: appendix-a-configs.md
+  - Appendix B — scripts: appendix-b-scripts.md
+  - Appendix C — runbook: appendix-c-runbook.md

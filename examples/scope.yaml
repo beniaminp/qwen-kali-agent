@@ -1,0 +1,19 @@
+engagement_id: LAB-2026-001
+authorized_by: "Beniamin Pantiru"
+authorization_document: "/lab/authorization.pdf"
+targets:
+  - 10.10.10.0/24
+domains: []
+exclude:
+  - 10.10.10.1
+allowed_tools:
+  - scope_check
+  - nmap_scan
+  - http_probe
+  - dns_lookup
+  - tls_info
+  - kali_exec
+  - report_finding
+window:
+  start: 2026-10-25T08:00:00Z
+  end: 2026-10-26T08:00:00Z

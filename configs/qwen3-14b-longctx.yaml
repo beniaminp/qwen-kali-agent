@@ -1,0 +1,30 @@
+model: mlx-community/Qwen3-14B-4bit
+train: true
+data: data/processed_long
+fine_tune_type: lora
+optimizer: adamw
+num_layers: 12
+batch_size: 1
+iters: 500
+val_batches: 20
+learning_rate: 4.0e-5
+steps_per_report: 10
+steps_per_eval: 100
+save_every: 100
+max_seq_length: 4096
+grad_checkpoint: true
+grad_accumulation_steps: 8
+mask_prompt: true
+adapter_path: adapters/qwen3-14b-longctx
+seed: 42
+lora_parameters:
+  rank: 16
+  dropout: 0.05
+  scale: 20.0
+lr_schedule:
+  name: cosine_decay
+  warmup: 80
+  arguments: [4.0e-5, 500, 1.0e-6]
+optimizer_config:
+  adamw:
+    weight_decay: 0.01
