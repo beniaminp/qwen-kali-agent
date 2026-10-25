@@ -4,7 +4,13 @@
 
 This chapter is the common mathematical foundation for the next four. It explains what a decoder-only language model computes, why Qwen and Gemma choose different pieces, and how to count parameters, FLOPs, memory and KV cache.
 
-It is deliberately equation-heavy. If you only want the practical training recipe, skip to [35 — From zero](35-from-zero.md) and [36 — Reproducing 12B–14B](36-reproducing-12b-14b.md).
+It is deliberately equation-heavy. There are three companion pages:
+
+- **[37 — Architecture anatomy](37-architecture.md)** maps every equation to actual tensor shapes and `config.json` keys.
+- **[38 — Derivations and proofs](38-derivations.md)** proves the softmax gradient, the RoPE relative property, the RMSNorm Jacobian, the GDN recurrence and the quantization error bound.
+- **[35 — From zero](35-from-zero.md)** and **[36 — Reproducing 12B–14B](36-reproducing-12b-14b.md)** turn the math into a training plan.
+
+If you only want the practical fine-tuning recipe, skip to [08 — Fine-tuning](08-finetuning.md).
 
 ---
 
@@ -159,6 +165,10 @@ y &= u + \operatorname{MLP}(\operatorname{Norm}_2(u)).
 
 Qwen3 and Qwen2.5 use **pre-norm** with RMSNorm. Gemma 4 uses **pre-norm and post-norm** with RMSNorm and QK-norm. Pre-norm keeps the residual path close to identity, which stabilises deep training; post-norm can improve final representation quality at the cost of stability.
 
+![A pre-norm decoder block](assets/diagrams/decoder-block.svg)
+
+The residual stream is the shared highway: every attention and MLP block reads from it and writes back to it. That is why all blocks have the same shape \(B\times T\times d\), and why LoRA can be inserted into projections without changing the interface. [37 — Architecture anatomy](37-architecture.md) traces the exact tensors for Qwen3-14B and Gemma 4 12B.
+
 ---
 
 ## 5. RMSNorm
@@ -253,6 +263,8 @@ K,V\in\mathbb{R}^{G\times d_h},\quad
 Qwen3-14B: \(H=40\), \(G=8\), ratio 5. Qwen2.5-Coder-14B: \(H=40\), \(G=8\), ratio 5. Gemma 4 12B: \(H=16\), \(G=8\), ratio 2.
 
 GQA reduces the KV cache and memory bandwidth with a small quality cost. Multi-query attention is the extreme \(G=1\); multi-head attention is \(G=H\).
+
+![Multi-head vs grouped-query attention](assets/diagrams/gqa.svg)
 
 ### 6.3 KV cache
 
@@ -464,6 +476,10 @@ S_t = \alpha_t S_{t-1}
 
 \(\alpha_t\) forgets stale associations; \(\beta_t\) controls how strongly the new key/value overwrites. Qwen3.5 uses GDN for most layers and standard gated attention every fourth layer (3:1). The chunkwise parallel form uses the WY representation of the product of rank-one Householder-like updates, so training is not strictly sequential.
 
+![Gated DeltaNet state update](assets/diagrams/gdn.svg)
+
+[38 — Derivations and proofs](38-derivations.md) shows that the delta rule is one online gradient step on \(\|S^\top k_t-v_t\|^2\), and derives the WY chunkwise form.
+
 **Why hybrid?** GDN gives cheap long-context memory; full attention every few layers recovers precise retrieval. Qwen3.5: 3 GDN : 1 gated attention. Gemma 4: 5 local sliding-window : 1 global attention (4:1 for E2B). Both are compromises between \(O(T^2)\) quality and \(O(T)\) cost.
 
 ---
@@ -477,6 +493,8 @@ A_{ij} = 0 \quad\text{if } j<i-W+1.
 \]
 
 Gemma 4 uses \(W=1024\), with a 5:1 local:global ratio. Local layers cost \(O(TW)\) instead of \(O(T^2)\) and their KV cache is bounded by \(W\). Global layers keep full attention every sixth layer for long-range retrieval.
+
+![Qwen3 full attention and Gemma 4 hybrid stack](assets/diagrams/hybrid-stacks.svg)
 
 The cache for a hybrid stack is
 
@@ -563,7 +581,13 @@ For a dense model with \(N\) parameters and \(D\) tokens, the standard estimate 
 C_{\text{train}} \approx 6ND.
 \]
 
-Why 6: forward is \(2ND\) (one multiply-add per weight per token), backward is \(4ND\) (two matmuls: input gradient and weight gradient). Attention score FLOPs add \(O(LT^2d)\), which matters at long context.
+Why 6: forward is \(2ND\) (one multiply-add per weight per token), backward is \(4ND\) (two matmuls: input gradient and weight gradient). Attention score/value FLOPs add roughly
+
+\[
+12\,L\,T^2\,d
+\]
+
+for training (forward + backward), which is negligible at 2K context and significant at 32K. The exact constant depends on the implementation; measure tokens/sec rather than trusting a formula. See [38 — Derivations and proofs](38-derivations.md) §13.
 
 ### 14.2 Inference compute
 

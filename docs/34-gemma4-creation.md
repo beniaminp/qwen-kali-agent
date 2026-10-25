@@ -4,6 +4,8 @@
 
 Gemma 4 is Google DeepMind’s open-weight, natively multimodal family. The public report is unusually detailed about architecture, tokenizer, training infrastructure and post-training. This chapter reconstructs the design and the mathematics; exact data mixtures and hyperparameters remain undisclosed.
 
+> **Read with:** [37 — Architecture anatomy](37-architecture.md) for the encoder-free 12B tensor shapes and [38 — Derivations and proofs](38-derivations.md) for the RoPE/GQA/quantization math.
+
 ---
 
 ## 1. The family

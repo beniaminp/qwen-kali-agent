@@ -60,6 +60,8 @@ A GitBook-style table of contents, mirrored by the site navigation.
 ## Model internals
 
 - [Mathematics](32-mathematics.md)
+- [Architecture anatomy](37-architecture.md)
+- [Derivations and proofs](38-derivations.md)
 - [How Qwen was built](33-qwen-creation.md)
 - [How Gemma 4 was built](34-gemma4-creation.md)
 - [From zero](35-from-zero.md)

@@ -19,6 +19,8 @@ This site is the long-form handbook. The repository root has the same material i
   <a class="gb-card" href="27-gemma4-12b/"><strong>Gemma 4 12B track</strong><span>Apache-2.0, 256K context, vision, native tool calls and a separate MLX runbook.</span></a>
   <a class="gb-card" href="31-gemma-vs-qwen/"><strong>Compare Gemma vs Qwen</strong><span>Keep both stacks, same prompts and tools, and decide with the real verifier.</span></a>
   <a class="gb-card" href="32-mathematics/"><strong>The mathematics</strong><span>Attention, RoPE, GQA, MoE, Gated DeltaNet, FLOPs and KV cache, from first principles.</span></a>
+  <a class="gb-card" href="37-architecture/"><strong>Architecture anatomy</strong><span>From config.json to tensor shapes, GQA and KV cache, with diagrams.</span></a>
+  <a class="gb-card" href="38-derivations/"><strong>Derivations and proofs</strong><span>Softmax gradients, RoPE, RMSNorm, GDN, quantization and speculative decoding.</span></a>
   <a class="gb-card" href="35-from-zero/"><strong>Build from zero</strong><span>Train a small model you can actually afford; the full budget and recipe.</span></a>
 </div>
 
@@ -59,6 +61,8 @@ This site is the long-form handbook. The repository root has the same material i
 | Fine-tune Gemma | [29 — Gemma fine-tuning](29-gemma4-finetuning.md) |
 | Compare Gemma and Qwen | [31 — Gemma vs Qwen](31-gemma-vs-qwen.md) |
 | Understand the mathematics | [32 — Mathematics](32-mathematics.md) |
+| Map math to real tensor shapes | [37 — Architecture anatomy](37-architecture.md) |
+| Read the proofs | [38 — Derivations and proofs](38-derivations.md) |
 | See how Qwen was built | [33 — How Qwen was built](33-qwen-creation.md) |
 | See how Gemma 4 was built | [34 — How Gemma 4 was built](34-gemma4-creation.md) |
 | Train a model from zero | [35 — From zero](35-from-zero.md) |

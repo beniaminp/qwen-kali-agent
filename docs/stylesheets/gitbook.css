@@ -440,3 +440,24 @@ body {
     grid-template-columns: 1fr;
   }
 }
+
+/* Architecture diagrams */
+.md-typeset img {
+  max-width: 100%;
+  height: auto;
+}
+
+.md-typeset p:has(> img) {
+  text-align: center;
+}
+
+.md-typeset img[src$=".svg"] {
+  border: 1px solid var(--md-default-fg-color--lightest);
+  border-radius: 0.5rem;
+  background: #fbfaff;
+  padding: 0.4rem;
+}
+
+[data-md-color-scheme="slate"] .md-typeset img[src$=".svg"] {
+  background: #fbfaff;
+}

@@ -17,6 +17,7 @@ All scripts live in `scripts/` and are run from the repository root with the pro
 | `validate_gemma4_dataset.py` | Gemma 4 lint: object arguments, tool ids, native call syntax, thinking history. | `python scripts/validate_gemma4_dataset.py data/gemma4/react/processed/train.jsonl --tools examples/react/tools.json --strict` |
 | `compare_models.py` | Send the same prompts/tools to two OpenAI-compatible endpoints and record both. | `python scripts/compare_models.py --a-base-url ... --b-base-url ... --prompts ... --tools ... --out reports/compare.jsonl` |
 | `estimate_pretraining.py` | Parameters, FLOPs, GPU-hours, cost and KV cache from an architecture config. | `python scripts/estimate_pretraining.py --preset qwen3-14b --tokens 36e12 --gpus 10000 --mfu 0.4` |
+| `inspect_architecture.py` | Read a local/HF `config.json`, print per-component params, shapes, GQA, cache and FLOPs. | `python scripts/inspect_architecture.py --hf Qwen/Qwen3-14B --seq 32768` |
 | `train_tiny_transformer.py` | Runnable tiny Llama-style model with RMSNorm, RoPE, GQA and SwiGLU. | `python scripts/train_tiny_transformer.py --data data/tiny/corpus.txt --out runs/tiny --dim 256 --layers 6` |
 | `prepare_dataset.py` | Normalize a canonical JSONL, split train/valid/test, write a manifest. | `python scripts/prepare_dataset.py data/interim/all.jsonl --out data/processed --split 0.9 0.05 0.05` |
 | `split_dataset.py` | Deterministic split with exact/near-dup filtering. | `python scripts/split_dataset.py data/interim/all.jsonl --out data/processed` |
@@ -485,7 +486,30 @@ For a GPU: `--device cuda --dtype bf16`. It is a teaching implementation, not a 
 
 ---
 
-## B.22 Shell helpers
+## B.22 `inspect_architecture.py`
+
+Reads only `config.json` — no weights, no PyTorch — and prints:
+
+- hidden size, layers, FFN, heads, KV heads, head dimension, vocabulary;
+- parameter count for attention, MLP, embedding, LM head and total;
+- active parameters for MoE;
+- KV cache at a chosen sequence length;
+- training/inference FLOPs for a batch.
+
+```bash
+python scripts/inspect_architecture.py --hf Qwen/Qwen3-14B --seq 32768
+python scripts/inspect_architecture.py --hf Qwen/Qwen3-30B-A3B --seq 4096
+python scripts/inspect_architecture.py --preset gemma4-12b --seq 32768
+python scripts/inspect_architecture.py --config config.json --json
+```
+
+Presets: `qwen3-14b`, `qwen25-coder-14b`, `gemma4-12b`, `qwen3-30b-a3b`.
+
+The KV estimate is an upper bound for full attention; it does not model sliding windows or K=V sharing. See [37 — Architecture anatomy](37-architecture.md).
+
+---
+
+## B.23 Shell helpers
 
 `export_gguf.sh`:
 
@@ -505,7 +529,7 @@ For a GPU: `--device cuda --dtype bf16`. It is a teaching implementation, not a 
 
 ---
 
-## B.23 Exit codes
+## B.24 Exit codes
 
 | Code | Meaning |
 |---|---|

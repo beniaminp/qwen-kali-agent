@@ -4,6 +4,8 @@
 
 This chapter reconstructs the Qwen pipeline from public information. It separates what is disclosed (architecture, token counts, training stages, some RL details) from what is not (exact data mixture, exact hyperparameters, full RL recipe).
 
+> **Read with:** [37 — Architecture anatomy](37-architecture.md) for the shape-level view and [38 — Derivations and proofs](38-derivations.md) for the math behind GRPO, distillation and attention.
+
 ---
 
 ## 1. The family tree

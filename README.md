@@ -90,6 +90,8 @@ Or use `make docs-serve` / `make docs`. `site/` is generated and git-ignored.
 │   ├── 30-gemma4-synthetic.md generating verified Gemma data
 │   ├── 31-gemma-vs-qwen.md    running both stacks and comparing
 │   ├── 32-mathematics.md      transformer, attention, RoPE, MoE, GDN, FLOPs
+│   ├── 37-architecture.md     config.json to tensors, shapes, cache, trade-offs
+│   ├── 38-derivations.md      softmax/attention/RMSNorm/RoPE/GDN proofs
 │   ├── 33-qwen-creation.md    how Qwen2.5/3/3.5 were pretrained and post-trained
 │   ├── 34-gemma4-creation.md  how Gemma 4 was built, including the 12B
 │   ├── 35-from-zero.md        train a small model you can afford
@@ -335,6 +337,8 @@ The script records both outputs. Apply each patch and grade with the real verifi
 Five chapters cover the mathematics and the public training pipelines:
 
 - [32 — Mathematics](docs/32-mathematics.md): tokenization, cross-entropy, RMSNorm, GQA, RoPE/p-RoPE, SwiGLU/GeGLU, MoE routing, Gated DeltaNet, hybrid attention, MTP, parameter/FLOP/KV-cache formulas, quantization.
+- [37 — Architecture anatomy](docs/37-architecture.md): config keys, exact tensor shapes for Qwen3-14B and Gemma 4 12B, GQA/cache, stack patterns and design trade-offs.
+- [38 — Derivations and proofs](docs/38-derivations.md): softmax gradient, attention backward, RMSNorm Jacobian, RoPE relative proof, GDN as gradient descent, quantization error, speculative decoding, scaling laws.
 - [33 — How Qwen was built](docs/33-qwen-creation.md): Qwen2.5 (18T tokens), Qwen2.5-Coder (5.5T code), Qwen3 (36T, 119 languages, three-stage pretraining, GRPO, thinking fusion, distillation), Qwen3-Coder, Qwen3.5.
 - [34 — How Gemma 4 was built](docs/34-gemma4-creation.md): encoder-free 12B, 5:1 local/global attention, K=V, p-RoPE, QAT, MTP, TPU infrastructure, instruction tuning.
 - [35 — From zero](docs/35-from-zero.md): a 125M–1.2B model you can actually train, tokenizer, data, stability and evaluation.
@@ -346,6 +350,10 @@ Two planning tools:
 # Parameters, FLOPs, GPU-hours, cost and KV cache
 python scripts/estimate_pretraining.py --preset qwen3-14b --tokens 36e12 \
   --gpus 10000 --mfu 0.4
+
+# Read config.json only: shapes, GQA, parameter breakdown, cache
+python scripts/inspect_architecture.py --hf Qwen/Qwen3-14B --seq 32768
+python scripts/inspect_architecture.py --preset gemma4-12b --seq 32768
 
 # A tiny, runnable Llama-style model (requires PyTorch)
 uv pip install -r requirements-pretrain.txt
