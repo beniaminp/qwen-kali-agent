@@ -44,10 +44,16 @@ data/unified/interim/
 data/unified/processed/
 data/unified/processed-*/
 data/unified/golden/
+data/gemma4/*/raw/
+data/gemma4/*/interim/
+data/gemma4/*/processed/
+data/gemma4/*/processed-*/
+data/gemma4/*/golden/
 !data/README.md
 !data/java/README.md
 !data/react/README.md
 !data/unified/README.md
+!data/gemma4/README.md
 !data/examples/
 
 # Logs and reports

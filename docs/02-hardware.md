@@ -101,6 +101,8 @@ Peak ≈ **19–21 GB** — fits under the default 21.3 GiB only if nothing else
 
 **React/Tailwind note.** The same Qwen2.5-Coder-14B at 3,072 tokens peaks around 21–25 GB with 24/48 blocks; the 7B at 4,096 with all 28 blocks is the safer long-context run at 12–16 GB. Front-end examples include component code, styles and tests, so context is the pressure point.
 
+**Gemma 4 12B note.** 11.95B, 48 layers, 4-bit weights ~6.6–7.6 GB. 24/48 at 2,048 peaks around 16–22 GB; 24/48 at 3,072 around 20–26 GB. Start at 24/48, not all 48. See [27 — Gemma 4 12B](27-gemma4-12b.md).
+
 With `--grad-checkpoint`:
 
 - Activations ≈ `B × L × N_lora × 2H × 2` ≈ **0.67 GB**.

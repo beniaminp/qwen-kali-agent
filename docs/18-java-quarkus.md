@@ -4,6 +4,8 @@
 
 > If you want one Qwen3 base for Kali, Java and React instead of a Java-specific coder, see [26 — One Qwen3 for all](26-one-model-for-all.md). The Java-specific adapter here is still the higher-quality option for Java.
 
+> For a second base, see the parallel [Gemma 4 12B track](27-gemma4-12b.md); compare both on the same Maven/ArchUnit tasks before switching.
+
 This is the start of the Java/Quarkus track. It answers three questions before any training:
 
 1. **Which Java and Quarkus versions should the model target?**

@@ -230,7 +230,20 @@ Data: `data/unified/processed`, built with `scripts/mix_datasets.py --arguments-
 
 ---
 
-## A.12 Config validation
+## A.12 Gemma 4 12B configs
+
+| Config | Role | Layers | Rank | Scale | Seq | LR |
+|---|---|---|---:|---:|---:|---:|
+| `gemma4-12b-kali.yaml` | Kali/agent | 24/48 | 16 | 2.0 | 2048 | 1e-4 |
+| `gemma4-12b-java.yaml` | Java/Quarkus | 24/48 | 16 | 2.0 | 2048 | 1e-4 |
+| `gemma4-12b-react.yaml` | React/Tailwind | 24/48 | 16 | 2.0 | 3072 | 1e-4 |
+| `gemma4-12b-unified.yaml` | one mixed adapter | 24/48 | 16 | 2.0 | 2048 | 1e-4 |
+
+Data lives under `data/gemma4/<track>/processed`; tool arguments must be **objects** (`--arguments-format dict`). Details: [27 — Gemma 4 12B](27-gemma4-12b.md), [29 — Gemma fine-tuning](29-gemma4-finetuning.md).
+
+---
+
+## A.13 Config validation
 
 ```bash
 python - <<'PY'

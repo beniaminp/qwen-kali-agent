@@ -16,6 +16,8 @@ This site is the long-form handbook. The repository root has the same material i
   <a class="gb-card" href="22-react-tailwind/"><strong>React &amp; Tailwind</strong><span>React 19, Tailwind 4.3, accessible design systems and Vite 8.</span></a>
   <a class="gb-card" href="24-react-finetuning/"><strong>Fine-tune a UI coder</strong><span>Qwen2.5-Coder on React data, verified by TypeScript, Playwright and axe.</span></a>
   <a class="gb-card" href="26-one-model-for-all/"><strong>One Qwen3 for all</strong><span>Qwen3-14B + three adapters, or one mixed adapter for Kali, Java and React.</span></a>
+  <a class="gb-card" href="27-gemma4-12b/"><strong>Gemma 4 12B track</strong><span>Apache-2.0, 256K context, vision, native tool calls and a separate MLX runbook.</span></a>
+  <a class="gb-card" href="31-gemma-vs-qwen/"><strong>Compare Gemma vs Qwen</strong><span>Keep both stacks, same prompts and tools, and decide with the real verifier.</span></a>
 </div>
 
 
@@ -51,18 +53,23 @@ This site is the long-form handbook. The repository root has the same material i
 | Fine-tune a UI coder | [24 — React fine-tuning](24-react-finetuning.md) |
 | Generate React data with an LLM | [25 — React synthetic data](25-react-synthetic.md) |
 | Use one Qwen3 for all tracks | [26 — One Qwen3 for all](26-one-model-for-all.md) |
+| Try Gemma 4 12B | [27 — Gemma 4 12B](27-gemma4-12b.md) |
+| Fine-tune Gemma | [29 — Gemma fine-tuning](29-gemma4-finetuning.md) |
+| Compare Gemma and Qwen | [31 — Gemma vs Qwen](31-gemma-vs-qwen.md) |
 
 ---
 
 ## The one-paragraph answer
 
-**Two tracks.**
+**Three primary tracks.**
 
 **Kali/agent:** train **Qwen3-14B** with 4-bit QLoRA using **MLX-LM** on the M1 Pro. Use **Qwen3-8B** for the first smoke run. Build a **2–5M-token** mix of general tool calling, multi-turn agentic trajectories, Kali CLI data, execution-verified synthetic trajectories, and refusal/scope examples. Evaluate on **BFCL**, **KaliBench** (held-out test), **Cybench** and a private **240-task golden set**. Serve with **`llama-server`** for the best tool fidelity, or **`mlx_lm.server`** for speed, behind an **SSH tunnel** to the Kali VM. Put a deterministic **policy layer** between the model and the lab: scope file, allowlist, confirmation, audit log, kill switch. Publish only if the unsafe-action rate is zero and the licenses are clean.
 
 **Java/Quarkus:** train **Qwen2.5-Coder-14B-Instruct** with 4-bit QLoRA, adapting 24 of 48 blocks. Target **Java 25 LTS + Quarkus 3.40 LTS**, teach hexagonal architecture and SOLID, and verify every example with Maven tests and ArchUnit. Qwen3-Coder-30B-A3B is the teacher/judge, not a local training target. Start at [18 — Java landscape](18-java-quarkus.md).
 
 **React/Tailwind:** train **Qwen2.5-Coder-14B-Instruct** with 4-bit QLoRA at 3K context. Target **React 19.3 + Tailwind CSS 4.3 + Vite 8 + Node 24 LTS**, teach component architecture, design tokens and accessibility, and verify every example with TypeScript, Vitest, Playwright and axe. Start at [22 — React & Tailwind](22-react-tailwind.md).
+
+**Gemma 4 12B (optional second stack):** Apache-2.0, 11.95B dense, 256K context, text/image/audio, native tool calling. It is a strong React/vision base and a credible Java/Kali challenger. Train separate adapters and compare with Qwen on the same golden set; start at [27 — Gemma 4 12B](27-gemma4-12b.md).
 
 ---
 

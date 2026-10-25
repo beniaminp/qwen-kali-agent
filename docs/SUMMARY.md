@@ -49,6 +49,14 @@ A GitBook-style table of contents, mirrored by the site navigation.
 
 - [Qwen3 for all three tracks](26-one-model-for-all.md)
 
+## Gemma 4 12B
+
+- [Gemma landscape](27-gemma4-12b.md)
+- [Gemma datasets](28-gemma4-datasets.md)
+- [Gemma fine-tuning](29-gemma4-finetuning.md)
+- [Gemma synthetic data](30-gemma4-synthetic.md)
+- [Gemma vs Qwen](31-gemma-vs-qwen.md)
+
 ## Reference
 
 - [References](14-references.md)

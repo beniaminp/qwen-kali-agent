@@ -4,6 +4,8 @@
 
 > If you want one Qwen3 base for Kali, Java and React instead of a React-specific coder, see [26 — One Qwen3 for all](26-one-model-for-all.md). The React-specific adapter here is still the higher-quality option for React.
 
+> For a second base with native vision and 256K context, see the parallel [Gemma 4 12B React track](27-gemma4-12b.md) and [Gemma fine-tuning](29-gemma4-finetuning.md). It does not replace this Qwen track.
+
 This is the start of the front-end track. It answers the same three questions as the Java track:
 
 1. **Which React and Tailwind versions should the model target?**

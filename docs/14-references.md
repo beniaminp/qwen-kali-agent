@@ -132,4 +132,9 @@
 - [React fine-tuning](24-react-finetuning.md) — Qwen2.5-Coder React/Tailwind runbook.
 - [React synthetic data](25-react-synthetic.md) — verified React/Tailwind generation.
 - [One Qwen3 for all](26-one-model-for-all.md) — one base, three adapters; single-adapter trade-offs.
+- [Gemma 4 12B](27-gemma4-12b.md) — the alternative base, architecture, memory and tool format.
+- [Gemma datasets](28-gemma4-datasets.md) — data and licenses for the Gemma track.
+- [Gemma fine-tuning](29-gemma4-finetuning.md) — the MLX Gemma runbook.
+- [Gemma synthetic data](30-gemma4-synthetic.md) — verified Gemma data generation.
+- [Gemma vs Qwen](31-gemma-vs-qwen.md) — side-by-side serving and comparison.
 - [Network security](16-network-security.md) — asset inventory, TLS, segmentation, packet evidence.

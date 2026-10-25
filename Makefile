@@ -22,6 +22,11 @@ REACT_REPO ?= ../shadcn-ui/ui
 UNIFIED_MODEL ?= mlx-community/Qwen3-14B-4bit
 UNIFIED_DATA ?= data/unified/processed
 UNIFIED_ADAPTER ?= adapters/qwen3-14b-unified
+GEMMA_MODEL ?= mlx-community/gemma-4-12b-it-4bit
+GEMMA_ROOT ?= data/gemma4
+GEMMA_TRACK ?= react
+GEMMA_ADAPTER ?= adapters/gemma4-12b-react
+GEMMA_FUSED ?= fused/gemma4-12b-react-4bit
 MKDOCS ?= $(PYTHON) -m mkdocs
 
 .PHONY: help setup check data-check stats train-8b train-8b-all train-14b train-14b-last16 \
@@ -29,6 +34,8 @@ MKDOCS ?= $(PYTHON) -m mkdocs
         java-check java-mine java-train-7b java-train-14b java-check-lora java-fuse \
         react-check react-mine react-train-7b react-train-14b react-check-lora react-fuse \
         unified-mix unified-check unified-train unified-check-lora \
+        gemma4-check gemma4-train-kali gemma4-train-java gemma4-train-react \
+        gemma4-train-unified gemma4-check-lora gemma4-fuse gemma4-serve \
         docs-install docs docs-serve clean
 
 help: ## Show this help
@@ -124,6 +131,33 @@ unified-train: ## One Qwen3-14B adapter for all three tracks
 
 unified-check-lora: ## Verify the unified adapter covers MLP projections
 	$(PYTHON) scripts/check_lora.py --model $(UNIFIED_MODEL) --num-layers 24 --rank 16 --scale 2
+
+gemma4-check: ## Validate a Gemma split (TRACK=react by default)
+	$(PYTHON) scripts/validate_dataset.py $(GEMMA_ROOT)/$(GEMMA_TRACK)/processed/train.jsonl
+	$(PYTHON) scripts/validate_gemma4_dataset.py $(GEMMA_ROOT)/$(GEMMA_TRACK)/processed/train.jsonl --strict
+	$(PYTHON) scripts/token_stats.py $(GEMMA_ROOT)/$(GEMMA_TRACK)/processed/train.jsonl --model google/gemma-4-12B-it
+
+gemma4-train-kali: ## Gemma 4 12B Kali adapter
+	mlx_lm.lora --config configs/gemma4-12b-kali.yaml
+
+gemma4-train-java: ## Gemma 4 12B Java/Quarkus adapter
+	mlx_lm.lora --config configs/gemma4-12b-java.yaml
+
+gemma4-train-react: ## Gemma 4 12B React/Tailwind adapter
+	mlx_lm.lora --config configs/gemma4-12b-react.yaml
+
+gemma4-train-unified: ## Gemma 4 12B one mixed adapter
+	mlx_lm.lora --config configs/gemma4-12b-unified.yaml
+
+gemma4-check-lora: ## Verify the Gemma adapter covers attention + MLP
+	$(PYTHON) scripts/check_lora.py --model $(GEMMA_MODEL) --num-layers 24 --rank 16 --scale 2
+
+gemma4-fuse: ## Fuse the selected Gemma adapter
+	mlx_lm.fuse --model $(GEMMA_MODEL) --adapter-path $(GEMMA_ADAPTER) --save-path $(GEMMA_FUSED)
+
+gemma4-serve: ## Serve the fused Gemma model on loopback
+	mlx_lm.server --model $(GEMMA_FUSED) --host 127.0.0.1 --port 8083 \
+	  --max-tokens 4096 --temp 0.2 --top-p 0.95
 
 sweep: ## Generate a small rank/LR/layer sweep
 	$(PYTHON) scripts/make_sweep.py --base configs/qwen3-14b-all-layers.yaml \

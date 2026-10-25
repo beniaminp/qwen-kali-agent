@@ -2,6 +2,8 @@
 
 *Last verified: 25 October 2026 against the Qwen model cards, the Qwen3 technical report, the Qwen3-Coder repository and MLX-LM 0.32.2.*
 
+> Considering **Gemma 4 12B** as a second base? See [27 — Gemma 4 12B](27-gemma4-12b.md) and [31 — Gemma vs Qwen](31-gemma-vs-qwen.md). The Qwen recommendation here is unchanged.
+
 The handbook now has three tracks:
 
 - **Kali/agent** — tool calling, scope, recovery, refusal.

@@ -25,6 +25,7 @@ This repository is documentation first, with runnable configs and scripts second
 | **Java/Quarkus track** | **Qwen2.5-Coder-14B-Instruct 4-bit**, 24/48 blocks, Java 25 LTS + Quarkus 3.40 LTS. Qwen3-Coder-30B-A3B is the teacher/judge, not a local training target. Start at [`docs/18-java-quarkus.md`](docs/18-java-quarkus.md). |
 | **React/Tailwind track** | **Qwen2.5-Coder-14B-Instruct 4-bit**, 24/48 blocks at 3K, React 19.3 + Tailwind 4.3 + Vite 8 + Node 24 LTS. TypeScript 7-compatible source; TypeScript 6 API bridge for ESLint. Start at [`docs/22-react-tailwind.md`](docs/22-react-tailwind.md). |
 | **One Qwen3 for all** | **Qwen3-14B 4-bit** with **three LoRA adapters** (Kali, Java, React) is the best local “one model for all”. One mixed adapter is possible with [`docs/26-one-model-for-all.md`](docs/26-one-model-for-all.md). For training-free serving, Qwen3-Coder-30B-A3B or Qwen3-30B-A3B-2507 at 4-bit fits 32 GB. |
+| **Gemma 4 12B track** | **Gemma 4 12B 4-bit**, 24/48 blocks, Apache-2.0, 256K context, vision/native tool calls. Separate configs/data/ports; keep Qwen unchanged and compare with [`docs/31-gemma-vs-qwen.md`](docs/31-gemma-vs-qwen.md). |
 | **Dataset size** | **2–5M tokens** for a first serious adapter; 10M+ only if evaluation proves it helps. Quality and trajectory realism dominate raw row count. |
 | **Serving** | **`llama-server`** (llama.cpp) for the best tool-call fidelity; **`mlx_lm.server`** for the fastest local iteration; **Ollama** for convenience. All are unauthenticated — put them behind loopback + SSH, never on an untrusted LAN. |
 | **Agent harness** | **OpenCode + MCP-Kali-Server** (small, typed tool surface) or **hackingBuddyGPT** (minimal research baseline). Avoid mega-tool MCP servers with a 14B. |
@@ -82,6 +83,12 @@ Or use `make docs-serve` / `make docs`. `site/` is generated and git-ignored.
 │   ├── 23-react-datasets.md   React/Tailwind datasets, licenses, quality filters
 │   ├── 24-react-finetuning.md Qwen2.5-Coder React/Tailwind runbook
 │   ├── 25-react-synthetic.md  generating verified React/Tailwind data with an LLM
+│   ├── 26-one-model-for-all.md one Qwen3 base, three adapters, mixed-data trade-offs
+│   ├── 27-gemma4-12b.md       Gemma 4 12B architecture, memory and tool format
+│   ├── 28-gemma4-datasets.md  Gemma datasets, licenses, Gemma-specific filters
+│   ├── 29-gemma4-finetuning.md Gemma 4 12B MLX runbook
+│   ├── 30-gemma4-synthetic.md generating verified Gemma data
+│   ├── 31-gemma-vs-qwen.md    running both stacks and comparing
 │   ├── appendix-a-configs.md  every config, explained
 │   ├── appendix-b-scripts.md  what each script does
 │   └── appendix-c-runbook.md  day-by-day execution plan
@@ -276,6 +283,45 @@ mlx_lm.lora --config configs/qwen3-14b-unified.yaml
 ```
 
 `--arguments-format string` is required: Qwen3 expects JSON-string tool arguments, unlike Qwen2.5-Coder’s objects. Read [26 — One Qwen3 for all](docs/26-one-model-for-all.md) for the decision matrix, the three-adapter serving pattern, mixed-adapter ratios and the quality trade-offs.
+
+---
+
+## Gemma 4 12B track
+
+The Gemma track is a **parallel stack**, not a replacement. It uses Gemma 4 12B (11.95B dense, 48 layers, 256K context, Apache-2.0, text/image/audio) with separate configs, data, adapters and ports. The Qwen files stay untouched.
+
+```bash
+mkdir -p data/gemma4/{kali,java,react,unified}
+
+# Gemma tool arguments must be mappings, not strings
+python scripts/prepare_dataset.py data/gemma4/react/interim/all.jsonl \
+  --out data/gemma4/react/processed --arguments-format dict
+
+python scripts/validate_gemma4_dataset.py data/gemma4/react/processed/train.jsonl \
+  --tools examples/react/tools.json --strict
+
+python scripts/check_lora.py \
+  --model mlx-community/gemma-4-12b-it-4bit \
+  --num-layers 24 --rank 16 --scale 2
+
+mlx_lm.lora --config configs/gemma4-12b-react.yaml
+```
+
+Read in order: [27 — Gemma 4 12B](docs/27-gemma4-12b.md), [28 — Gemma datasets](docs/28-gemma4-datasets.md), [29 — Gemma fine-tuning](docs/29-gemma4-finetuning.md), [30 — Gemma synthetic data](docs/30-gemma4-synthetic.md), [31 — Gemma vs Qwen](docs/31-gemma-vs-qwen.md).
+
+To compare both stacks on the same tasks:
+
+```bash
+python scripts/compare_models.py \
+  --a-base-url http://127.0.0.1:8082/v1 --a-model qwen25-coder-14b-react \
+  --b-base-url http://127.0.0.1:8085/v1 --b-model gemma4-12b-react \
+  --prompts data/golden/react-prompts.jsonl \
+  --tools examples/react/tools.json \
+  --temperature 0.2 --max-tokens 4096 --seed 42 \
+  --out reports/compare-react.jsonl
+```
+
+The script records both outputs. Apply each patch and grade with the real verifier (Maven, Vitest/Playwright, or the Kali golden set).
 
 ---
 

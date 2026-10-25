@@ -14,6 +14,8 @@ All scripts live in `scripts/` and are run from the repository root with the pro
 | `validate_react_dataset.py` | React/Tailwind lint: v3 directives, legacy React, dynamic classes, XSS, a11y smells, argument shape. | `python scripts/validate_react_dataset.py data/react/processed/train.jsonl --tools examples/react/tools.json --require-dict-arguments --strict` |
 | `mine_react_commits.py` | Mine React/TS commit seeds from a git repo. | `python scripts/mine_react_commits.py --repo ~/src/shadcn-ui/ui --out data/react/interim/seeds.jsonl --limit 300 --only-with-tests` |
 | `mix_datasets.py` | Mix track JSONL with weights, convert tool arguments, split deterministically. | `python scripts/mix_datasets.py --source kali=... --source java=... --source react=... --out data/unified/processed --arguments-format string` |
+| `validate_gemma4_dataset.py` | Gemma 4 lint: object arguments, tool ids, native call syntax, thinking history. | `python scripts/validate_gemma4_dataset.py data/gemma4/react/processed/train.jsonl --tools examples/react/tools.json --strict` |
+| `compare_models.py` | Send the same prompts/tools to two OpenAI-compatible endpoints and record both. | `python scripts/compare_models.py --a-base-url ... --b-base-url ... --prompts ... --tools ... --out reports/compare.jsonl` |
 | `prepare_dataset.py` | Normalize a canonical JSONL, split train/valid/test, write a manifest. | `python scripts/prepare_dataset.py data/interim/all.jsonl --out data/processed --split 0.9 0.05 0.05` |
 | `split_dataset.py` | Deterministic split with exact/near-dup filtering. | `python scripts/split_dataset.py data/interim/all.jsonl --out data/processed` |
 | `generate_synthetic.py` | DeepSeek/OpenAI-compatible generation with retries, cost tracking and JSON validation. | `python scripts/generate_synthetic.py --tasks 50 --out data/interim/gen.jsonl` |
@@ -399,7 +401,45 @@ Use `--arguments-format string` for Qwen3 and `dict` for Qwen2.5-Coder. `--dry-r
 
 ---
 
-## B.18 Shell helpers
+## B.18 `validate_gemma4_dataset.py`
+
+Gemma 4's template is stricter than Qwen's:
+
+- `tool_calls[].function.arguments` must be a **mapping**; a string is a hard error.
+- `tool_call_id` must resolve to a preceding tool call.
+- Tool names must match `[A-Za-z_][A-Za-z0-9_-]*`.
+- Qwen-style `<tool_call>` JSON in content is a warning; let the Gemma template render.
+- Previous-turn `reasoning_content` is a warning; Gemma expects final text in history except tool-call turns.
+- Secrets and missing `meta.track`/`meta.license` are flagged.
+
+```bash
+python scripts/validate_gemma4_dataset.py data/gemma4/react/processed/train.jsonl \
+  --tools examples/react/tools.json --strict
+```
+
+It is a static linter. Render a row with `AutoProcessor.apply_chat_template` and check `<|tool_call>call:` before training.
+
+---
+
+## B.19 `compare_models.py`
+
+Calls two OpenAI-compatible endpoints with the same messages, tools and sampling, and writes one JSONL record per prompt plus a summary:
+
+```bash
+python scripts/compare_models.py \
+  --a-base-url http://127.0.0.1:8082/v1 --a-model qwen25-coder-14b-react \
+  --b-base-url http://127.0.0.1:8085/v1 --b-model gemma4-12b-react \
+  --prompts data/golden/react-prompts.jsonl \
+  --tools examples/react/tools.json \
+  --temperature 0.2 --max-tokens 4096 --seed 42 \
+  --out reports/compare-react.jsonl
+```
+
+It records content, tool calls, latency, usage and errors. It does not judge; apply each patch and run the real verifier. See [31 — Gemma vs Qwen](31-gemma-vs-qwen.md).
+
+---
+
+## B.20 Shell helpers
 
 `export_gguf.sh`:
 
@@ -419,7 +459,7 @@ Use `--arguments-format string` for Qwen3 and `dict` for Qwen2.5-Coder. `--dry-r
 
 ---
 
-## B.19 Exit codes
+## B.21 Exit codes
 
 | Code | Meaning |
 |---|---|
