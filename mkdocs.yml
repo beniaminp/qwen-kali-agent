@@ -1,59 +1,116 @@
 site_name: Qwen Kali Agent Handbook
 site_description: Fine-tuning and deploying a Qwen agentic model for authorized Kali Linux and network-security work on a 32 GB M1 Pro.
 site_author: Beniamin Pantiru
+site_url: https://beniaminp.github.io/qwen-kali-agent/
 repo_url: https://github.com/beniaminp/qwen-kali-agent
 repo_name: beniaminp/qwen-kali-agent
-copyright: Apache-2.0
+edit_uri: edit/main/docs/
+copyright: Apache-2.0 · Qwen Kali Agent Handbook
 
 theme:
   name: material
+  language: en
+  logo: assets/logo.svg
+  favicon: assets/logo.svg
+  font:
+    text: Inter
+    code: JetBrains Mono
   features:
     - navigation.sections
     - navigation.top
-    - content.code.copy
+    - navigation.tracking
+    - toc.follow
     - search.suggest
+    - search.highlight
+    - content.code.copy
+    - content.code.annotate
+    - content.action.edit
+    - content.action.view
   palette:
-    - scheme: slate
+    - media: "(prefers-color-scheme: light)"
+      scheme: default
       primary: deep purple
-      accent: amber
+      accent: deep purple
       toggle:
-        icon: material/brightness-4
-        name: Switch to light mode
-    - scheme: default
-      primary: deep purple
-      accent: amber
-      toggle:
-        icon: material/brightness-7
+        icon: material/weather-night
         name: Switch to dark mode
+    - media: "(prefers-color-scheme: dark)"
+      scheme: slate
+      primary: deep purple
+      accent: deep purple
+      toggle:
+        icon: material/weather-sunny
+        name: Switch to light mode
+
+plugins:
+  - search:
+      lang: en
+  - minify:
+      minify_html: true
 
 markdown_extensions:
   - admonition
+  - attr_list
+  - def_list
+  - footnotes
+  - md_in_html
+  - tables
+  - toc:
+      permalink: true
+      toc_depth: 3
   - pymdownx.details
   - pymdownx.superfences
   - pymdownx.tabbed:
       alternate_style: true
-  - tables
-  - toc:
-      permalink: true
+  - pymdownx.highlight:
+      anchor_linenums: true
+  - pymdownx.inlinehilite
+  - pymdownx.snippets
+  - pymdownx.tasklist:
+      custom_checkbox: true
+  - pymdownx.caret
+  - pymdownx.tilde
+  - pymdownx.mark
+  - pymdownx.smartsymbols
+
+extra_css:
+  - stylesheets/gitbook.css
+
+extra:
+  generator: false
+  social:
+    - icon: fontawesome/brands/github
+      link: https://github.com/beniaminp/qwen-kali-agent
+      name: Repository
 
 nav:
   - Home: index.md
-  - Landscape: 01-landscape.md
-  - Hardware: 02-hardware.md
-  - macOS setup: 03-macos-setup.md
-  - Data strategy: 04-data-strategy.md
-  - Datasets: 05-datasets.md
-  - Data format: 06-data-format.md
-  - Synthetic data: 07-synthetic-data.md
-  - Fine-tuning: 08-finetuning.md
-  - Evaluation: 09-evaluation.md
-  - Export & serving: 10-export-serving.md
-  - Kali agent: 11-kali-agent.md
-  - Safety & legal: 12-safety-legal.md
-  - Troubleshooting: 13-troubleshooting.md
-  - References: 14-references.md
-  - Agentic methods: 15-agentic-methods.md
-  - Network security: 16-network-security.md
-  - Appendix A — configs: appendix-a-configs.md
-  - Appendix B — scripts: appendix-b-scripts.md
-  - Appendix C — runbook: appendix-c-runbook.md
+  - Summary: SUMMARY.md
+  - Start here:
+      - Landscape: 01-landscape.md
+      - Hardware: 02-hardware.md
+      - macOS setup: 03-macos-setup.md
+  - Data:
+      - Data strategy: 04-data-strategy.md
+      - Datasets: 05-datasets.md
+      - Data format: 06-data-format.md
+      - Synthetic data: 07-synthetic-data.md
+  - Train:
+      - Fine-tuning: 08-finetuning.md
+      - Fine-tuning update 2026: 17-finetune-2026-update.md
+      - Agentic methods: 15-agentic-methods.md
+      - Evaluation: 09-evaluation.md
+  - Deploy:
+      - Export & serving: 10-export-serving.md
+      - Kali agent: 11-kali-agent.md
+      - Network security: 16-network-security.md
+      - Safety & legal: 12-safety-legal.md
+      - Troubleshooting: 13-troubleshooting.md
+  - Reference:
+      - References: 14-references.md
+      - Appendix A — configs: appendix-a-configs.md
+      - Appendix B — scripts: appendix-b-scripts.md
+      - Appendix C — runbook: appendix-c-runbook.md
+
+not_in_nav: |
+  /404.md

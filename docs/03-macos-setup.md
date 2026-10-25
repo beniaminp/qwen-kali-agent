@@ -251,6 +251,18 @@ Ollama runs a background service on `127.0.0.1:11434`. It is convenient for GGUF
 
 ---
 
+### Documentation site
+
+Material for MkDocs is separate from the MLX environment, but installs cleanly into the same venv:
+
+```bash
+uv pip install -r requirements-docs.txt
+mkdocs serve --dev-addr 127.0.0.1:8000
+mkdocs build --strict
+```
+
+The site is styled as a GitBook (sidebar, search, grouped parts, edit links) and lives in `site/`. See the repository README for GitHub Pages publishing.
+
 ## 9. Reproducibility notes
 
 - **Pin versions** before a long run. Write them into `requirements.lock.txt` and record the git commit of this repo.

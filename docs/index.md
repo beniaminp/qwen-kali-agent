@@ -2,7 +2,17 @@
 
 **Fine-tuning a Qwen model into an agentic Kali Linux assistant on a 32 GB M1 Pro — with the memory math, datasets, training runbook, evaluation, serving and safety controls.**
 
-This site is the long-form handbook. The repository root has the same material in [`README.md`](../README.md), plus configs, scripts and examples.
+This site is the long-form handbook. The repository root has the same material in [`README.md`](https://github.com/beniaminp/qwen-kali-agent/blob/main/README.md), plus configs, scripts and examples.
+
+<div class="gb-cards">
+  <a class="gb-card" href="01-landscape/"><strong>Choose the model</strong><span>Qwen3-14B locally, Qwen3-8B as the fallback, and why Qwen3.5 is a GPU job.</span></a>
+  <a class="gb-card" href="08-finetuning/"><strong>Train the adapter</strong><span>MLX QLoRA runbook: flags, memory, checkpoints, loss reading.</span></a>
+  <a class="gb-card" href="17-finetune-2026-update/"><strong>Use the 2026 recipe</strong><span>All-layer LoRA, the MLX scale trap, one epoch, new configs.</span></a>
+  <a class="gb-card" href="04-data-strategy/"><strong>Build the data</strong><span>Tool-calling mix, agentic trajectories, negative examples, synthetic data.</span></a>
+  <a class="gb-card" href="10-export-serving/"><strong>Serve it</strong><span>MLX, GGUF, llama.cpp, Ollama, and the SSH tunnel to Kali.</span></a>
+  <a class="gb-card" href="11-kali-agent/"><strong>Wire up Kali</strong><span>MCP tools, scope policy, audit logs, and the lab loop.</span></a>
+</div>
+
 
 ---
 
@@ -26,6 +36,7 @@ This site is the long-form handbook. The repository root has the same material i
 | See the sources | [14 — References](14-references.md) |
 | Go beyond SFT | [15 — Agentic methods](15-agentic-methods.md) |
 | Test networks, not just web apps | [16 — Network security](16-network-security.md) |
+| Fix the LoRA recipe | [17 — Fine-tuning update](17-finetune-2026-update.md) |
 
 ---
 

@@ -73,8 +73,9 @@ mlx_lm.lora --config configs/qwen3-8b-fast.yaml --iters 1 --save-every 1
 ## Day 4–6 — 14B run (2–4 days)
 
 - [ ] Preflight: VM/Docker off, charger connected, sleep disabled.
-- [ ] Start `configs/qwen3-14b-balanced.yaml`.
-- [ ] Check at iteration 20: loss not `nan`, tokens/sec 20–30, peak mem <22 GB.
+- [ ] Run `python scripts/check_lora.py --model mlx-community/Qwen3-14B-4bit --num-layers -1 --rank 16 --scale 2`; confirm MLP projections are present.
+- [ ] Start `configs/qwen3-14b-all-layers.yaml`.
+- [ ] Check at iteration 20: loss not `nan`, tokens/sec 18–28, peak mem <24 GB.
 - [ ] Check at the first eval: val loss tracking train.
 - [ ] Evaluate the first checkpoint at ~50% (optional, but useful).
 - [ ] Stop when val loss has not improved for 2–3 evals.

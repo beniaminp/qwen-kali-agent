@@ -1,3 +1,4 @@
+# Memory-constrained fallback: last 8 blocks, rank 8, alpha=32 (scale 4.0).
 model: mlx-community/Qwen3-14B-4bit
 train: true
 data: data/processed
@@ -5,12 +6,12 @@ fine_tune_type: lora
 optimizer: adamw
 num_layers: 8
 batch_size: 1
-iters: 400
+iters: 250
 val_batches: 25
-learning_rate: 5.0e-5
+learning_rate: 1.0e-4
 steps_per_report: 10
 steps_per_eval: 100
-save_every: 100
+save_every: 50
 max_seq_length: 1536
 grad_checkpoint: true
 grad_accumulation_steps: 8
@@ -20,11 +21,11 @@ seed: 42
 lora_parameters:
   rank: 8
   dropout: 0.05
-  scale: 20.0
+  scale: 4.0
 lr_schedule:
   name: cosine_decay
   warmup: 50
-  arguments: [5.0e-5, 400, 1.0e-6]
+  arguments: [1.0e-4, 250, 1.0e-6]
 optimizer_config:
   adamw:
     weight_decay: 0.01

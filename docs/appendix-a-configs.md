@@ -2,6 +2,18 @@
 
 The files in `configs/` are starting points. Every value here has a reason; change one variable at a time and record the result.
 
+The defaults below follow [17 — Fine-tuning update](17-finetune-2026-update.md): all-layer LoRA, `scale = 32 / rank`, and one to two epochs.
+
+| Config | Role | Layers | Rank | Scale | LR |
+|---|---|---|---:|---:|---:|
+| `qwen3-8b-fast.yaml` | smoke / format | 12 | 16 | 2.0 | 1e-4 |
+| `qwen3-8b-all-layers.yaml` | 8B all-layer | -1 | 16 | 2.0 | 1.5e-4 |
+| `qwen3-14b-all-layers.yaml` | **recommended 14B** | -1 | 16 | 2.0 | 1e-4 |
+| `qwen3-14b-balanced.yaml` | last-16 baseline | 16 | 16 | 2.0 | 1e-4 |
+| `qwen3-14b-rank32.yaml` | capacity test | -1 | 32 | 1.0 | 1e-4 |
+| `qwen3-14b-conservative.yaml` | memory fallback | 8 | 8 | 4.0 | 1e-4 |
+| `qwen3-14b-longctx.yaml` | 4K context | 16 | 16 | 2.0 | 8e-5 |
+
 ---
 
 ## A.1 `qwen3-8b-fast.yaml` — debug and iterate
@@ -29,7 +41,7 @@ seed: 42
 lora_parameters:
   rank: 16
   dropout: 0.05
-  scale: 20.0
+  scale: 2.0
 lr_schedule:
   name: cosine_decay
   warmup: 50
@@ -42,11 +54,11 @@ optimizer_config:
 | Value | Why |
 |---|---|
 | 8B 4-bit | ~4.6 GB weights; 10–12 GB peak; fast iteration. |
-| 12 layers | Enough capacity to learn the format; less memory than 16. |
+| 12 layers | Enough to learn the format; lower memory than all-layer. |
 | batch 2 × accum 4 | Effective batch 8; fits comfortably. |
 | 400 iters | ~4.8M tokens at 1.5k/sample; adjust to your dataset. |
-| LR 1e-4 + cosine | Standard LoRA range for 8B. |
-| rank 16, scale 20 | MLX defaults; ~27M trainable params. |
+| LR 1e-4 + scale 2.0 | Standard alpha=32 parameterization. |
+| rank 16 | ~19M trainable params over 12 layers. |
 | seq 2048 | Cheap; split longer trajectories. |
 | grad-checkpoint | Buys headroom; ~20–30% slower. |
 
@@ -54,7 +66,7 @@ Use this for a **100k-token smoke test** first: subset the data and set `iters: 
 
 ---
 
-## A.2 `qwen3-14b-balanced.yaml` — the main run
+## A.2 `qwen3-14b-all-layers.yaml` — recommended
 
 ```yaml
 model: mlx-community/Qwen3-14B-4bit
@@ -62,28 +74,28 @@ train: true
 data: data/processed
 fine_tune_type: lora
 optimizer: adamw
-num_layers: 16
+num_layers: -1
 batch_size: 1
-iters: 600
+iters: 300
 val_batches: 25
-learning_rate: 5.0e-5
+learning_rate: 1.0e-4
 steps_per_report: 10
 steps_per_eval: 100
-save_every: 100
+save_every: 50
 max_seq_length: 2048
 grad_checkpoint: true
 grad_accumulation_steps: 8
 mask_prompt: true
-adapter_path: adapters/qwen3-14b-pentest
+adapter_path: adapters/qwen3-14b-all-layers
 seed: 42
 lora_parameters:
   rank: 16
   dropout: 0.05
-  scale: 20.0
+  scale: 2.0
 lr_schedule:
   name: cosine_decay
-  warmup: 80
-  arguments: [5.0e-5, 600, 1.0e-6]
+  warmup: 50
+  arguments: [1.0e-4, 300, 1.0e-6]
 optimizer_config:
   adamw:
     weight_decay: 0.01
@@ -91,19 +103,25 @@ optimizer_config:
 
 | Value | Why |
 |---|---|
-| 14B 4-bit | ~8.3 GB weights; 16–22 GB peak. |
-| 16 layers | Default capacity/memory balance. |
-| batch 1 × accum 8 | Effective batch 8; the only safe starting point. |
-| 600 iters | ~7.2M tokens at 1.5k/sample; 2–3 epochs over 2–3M tokens. |
-| LR 5e-5 + warmup | Conservative for 14B; less likely to spike. |
-| seq 2048 | Most examples fit; split long ones. |
-| save_every 100 | ~100 MB/checkpoint; 6 checkpoints. |
+| all 40 layers | The 2026 evidence favors MLP + attention everywhere. |
+| rank 16, scale 2.0 | ~63M trainable params; alpha=32 equivalence. |
+| batch 1 × accum 8 | Effective batch 8; LoRA dislikes large batches. |
+| 300 iters | ~3.6M tokens; ~1.5–2 epochs over 2M. |
+| seq 2048 | Most agentic examples fit; split long ones. |
+| grad-checkpoint | Required for all-layer LoRA on 32 GB. |
+| save_every 50 | Shorter runs; more checkpoints. |
 
-If you have a 2M-token dataset and average 1,200 tokens/sample, 600 iters is ~2.5 epochs. If your average is 2,000, it is ~4 epochs; reduce to 400.
+Peak estimate: **19–24 GB**. If it OOMs, change `num_layers` to 24, then 16 — not the data first.
 
 ---
 
-## A.3 `qwen3-14b-conservative.yaml` — when memory is tight
+## A.3 `qwen3-14b-balanced.yaml` — last-16 baseline
+
+Same as A.2 but `num_layers: 16`, `adapter_path: adapters/qwen3-14b-last16`, `iters: 300`. Peak 16–20 GB. Keep it as a comparison, not the default. If it beats the all-layer adapter on the golden set, use it; otherwise the all-layer result is the candidate.
+
+---
+
+## A.4 `qwen3-14b-conservative.yaml` — memory fallback
 
 ```yaml
 model: mlx-community/Qwen3-14B-4bit
@@ -113,12 +131,12 @@ fine_tune_type: lora
 optimizer: adamw
 num_layers: 8
 batch_size: 1
-iters: 400
+iters: 250
 val_batches: 25
-learning_rate: 5.0e-5
+learning_rate: 1.0e-4
 steps_per_report: 10
 steps_per_eval: 100
-save_every: 100
+save_every: 50
 max_seq_length: 1536
 grad_checkpoint: true
 grad_accumulation_steps: 8
@@ -128,88 +146,64 @@ seed: 42
 lora_parameters:
   rank: 8
   dropout: 0.05
-  scale: 20.0
+  scale: 4.0
 lr_schedule:
   name: cosine_decay
   warmup: 50
-  arguments: [5.0e-5, 400, 1.0e-6]
+  arguments: [1.0e-4, 250, 1.0e-6]
 ```
 
-Differences: last 8 layers, rank 8, 1536 context. Peak ~12–15 GB. Use it if the balanced config OOMs, the machine is shared, or you need to keep the Kali VM running. Quality is lower; evaluate before committing.
+Last 8 layers, rank 8, 1536 context. Peak ~12–15 GB. Use it if the machine is shared or the all-layer config OOMs. Quality is lower; evaluate before committing.
 
 ---
 
-## A.4 `qwen3-14b-longctx.yaml` — 4K agent trajectories
+## A.5 `qwen3-14b-rank32.yaml` — capacity test
 
-```yaml
-model: mlx-community/Qwen3-14B-4bit
-train: true
-data: data/processed_long
-fine_tune_type: lora
-optimizer: adamw
-num_layers: 12
-batch_size: 1
-iters: 500
-val_batches: 20
-learning_rate: 4.0e-5
-steps_per_report: 10
-steps_per_eval: 100
-save_every: 100
-max_seq_length: 4096
-grad_checkpoint: true
-grad_accumulation_steps: 8
-mask_prompt: true
-adapter_path: adapters/qwen3-14b-longctx
-seed: 42
-lora_parameters:
-  rank: 16
-  dropout: 0.05
-  scale: 20.0
-lr_schedule:
-  name: cosine_decay
-  warmup: 80
-  arguments: [4.0e-5, 500, 1.0e-6]
-```
-
-Long context is expensive: 4K roughly doubles activation memory versus 2K. If it OOMs, drop to 3072 or 8 layers. Do not raise `max_seq_length` just because a few examples are long; split them instead.
+All layers, rank 32, `scale: 1.0`, 300 iters. ~125M trainable params. Run only if the rank-16 all-layer adapter underfits and you have a clean, larger dataset. The extra capacity is not free: more overfitting risk and a larger adapter.
 
 ---
 
-## A.5 Tuning rules of thumb
+## A.6 `qwen3-14b-longctx.yaml` — 4K context
+
+Last 16 layers, rank 16, `scale: 2.0`, seq 4096, 250 iters. 4K roughly doubles activation memory versus 2K. If it OOMs, drop to 3072 or 12 layers. Do not raise `max_seq_length` just because a few examples are long; split them instead.
+
+---
+
+## A.7 Tuning rules of thumb
 
 | If… | Change |
 |---|---|
-| OOM at step 1 | `batch_size: 1`, `grad_checkpoint: true`, `max_seq_length: 1536`, `num_layers: 8`. |
+| OOM at step 1 | `num_layers: 24`, then `16`; keep seq 2048; `batch_size: 1`. |
+| Still OOM | seq 1536; conservative config; `--clear-cache-threshold 2GB`. |
 | Loss `nan` | Check token lengths; drop rows where prompt ≥ max sequence. Halve LR. |
-| Loss stuck >1.0 | Verify mask/template; raise LR to 1e-4 (8B) or 1e-4 (14B with warmup). |
+| Loss stuck >1.0 | Verify mask/template; check `scale`; raise LR only after `check_lora.py`. |
 | Val loss rises | Stop earlier; dropout 0.1; fewer epochs; more diverse data. |
-| Underfitting | More layers (16→24), rank 16→32, more epochs, cleaner data. |
-| Too slow | 8B instead; fewer layers; shorter sequences; close apps. |
-| Adapter has no effect | Wrong path/base; verify with a fixed prompt. |
+| Underfitting | rank 16→32, more data, cleaner labels; layers already all. |
+| Too slow | 8B; last 16; shorter sequences; close apps. |
+| Adapter has no effect | Wrong base/path; verify with a fixed prompt. |
 
 ---
 
-## A.6 What not to change casually
+## A.8 What not to change casually
 
 - **Model family** mid-run: the adapter is tied to the base architecture.
 - **Chat template** mid-run: the tokenizer is part of the model.
-- **`scale`** without understanding MLX semantics: it is not PEFT `alpha`.
+- **`scale`** without adjusting LR: `scale` multiplies the update; `scale = alpha / rank`.
 - **`--fine-tune-type full`** on 14B: it does not fit 32 GB.
 - **`max_seq_length`** without re-measuring: truncation can cut a tool call.
 
 ---
 
-## A.7 Config validation
-
-The YAML must parse and the keys must be recognized. MLX-LM prints unknown keys? It merges into `CONFIG_DEFAULTS`; unknown keys may be ignored. Check:
+## A.9 Config validation
 
 ```bash
 python - <<'PY'
-import yaml, json
+import yaml
 from pathlib import Path
 for p in Path("configs").glob("*.yaml"):
     d = yaml.safe_load(p.read_text())
-    print(p.name, sorted(d.keys()))
+    print(p.name, "layers=", d.get("num_layers"), "rank=", d["lora_parameters"]["rank"],
+          "scale=", d["lora_parameters"]["scale"], "lr=", d.get("learning_rate"))
 PY
 ```
 
@@ -219,4 +213,16 @@ Run a **1-iteration** test before a long run:
 mlx_lm.lora --config configs/qwen3-8b-fast.yaml --iters 1 --save-every 1
 ```
 
-This catches path, schema, and template errors in minutes.
+And verify the adapter actually covers MLP layers:
+
+```bash
+python scripts/check_lora.py --model mlx-community/Qwen3-14B-4bit \
+  --num-layers -1 --rank 16 --scale 2
+```
+
+Generate a small sweep:
+
+```bash
+python scripts/make_sweep.py --base configs/qwen3-14b-all-layers.yaml \
+  --out configs/sweeps/r1 --rank 16,32 --lr 5e-5,1e-4 --layers all,16
+```

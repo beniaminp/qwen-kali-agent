@@ -20,7 +20,7 @@ seed: 42
 lora_parameters:
   rank: 16
   dropout: 0.05
-  scale: 20.0
+  scale: 2.0
 lr_schedule:
   name: cosine_decay
   warmup: 50

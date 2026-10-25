@@ -1,16 +1,18 @@
+# Long-context experiment: last 16 blocks, rank 16, alpha=32.
+# If this OOMs, drop max_seq_length to 3072 or num_layers to 12.
 model: mlx-community/Qwen3-14B-4bit
 train: true
 data: data/processed_long
 fine_tune_type: lora
 optimizer: adamw
-num_layers: 12
+num_layers: 16
 batch_size: 1
-iters: 500
+iters: 250
 val_batches: 20
-learning_rate: 4.0e-5
+learning_rate: 8.0e-5
 steps_per_report: 10
 steps_per_eval: 100
-save_every: 100
+save_every: 50
 max_seq_length: 4096
 grad_checkpoint: true
 grad_accumulation_steps: 8
@@ -20,11 +22,11 @@ seed: 42
 lora_parameters:
   rank: 16
   dropout: 0.05
-  scale: 20.0
+  scale: 2.0
 lr_schedule:
   name: cosine_decay
-  warmup: 80
-  arguments: [4.0e-5, 500, 1.0e-6]
+  warmup: 50
+  arguments: [8.0e-5, 250, 1.0e-6]
 optimizer_config:
   adamw:
     weight_decay: 0.01

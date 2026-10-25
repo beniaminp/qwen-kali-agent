@@ -1,3 +1,4 @@
+# Baseline: last 16 blocks. Kept for comparison with the all-layer recipe.
 model: mlx-community/Qwen3-14B-4bit
 train: true
 data: data/processed
@@ -5,26 +6,26 @@ fine_tune_type: lora
 optimizer: adamw
 num_layers: 16
 batch_size: 1
-iters: 600
+iters: 300
 val_batches: 25
-learning_rate: 5.0e-5
+learning_rate: 1.0e-4
 steps_per_report: 10
 steps_per_eval: 100
-save_every: 100
+save_every: 50
 max_seq_length: 2048
 grad_checkpoint: true
 grad_accumulation_steps: 8
 mask_prompt: true
-adapter_path: adapters/qwen3-14b-pentest
+adapter_path: adapters/qwen3-14b-last16
 seed: 42
 lora_parameters:
   rank: 16
   dropout: 0.05
-  scale: 20.0
+  scale: 2.0
 lr_schedule:
   name: cosine_decay
-  warmup: 80
-  arguments: [5.0e-5, 600, 1.0e-6]
+  warmup: 50
+  arguments: [1.0e-4, 300, 1.0e-6]
 optimizer_config:
   adamw:
     weight_decay: 0.01

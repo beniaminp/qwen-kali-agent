@@ -75,7 +75,7 @@ M_peak ≈ M_weights
 | Term | Approximate size | Notes |
 |---|---|---|
 | `M_weights` | 4.5 bits/param for MLX 4-bit | Includes quantization scales/biases. |
-| `M_lora_params` | `rank × Σ(in+out)` over adapted layers | Rank 16 on 16 layers of 14B ≈ 27M params ≈ 107 MB fp32. |
+| `M_lora_params` | `rank × Σ(in+out)` over adapted layers | Rank 16 on 16 layers of 14B ≈ 27M params ≈ 107 MB fp32; all 40 layers ≈ 63M ≈ 252 MB. |
 | `M_optimizer` | 2–3× adapter params | Adam/AdamW moments; still small because the base is frozen. |
 | `M_activations` | `B × L × N_lora × (c₁H + c₂I) × bytes` | Dominated by sequence length and adapted layers. |
 | `M_logits` | `B × L × V × 4 bytes` | V = 151,936 for Qwen3; ~1.24 GB per 2K sequence in fp32. |
@@ -90,6 +90,7 @@ Qwen3-14B: `H=5120`, `I=17408`, 40 layers, `V=151936`.
 
 - 4-bit weights: **~8.3 GB**.
 - LoRA rank 16 on the last 16 layers: **~0.11 GB** params, ~0.3 GB optimizer.
+- LoRA rank 16 on all 40 layers: **~0.25 GB** params, ~0.7 GB optimizer; the activation term roughly doubles, so peak is ~21–24 GB even with checkpointing.
 - Logits at `B=1, L=2048`: `1 × 2048 × 151936 × 4 ≈ 1.24 GB` (fp32 cross-entropy).
 - Activations without checkpointing: roughly `1 × 2048 × 16 × (10×5120 + 4×17408) × 2 ≈ 7.9 GB`.
 - Runtime: ~2–3 GB.
@@ -198,7 +199,7 @@ In order of effectiveness:
 
 1. **Enable gradient checkpointing.** Biggest win per line of config.
 2. **Reduce `max_seq_length`.** 2048 → 1536 or 1024. Truncation is better than OOM, but fix the data if many examples are long.
-3. **Reduce `num_layers`.** 16 → 8. You lose some adaptation capacity; tool-format learning usually survives.
+3. **Reduce `num_layers`.** All 40 → 24 → 16 → 8. You lose adaptation capacity; tool-format learning usually survives, but evaluate.
 4. **Batch size 1 + gradient accumulation.** Effective batch without activation memory.
 5. **Quantize the base to 4-bit.** You should already be doing this. 6-bit/8-bit doubles or quadruples weight memory.
 6. **Close everything.** Chrome, Docker Desktop, Slack, the Kali VM, photo apps. Check `memory_pressure`.

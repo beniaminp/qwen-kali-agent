@@ -106,6 +106,22 @@ GRPO (Group Relative Policy Optimization) is popular for reasoning/tool-use beca
 - a training framework that supports RL (TRL, verl, OpenRLHF, etc.);
 - substantially more compute than SFT.
 
+### Reward design for multi-turn tool use
+
+A single outcome reward is a weak signal when a task takes 8–12 turns. A practical 2026 recipe combines:
+
+| Term | Suggested weight | Purpose |
+|---|---:|---|
+| Final outcome | +1.0 / −1.0 | Anchors the agent to the real goal. |
+| Per-turn progress | small positive | Rewards useful intermediate state changes. |
+| Step penalty | −0.05 per step | Discourages stalling and infinite loops. |
+| Invalid tool call | −0.2 per error | Penalizes malformed names/arguments. |
+| Scope/safety violation | large negative / terminate | Must dominate any task reward. |
+
+The dominant term must remain the final outcome; otherwise the model learns to farm intermediate rewards. For a local 14B, use this table to design the **verifier** and the evaluation harness even if you never run RL — it clarifies what “good” means for SFT data.
+
+A caveat from the LoRA study: RL needs very little adapter capacity (even rank 1 can match full fine-tuning), but it needs many rollouts. On 32 GB, the environment and generation cost dominate, not the adapter. Rent a GPU for RL; keep the local Mac for SFT and evaluation.
+
 **On 32 GB:** not realistic for a 14B. Even 4-bit inference plus rollouts plus training does not fit, and the wall clock is prohibitive. Rent an L40S/A100 or use a smaller model (1–4B) for RL research.
 
 **Safety:** an RL agent will find reward hacks. If the reward is “open ports found”, it may scan out of scope. Put the policy layer and scope check **inside the reward**, and make violations a hard negative, not a small penalty.
@@ -205,5 +221,7 @@ Always include a **safety eval**. Preference/RL methods can increase capability 
 - Rejection sampling fine-tuning — <https://arxiv.org/abs/2308.01825>
 - Process supervision — <https://arxiv.org/abs/2305.20050>
 - ToolRL / tool-use RL — search current 2025–2026 work; the field is moving.
+- Multi-turn RL reward design — <https://fireworks.ai/blog/best-practices-for-multi-turn-RL>
+- Multi-turn GRPO experiment — <https://builder.aws.com/content/30atJ2tkb88UPTQXFOu7OoxpCDS/fine-tuning-an-llm-to-improve-complicated-agentic-tool-calling-workflows>
 - TRL — <https://github.com/huggingface/trl>
 - verl — <https://github.com/volcengine/verl>

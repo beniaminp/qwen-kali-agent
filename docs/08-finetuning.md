@@ -1,6 +1,6 @@
 # 08 — Fine-tuning with MLX: the full runbook
 
-*Last verified: 25 October 2026 against mlx-lm 0.32.2. Commands were checked against `mlx_lm/lora.py` and `LORA.md`; they were not executed on the target Mac in this environment.*
+*Last verified: 25 October 2026 against mlx-lm 0.32.2. Commands were checked against `mlx_lm/lora.py` and `LORA.md`; they were not executed on the target Mac in this environment. The hyperparameter defaults were revised after the research pass in [17 — Fine-tuning update](17-finetune-2026-update.md): use all-layer LoRA, `scale = 32/rank`, and one to two epochs.*
 
 This is the chapter you run. It assumes:
 
@@ -43,11 +43,12 @@ Checklist:
 
 - **LoRA** freezes the base weights and injects low-rank matrices into selected linear layers.
 - **QLoRA** is the same, but the base is a 4-bit quantized MLX model. `mlx_lm.lora` detects a quantized model and does this automatically.
-- By default, LoRA is applied to the **last `num_layers` transformer blocks**, to every linear layer in those blocks (q, k, v, o, gate, up, down). `--num-layers -1` applies to all blocks.
+- MLX applies LoRA to **every linear layer in the selected blocks** (q, k, v, o, gate, up, down), not just attention. `--num-layers -1` selects all blocks; a positive N selects the last N.
+- **The revised default is all layers** (`num_layers: -1`). The 2026 LoRA evidence shows attention-only and last-block-only adapters leave quality on the table, especially on MLP layers. Fall back to 24 or 16 only if memory forces it.
 - Only adapter weights and optimizer state are trained. The base model is read-only.
 - `--mask-prompt` computes loss only on the final assistant completion. Everything before it is context.
 
-The default adapter is tiny: rank 8, 16 layers on a 14B model ≈ 13M trainable parameters (~50 MB fp32). Rank 16 doubles it. The adapter is not the memory problem; **activations and logits are**.
+Adapter size is not the memory problem; **activations and logits are**. A rank-16 all-layer Qwen3-14B adapter is on the order of 60M parameters (~240 MB fp32), versus the ~8.3 GB 4-bit base. The extra activation memory from adapting 40 blocks is what you have to watch.
 
 ---
 
@@ -62,16 +63,16 @@ From `mlx_lm.lora --help` and `mlx_lm/lora.py`:
 | `--data` | WikiSQL | `data/processed` | Directory with `train.jsonl`, `valid.jsonl`, `test.jsonl`. |
 | `--fine-tune-type` | `lora` | `lora` | `dora`, `full` also exist; full does not fit 14B. |
 | `--optimizer` | `adam` | `adamw` | `adam`, `adamw`, `muon`, `sgd`, `adafactor`. |
-| `--num-layers` | 16 | 8–16 | Last N blocks. `-1` = all; more layers = more memory/time. |
+| `--num-layers` | 16 | **-1 (all)** | Last N blocks. `-1` = all; 24/16 only if memory forces it. |
 | `--batch-size` | 4 | 1–2 | Per-step micro-batch. Start at 1. |
 | `--iters` | 1000 | computed | One iteration = one batch, not one epoch. |
 | `--val-batches` | 25 | 25–50 | `-1` uses the whole validation set (slow). |
-| `--learning-rate` | 1e-5 | 5e-5–1e-4 | LoRA tolerates higher LR than full FT. |
+| `--learning-rate` | 1e-5 | 1e-4 (scale 2) | Pair with `scale`; see §3. |
 | `--steps-per-report` | 10 | 10 | Console cadence. |
 | `--steps-per-eval` | 200 | 100 | Validation cadence. |
 | `--grad-accumulation-steps` | 1 | 4–8 | Effective batch without activation memory. |
 | `--resume-adapter-file` | — | path | Loads weights only, not optimizer/iteration state. |
-| `--adapter-path` | `adapters` | `adapters/qwen3-14b-pentest` | Output directory. |
+| `--adapter-path` | `adapters` | `adapters/qwen3-14b-all-layers` | Output directory. |
 | `--save-every` | 100 | 100–200 | Saves `NNNNNNN_adapters.safetensors` plus `adapters.safetensors`. |
 | `--test` | false | after training | Evaluates test loss after training. |
 | `--test-batches` | 500 | -1 or 100 | Cap test evaluation. |
@@ -85,11 +86,27 @@ From `mlx_lm.lora --help` and `mlx_lm/lora.py`:
 
 **YAML-only settings** (not exposed as CLI flags): `lora_parameters` (`rank`, `dropout`, `scale`), `lr_schedule`, `optimizer_config`.
 
-`scale` in MLX is **not** `alpha / rank`. The layer computes `y + scale * (x @ A @ B)`. The default `scale: 20.0` at rank 8 is roughly PEFT `alpha=160`. Do not copy a PEFT config (`lora_alpha: 16`) into MLX without converting.
+`scale` in MLX **is** the multiplier on `B A`:
+
+```text
+MLX:  y = W x + scale * B A x
+PEFT: y = W x + (alpha / r) * B A x
+=>    scale = alpha / r
+```
+
+The revised configs use `scale = 32 / rank`, so they are directly comparable to standard PEFT recipes:
+
+| Rank | MLX `scale` | PEFT `alpha` | LR |
+|---:|---:|---:|---:|
+| 8 | 4.0 | 32 | 1e-4 |
+| 16 | 2.0 | 32 | 1e-4 |
+| 32 | 1.0 | 32 | 1e-4 |
+
+MLX's default `scale: 20.0` at rank 8 is equivalent to PEFT `alpha=160`; that is why MLX examples use `1e-5`. If you keep `scale: 20`, divide these LRs by 10.
 
 ---
 
-## 3. The three configs
+## 3. The configs
 
 The repository ships them in `configs/`. Use them as starting points, not sacred numbers.
 
@@ -118,7 +135,7 @@ seed: 42
 lora_parameters:
   rank: 16
   dropout: 0.05
-  scale: 20.0
+  scale: 2.0
 lr_schedule:
   name: cosine_decay
   warmup: 50
@@ -128,9 +145,9 @@ optimizer_config:
     weight_decay: 0.01
 ```
 
-Effective batch = 2 × 4 = 8. At ~1,500 tokens/sample that is ~12k tokens per optimizer step; 400 steps ≈ 4.8M tokens seen (about 2–3 epochs over a 2M-token set). At 40–55 tok/s, expect **25–35 hours**. For a 100k-token smoke test, set `iters: 50` and use a 100k-token subset.
+Effective batch = 2 × 4 = 8. 400 steps × 8 × ~1,500 tokens ≈ 4.8M tokens. At 40–55 tok/s, expect **25–35 hours**. For a 100k-token smoke test, set `iters: 50` and use a subset. `qwen3-8b-all-layers.yaml` is the all-layer 8B variant.
 
-### 3.2 14B balanced (`configs/qwen3-14b-balanced.yaml`)
+### 3.2 14B all layers — recommended (`configs/qwen3-14b-all-layers.yaml`)
 
 ```yaml
 model: mlx-community/Qwen3-14B-4bit
@@ -138,109 +155,90 @@ train: true
 data: data/processed
 fine_tune_type: lora
 optimizer: adamw
-num_layers: 16
+num_layers: -1
 batch_size: 1
-iters: 600
+iters: 300
 val_batches: 25
-learning_rate: 5.0e-5
+learning_rate: 1.0e-4
 steps_per_report: 10
 steps_per_eval: 100
-save_every: 100
+save_every: 50
 max_seq_length: 2048
 grad_checkpoint: true
 grad_accumulation_steps: 8
 mask_prompt: true
-adapter_path: adapters/qwen3-14b-pentest
+adapter_path: adapters/qwen3-14b-all-layers
 seed: 42
 lora_parameters:
   rank: 16
   dropout: 0.05
-  scale: 20.0
+  scale: 2.0
 lr_schedule:
   name: cosine_decay
-  warmup: 80
-  arguments: [5.0e-5, 600, 1.0e-6]
+  warmup: 50
+  arguments: [1.0e-4, 300, 1.0e-6]
 optimizer_config:
   adamw:
     weight_decay: 0.01
 ```
 
-Effective batch 8. At ~1,500 tokens/sample, 600 steps ≈ 7.2M tokens seen. At 20–30 tok/s, **65–100 hours**. If that is too long, cut `iters` to 300 and evaluate; more data is not automatically better.
+Effective batch 8. 300 steps × 8 × ~1,500 tokens ≈ 3.6M tokens (~1.5–2 epochs over 2M tokens). At 20–30 tok/s, **40–55 hours**. Peak memory is the risk: estimates are 19–24 GB. If it OOMs, set `num_layers: 24`, then `16`; do not start by shortening the data.
 
-### 3.3 14B conservative (`configs/qwen3-14b-conservative.yaml`)
+### 3.3 14B last-16 baseline (`configs/qwen3-14b-balanced.yaml`)
 
-```yaml
-model: mlx-community/Qwen3-14B-4bit
-train: true
-data: data/processed
-fine_tune_type: lora
-optimizer: adamw
-num_layers: 8
-batch_size: 1
-iters: 400
-val_batches: 25
-learning_rate: 5.0e-5
-steps_per_report: 10
-steps_per_eval: 100
-save_every: 100
-max_seq_length: 1536
-grad_checkpoint: true
-grad_accumulation_steps: 8
-mask_prompt: true
-adapter_path: adapters/qwen3-14b-conservative
-seed: 42
-lora_parameters:
-  rank: 8
-  dropout: 0.05
-  scale: 20.0
-lr_schedule:
-  name: cosine_decay
-  warmup: 50
-  arguments: [5.0e-5, 400, 1.0e-6]
-```
+Same as 3.2 but `num_layers: 16`, `adapter_path: adapters/qwen3-14b-last16`. Keep it as the comparison run; it is the previous default and uses less memory (16–20 GB). Do not ship it without checking it against the all-layer adapter on the golden set.
 
-Use this when the balanced config OOMs or the machine is shared. It trains less capacity (last 8 blocks) and shorter sequences; quality will be lower, but it finishes.
+### 3.4 14B conservative (`configs/qwen3-14b-conservative.yaml`)
 
-### 3.4 How many iterations?
+`num_layers: 8`, rank 8, `scale: 4.0`, seq 1536, 250 iterations. Peak ~12–15 GB. Use it when the machine is shared or the all-layer run OOMs. Quality is lower; evaluate before committing.
+
+### 3.5 Capacity and long-context variants
+
+- `configs/qwen3-14b-rank32.yaml` — all layers, rank 32, `scale: 1.0`, 300 iterations. Tests whether the adapter is capacity-limited.
+- `configs/qwen3-14b-longctx.yaml` — last 16 blocks, seq 4096, rank 16, `scale: 2.0`, 250 iterations. Only if your 99th-percentile length truly needs it.
+- `configs/qwen3-8b-all-layers.yaml` — all blocks, rank 16, `scale: 2.0`, 300 iterations.
+
+### 3.6 How many iterations?
 
 ```text
 tokens_seen ≈ iters × batch_size × grad_accumulation_steps × avg_tokens_per_sample
 iters ≈ epochs × dataset_tokens / (batch_size × grad_accumulation_steps × avg_tokens_per_sample)
 ```
 
-Example: 2M-token dataset, avg 1,200 tokens, effective batch 8, 3 epochs:
+Example: 2M-token dataset, avg 1,500 tokens, effective batch 8, **1 epoch**:
 
 ```text
-iters = 3 × 2,000,000 / (8 × 1,200) ≈ 625
+iters = 1 × 2,000,000 / (8 × 1,500) ≈ 167
 ```
 
-Round to 600. If you change `max_seq_length`, re-measure `avg_tokens_per_sample`.
-
----
+So 150–200 iterations is one epoch; 300 is ~1.8 epochs. The old 600-iteration recipe was ~3.6 epochs and is no longer the default. If you change `max_seq_length`, re-measure `avg_tokens_per_sample`.
 
 ## 4. Hyperparameter guidance
 
 ### Rank and scale
 
-| Rank | Trainable params (14B, 16 layers) | Use |
+| Rank | Approx. trainable params (14B, all 40 layers) | Use |
 |---|---:|---|
-| 8 | ~13M | format/domain adaptation; least memory |
-| 16 | ~27M | **default** for this handbook |
-| 32 | ~53M | more capacity; more overfit risk; 14B still fits |
-| 64 | ~107M | only with a large, clean dataset |
+| 8 | ~31M | memory-constrained; format adaptation |
+| 16 | ~63M | **default** for this handbook |
+| 32 | ~125M | capacity experiment; more overfit risk |
+| 64 | ~250M | only with a large, clean dataset and a good reason |
 
-Scale 20 is the MLX default and works with LR 5e-5–1e-4. If you increase rank, you do **not** automatically increase scale (unlike PEFT alpha); keep 16–20 unless you see underfitting.
+Use `scale = 32 / rank` (4.0, 2.0, 1.0, 0.5). If you keep MLX's `scale: 20`, divide the LR by 10. Verify the actual count with `python scripts/check_lora.py`; do not trust the table.
 
 ### Learning rate
 
+With `scale = 32 / rank`:
+
 - 8B: `1e-4` is a good start.
-- 14B: `5e-5` is safer; `1e-4` can work with warmup and cosine decay.
+- 14B: `1e-4` is the default; `5e-5` is the conservative choice.
+- If you keep `scale: 20`, use `1e-5` instead.
 - If loss spikes or becomes `nan`: halve the LR, verify there are no empty completions, then retry.
 - If loss plateaus high (>0.9) after 200 steps: the data may be too diverse, the LR too low, or the mask is wrong.
 
 ### Layers
 
-More adapted layers = more capacity and more activation memory. 8 layers is a memory compromise; 16 is the default; 24–40 is only for a large, clean dataset on a 64 GB machine.
+More adapted layers = more capacity and more activation memory. **All 40 is the default now.** 24 is the first fallback, 16 the second, 8 the last. The earlier “16 is enough” advice came from attention-only intuition; the evidence favors MLP + all layers. On 32 GB, all layers usually fit with gradient checkpointing and seq 2048; measure it.
 
 ### Dropout
 
@@ -248,11 +246,11 @@ More adapted layers = more capacity and more activation memory. 8 layers is a me
 
 ### Batch and accumulation
 
-Start `batch_size: 1`, `grad_accumulation_steps: 8`. Increase batch only after measuring peak memory. Effective batch 8–16 is usually enough for LoRA SFT.
+Start `batch_size: 1`, `grad_accumulation_steps: 8`. Increase only after measuring peak memory. Keep the effective batch **8–16**, and never above 32: LoRA is less tolerant of large batches than full fine-tuning, and raising rank does not fix it.
 
 ### Sequence length
 
-2048 is the default. Agentic trajectories with tool schemas often need 3–4K. Measure the 99th percentile. Going to 4096 roughly doubles activation memory; use gradient checkpointing and batch 1.
+2048 is the default. Agentic trajectories with tool schemas often need 3–4K. Measure the 99th percentile. Going to 4096 roughly doubles activation memory; use gradient checkpointing, batch 1, and preferably last 16 blocks rather than all 40.
 
 ---
 
@@ -280,7 +278,7 @@ What matters:
 | Train loss | falls to 0.3–0.7 | stuck >1.0 after 200 iters |
 | Val loss | tracks train, falls | rises for 2+ evals = overfit |
 | Tokens/sec | 20–30 (14B), 40–55 (8B) | <10 = memory pressure/thermal |
-| Peak mem | 16–22 GB (14B) | >26 GB = danger |
+| Peak mem | 19–24 GB (14B all layers) | >26 GB = danger |
 | It/sec | stable | collapses = swap/thermal |
 
 **Do not judge by loss alone.** A model can reach 0.3 loss by memorizing tool names and still fail on held-out tasks. Evaluate at least once mid-run.
@@ -300,7 +298,7 @@ What matters:
 Every `save_every` iterations, MLX writes:
 
 ```text
-adapters/qwen3-14b-pentest/
+adapters/qwen3-14b-all-layers/
 ├── adapter_config.json
 ├── adapters.safetensors
 ├── 0000100_adapters.safetensors
@@ -311,10 +309,10 @@ adapters/qwen3-14b-pentest/
 Resume:
 
 ```bash
-mlx_lm.lora --config configs/qwen3-14b-balanced.yaml \
-  --resume-adapter-file adapters/qwen3-14b-pentest/0000300_adapters.safetensors \
-  --iters 300 \
-  --adapter-path adapters/qwen3-14b-pentest-resume
+mlx_lm.lora --config configs/qwen3-14b-all-layers.yaml \
+  --resume-adapter-file adapters/qwen3-14b-all-layers/0000200_adapters.safetensors \
+  --iters 100 \
+  --adapter-path adapters/qwen3-14b-all-layers-resume
 ```
 
 **Caveats:**
@@ -330,7 +328,7 @@ mlx_lm.lora --config configs/qwen3-14b-balanced.yaml \
 
 | Symptom | Fix |
 |---|---|
-| `kIOGPUCommandBufferCallbackErrorOutOfMemory` | batch 1, `--grad-checkpoint`, seq 1536, `--num-layers 8`, close apps. |
+| `kIOGPUCommandBufferCallbackErrorOutOfMemory` | batch 1, `--grad-checkpoint`, seq 1536, `--num-layers 24` then `16`, close apps. |
 | `[metal::malloc] Resource limit (499000) exceeded` | descriptor/handle leak; restart the process, update MLX, reduce layers/seq, `--clear-cache-threshold 2GB`. |
 | Process killed, no traceback | wired-memory pressure; lower `iogpu.wired_limit_mb` or memory use; reboot. |
 | Swapouts climbing | close Chrome/Docker/VM; reduce batch/seq; do not continue. |
@@ -375,13 +373,13 @@ run_id: 2026-10-25-qwen3-14b-r1
 base_model: mlx-community/Qwen3-14B-4bit
 dataset_version: 2026-10-24.v1
 dataset_tokens: 2.1M
-config: configs/qwen3-14b-balanced.yaml
-iters: 600
+config: configs/qwen3-14b-all-layers.yaml
+iters: 300
 effective_batch: 8
 max_seq_length: 2048
-peak_mem_gb: 19.4
-tokens_per_sec: 24.1
-wall_clock_h: 71
+peak_mem_gb: 22.0
+tokens_per_sec: 22.0
+wall_clock_h: 48
 final_train_loss: 0.41
 final_val_loss: 0.52
 eval_tool_validity: 0.94
@@ -404,23 +402,27 @@ python scripts/check_env.py
 python scripts/validate_dataset.py data/processed/train.jsonl --tools examples/tools/kali-tools.json
 python scripts/token_stats.py data/processed/train.jsonl --model Qwen/Qwen3-14B
 
-# 3. Smoke test on 8B (hours)
-mlx_lm.lora --config configs/qwen3-8b-fast.yaml
+# 3. Verify the adapter scope before spending hours
+python scripts/check_lora.py --model mlx-community/Qwen3-8B-4bit \
+  --num-layers -1 --rank 16 --scale 2
 
-# 4. Evaluate the 8B adapter
+# 4. Smoke test on 8B (hours)
+mlx_lm.lora --config configs/qwen3-8b-all-layers.yaml
+
+# 5. Evaluate the 8B adapter
 mlx_lm.fuse --model mlx-community/Qwen3-8B-4bit \
-  --adapter-path adapters/qwen3-8b-pentest \
+  --adapter-path adapters/qwen3-8b-all-layers \
   --save-path fused/qwen3-8b-pentest-4bit
 mlx_lm.server --model fused/qwen3-8b-pentest-4bit --port 8080 &
 python scripts/eval_toolcall.py --base-url http://127.0.0.1:8080/v1 \
   --golden data/golden/golden.jsonl --out reports/8b.json
 
-# 5. Main 14B run
-mlx_lm.lora --config configs/qwen3-14b-balanced.yaml
+# 6. Main 14B run (all layers)
+mlx_lm.lora --config configs/qwen3-14b-all-layers.yaml
 
-# 6. Fuse and evaluate
+# 7. Fuse and evaluate
 mlx_lm.fuse --model mlx-community/Qwen3-14B-4bit \
-  --adapter-path adapters/qwen3-14b-pentest \
+  --adapter-path adapters/qwen3-14b-all-layers \
   --save-path fused/qwen3-14b-pentest-4bit
 mlx_lm.server --model fused/qwen3-14b-pentest-4bit --port 8080 &
 python scripts/eval_toolcall.py --base-url http://127.0.0.1:8080/v1 \
@@ -452,6 +454,9 @@ Export to GGUF/Ollama is in [`10-export-serving.md`](10-export-serving.md).
 - MLX-LM `trainer.py` (truncation/eval) — <https://github.com/ml-explore/mlx-lm/blob/main/mlx_lm/tuner/trainer.py>
 - MLX-LM issue #1206 (GDN training OOM) — <https://github.com/ml-explore/mlx-lm/issues/1206>
 - MLX-LM issue #1185 (Metal descriptor leak) — <https://github.com/ml-explore/mlx-lm/issues/1185>
+- MLX-LM issue #1956 (GDN backward step scaling) — <https://github.com/ml-explore/mlx-lm/issues/1956>
+- LoRA Without Regret — <https://thinkingmachines.ai/blog/lora>
+- [17 — Fine-tuning update](17-finetune-2026-update.md)
 - Qwen3-14B model card — <https://huggingface.co/Qwen/Qwen3-14B>
 - LoRA paper — <https://arxiv.org/abs/2106.09685>
 - QLoRA paper — <https://arxiv.org/abs/2305.14314>

@@ -1,0 +1,39 @@
+# Summary
+
+A GitBook-style table of contents, mirrored by the site navigation.
+
+## Start here
+
+- [Introduction](index.md)
+- [Landscape](01-landscape.md)
+- [Hardware](02-hardware.md)
+- [macOS setup](03-macos-setup.md)
+
+## Data
+
+- [Data strategy](04-data-strategy.md)
+- [Datasets](05-datasets.md)
+- [Data format](06-data-format.md)
+- [Synthetic data](07-synthetic-data.md)
+
+## Train
+
+- [Fine-tuning](08-finetuning.md)
+- [Fine-tuning update 2026](17-finetune-2026-update.md)
+- [Agentic methods](15-agentic-methods.md)
+- [Evaluation](09-evaluation.md)
+
+## Deploy
+
+- [Export and serving](10-export-serving.md)
+- [Kali agent](11-kali-agent.md)
+- [Network security](16-network-security.md)
+- [Safety and legal](12-safety-legal.md)
+- [Troubleshooting](13-troubleshooting.md)
+
+## Reference
+
+- [References](14-references.md)
+- [Appendix A — configs](appendix-a-configs.md)
+- [Appendix B — scripts](appendix-b-scripts.md)
+- [Appendix C — runbook](appendix-c-runbook.md)

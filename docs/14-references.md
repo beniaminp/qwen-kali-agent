@@ -122,4 +122,5 @@
 ## Advanced topics
 
 - [Agentic methods](15-agentic-methods.md) — SFT, rejection sampling, DPO, RL.
+- [Fine-tuning update](17-finetune-2026-update.md) — all-layer LoRA, scale/LR correction, new configs.
 - [Network security](16-network-security.md) — asset inventory, TLS, segmentation, packet evidence.

@@ -60,7 +60,7 @@ Training needs the weights **plus** activations, logits, adapter gradients and o
 | Qwen3-Coder-30B-A3B | ~17.2 GB | ~28–32 GB | Marginal; treat as inference-only. |
 | Qwen3-Coder-Next | ~44.8 GB | — | No. |
 
-The Qwen3.5/3.8 numbers are not hypothetical. MLX-LM issues report first-backward OOMs for 9B on a 36 GB machine, and 27B peaks of 60–117 GB before a Metal resource-limit failure. The GDN path falls back to a Python recurrence during training because the Metal kernel has no vector-Jacobian product. See [`02-hardware.md`](02-hardware.md) §4 for links.
+The Qwen3.5/3.8 numbers are not hypothetical. MLX-LM issues report first-backward OOMs for 9B on a 36 GB machine, and 27B peaks of 60–117 GB before a Metal resource-limit failure. The GDN path falls back to a Python recurrence during training because the Metal kernel has no vector-Jacobian product; issue #1956 (Oct 2026) shows step time scaling with the number of trained GDN layers, and the Metal VJP PR #1217 was closed unmerged. Unsloth also advises against 4-bit QLoRA for Qwen3.5 dense/MoE because of quantization sensitivity. See [`02-hardware.md`](02-hardware.md) §4 and [17 — Fine-tuning update](17-finetune-2026-update.md).
 
 **The consequence:** if you want the newer architecture, rent a CUDA GPU for a day, train there, and bring the merged weights back for 4-bit MLX inference. That is a perfectly good workflow and often cheaper than spending a week fighting the local training path.
 
@@ -132,7 +132,7 @@ The local Mac is superb for **iteration and inference** and mediocre for **long 
 ```text
 Do you have a CUDA GPU or a $20 budget?
 ├─ Yes → Is 262K context or the strongest base important?
-│         ├─ Yes → Qwen3.5-9B (LoRA, bf16 or 4-bit) on L40S/A100
+│         ├─ Yes → Qwen3.5-9B (bf16 LoRA, not 4-bit QLoRA) on L40S/A100
 │         └─ No  → Qwen3-14B QLoRA on the rented GPU (faster, same recipe)
 └─ No  → Train locally on the M1 Pro
           ├─ First adapter, dataset still moving → Qwen3-8B QLoRA

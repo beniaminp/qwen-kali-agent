@@ -7,6 +7,8 @@ All scripts live in `scripts/` and are run from the repository root with the pro
 | `check_env.py` | Verify macOS, arch, Python, MLX, memory, disk. | `python scripts/check_env.py` |
 | `validate_dataset.py` | Schema, tool-name, argument, secret and destructive-pattern checks. | `python scripts/validate_dataset.py data/processed/train.jsonl --tools examples/tools/kali-tools.json` |
 | `token_stats.py` | Token-length distribution; recommends `max_seq_length`. | `python scripts/token_stats.py data/processed/train.jsonl --model Qwen/Qwen3-14B` |
+| `check_lora.py` | Print adapted blocks, projection counts and trainable params before training. | `python scripts/check_lora.py --model mlx-community/Qwen3-14B-4bit --num-layers -1 --rank 16 --scale 2` |
+| `make_sweep.py` | Generate rank/LR/layer configs and a `commands.sh`. | `python scripts/make_sweep.py --base configs/qwen3-14b-all-layers.yaml --out configs/sweeps/r1 --rank 16,32 --lr 5e-5,1e-4` |
 | `prepare_dataset.py` | Normalize a canonical JSONL, split train/valid/test, write a manifest. | `python scripts/prepare_dataset.py data/interim/all.jsonl --out data/processed --split 0.9 0.05 0.05` |
 | `split_dataset.py` | Deterministic split with exact/near-dup filtering. | `python scripts/split_dataset.py data/interim/all.jsonl --out data/processed` |
 | `generate_synthetic.py` | DeepSeek/OpenAI-compatible generation with retries, cost tracking and JSON validation. | `python scripts/generate_synthetic.py --tasks 50 --out data/interim/gen.jsonl` |
@@ -223,7 +225,44 @@ It does not invent license text; it copies the manifest fields.
 
 ---
 
-## B.11 Shell helpers
+## B.11 `check_lora.py`
+
+Loads the base model, applies the same `linear_to_lora_layers` conversion MLX-LM uses, and reports:
+
+- transformer block count;
+- selected vs adapted blocks;
+- number of LoRA modules and counts by projection (`q_proj`, `k_proj`, `v_proj`, `o_proj`, `gate_proj`, `up_proj`, `down_proj`);
+- trainable parameters and percentage;
+- sample module names.
+
+Use it to catch attention-only adapters, stale MLX versions, or a custom `lora_parameters.keys` that silently excludes MLP. Exit code 2 means the module count is unusually low.
+
+```bash
+python scripts/check_lora.py --model mlx-community/Qwen3-14B-4bit \
+  --num-layers -1 --rank 16 --scale 2
+```
+
+Requires MLX; it will not run on Linux.
+
+---
+
+## B.12 `make_sweep.py`
+
+Generates a Cartesian product of rank, learning rate and layer count from a base YAML. It sets `scale = 32 / rank` by default, writes one YAML per run, a `commands.sh`, and a `sweep.md` table.
+
+```bash
+python scripts/make_sweep.py \
+  --base configs/qwen3-14b-all-layers.yaml \
+  --out configs/sweeps/r1 \
+  --rank 16,32 --lr 5e-5,1e-4 --layers all,16
+bash configs/sweeps/r1/commands.sh
+```
+
+Each run gets a unique `adapter_path` under `adapters/sweeps/`. It does not launch training; review the configs and the time budget first.
+
+---
+
+## B.13 Shell helpers
 
 `export_gguf.sh`:
 
@@ -243,7 +282,7 @@ It does not invent license text; it copies the manifest fields.
 
 ---
 
-## B.12 Exit codes
+## B.14 Exit codes
 
 | Code | Meaning |
 |---|---|

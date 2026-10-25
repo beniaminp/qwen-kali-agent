@@ -21,7 +21,7 @@ An MLX adapter is a set of low-rank deltas. To serve it as a standalone model, m
 ```bash
 mlx_lm.fuse \
   --model mlx-community/Qwen3-14B-4bit \
-  --adapter-path adapters/qwen3-14b-pentest \
+  --adapter-path adapters/qwen3-14b-all-layers \
   --save-path fused/qwen3-14b-pentest-4bit
 ```
 
@@ -32,7 +32,7 @@ For GGUF conversion, dequantize to bf16/f16 first:
 ```bash
 mlx_lm.fuse \
   --model mlx-community/Qwen3-14B-4bit \
-  --adapter-path adapters/qwen3-14b-pentest \
+  --adapter-path adapters/qwen3-14b-all-layers \
   --save-path fused/qwen3-14b-pentest-bf16 \
   --dequantize
 ```
@@ -335,7 +335,7 @@ hf upload <user>/qwen3-14b-pentest-4bit fused/qwen3-14b-pentest-4bit .
 5. Include the adapter (small) if you want reproducibility:
 
 ```bash
-hf upload <user>/qwen3-14b-pentest-adapter adapters/qwen3-14b-pentest .
+hf upload <user>/qwen3-14b-pentest-adapter adapters/qwen3-14b-all-layers .
 ```
 
 Do **not** publish if the dataset includes CC-BY-NC, GPL, unknown-license, or leaked CTF content. See [`12-safety-legal.md`](12-safety-legal.md).

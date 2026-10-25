@@ -19,12 +19,30 @@ This repository is documentation first, with runnable configs and scripts second
 | **What if I rent a GPU?** | **Qwen3.5-9B** (or Qwen3.8-27B if you rent 48–80 GB). Much stronger agentic base, 262K context. A 5–10M-token run costs roughly $5–30 on an L40S/A100. |
 | **What do I use as a teacher/judge?** | **Qwen3.8-27B-4bit** (best quality that fits for inference on 32 GB) and **Qwen3.6-35B-A3B-4bit** (much faster bulk generation). Do not try to train either locally. |
 | **Training framework** | **MLX-LM** (`mlx_lm.lora`). Native Apple Silicon, quantized LoRA (QLoRA), no CUDA. |
+| **LoRA recipe (Oct 2026)** | **All layers**, rank 16, `scale: 2.0` (= PEFT alpha 32), LR `1e-4`, effective batch 8, one to two epochs. Verify with `scripts/check_lora.py`; details in [`docs/17-finetune-2026-update.md`](docs/17-finetune-2026-update.md). |
 | **Dataset size** | **2–5M tokens** for a first serious adapter; 10M+ only if evaluation proves it helps. Quality and trajectory realism dominate raw row count. |
 | **Serving** | **`llama-server`** (llama.cpp) for the best tool-call fidelity; **`mlx_lm.server`** for the fastest local iteration; **Ollama** for convenience. All are unauthenticated — put them behind loopback + SSH, never on an untrusted LAN. |
 | **Agent harness** | **OpenCode + MCP-Kali-Server** (small, typed tool surface) or **hackingBuddyGPT** (minimal research baseline). Avoid mega-tool MCP servers with a 14B. |
 | **Evaluation** | **BFCL** (tool-call syntax), **KaliBench** (Kali CLI), **Cybench** (end-to-end CTF), plus a **240-task private golden set** and an unsafe-action rate gate. |
 
-**Why not Qwen3.5/3.6/3.8 locally?** They use a hybrid Gated DeltaNet (GDN) architecture whose training path in MLX-LM is still immature as of October 2026. Open issues report first-backward OOMs and Metal descriptor leaks on 32–36 GB machines. Qwen3-14B uses standard attention and is the reliable local choice. The full evidence is in [`docs/01-landscape.md`](docs/01-landscape.md) and [`docs/02-hardware.md`](docs/02-hardware.md).
+**Why not Qwen3.5/3.6/3.8 locally?** They use a hybrid Gated DeltaNet (GDN) architecture whose training path in MLX-LM is still immature as of October 2026. Open issues report first-backward OOMs, Metal descriptor leaks and step time scaling with trained GDN layers on 32–36 GB machines; the Metal VJP PR was closed unmerged. Unsloth also advises against 4-bit QLoRA for Qwen3.5. Qwen3-14B uses standard attention and is the reliable local choice. The full evidence is in [`docs/01-landscape.md`](docs/01-landscape.md) and [`docs/02-hardware.md`](docs/02-hardware.md).
+
+---
+
+## Documentation site
+
+The handbook is also a **GitBook-style MkDocs site** ([Material for MkDocs](https://squidfunk.github.io/mkdocs-material/) with a custom GitBook theme, search, grouped navigation and edit links).
+
+```bash
+# from the repo root, with the project venv active
+uv pip install -r requirements-docs.txt
+mkdocs serve                  # http://127.0.0.1:8000
+mkdocs build --strict         # static site in site/
+```
+
+Or use `make docs-serve` / `make docs`. `site/` is generated and git-ignored.
+
+**Publishing:** `.github/workflows/docs.yml` builds and deploys to GitHub Pages when Pages is enabled. This repository is currently **private**; GitHub Pages for private repositories requires a paid plan. To publish for free, make the repository public, then set **Settings → Pages → Source: GitHub Actions** and push to `main`. Alternatively, deploy `site/` to Cloudflare Pages, Netlify or any static host.
 
 ---
 
@@ -50,6 +68,7 @@ This repository is documentation first, with runnable configs and scripts second
 │   ├── 14-references.md       annotated source list
 │   ├── 15-agentic-methods.md  SFT, rejection sampling, DPO, RL
 │   ├── 16-network-security.md asset inventory, TLS, segmentation, packet evidence
+│   ├── 17-finetune-2026-update.md all-layer LoRA, scale/LR correction, new configs
 │   ├── appendix-a-configs.md  every config, explained
 │   ├── appendix-b-scripts.md  what each script does
 │   └── appendix-c-runbook.md  day-by-day execution plan
@@ -117,8 +136,12 @@ Details: [`docs/06-data-format.md`](docs/06-data-format.md).
 # Fast iteration on 8B first (hours)
 mlx_lm.lora --config configs/qwen3-8b-fast.yaml
 
-# The real run (14B, 4-bit QLoRA)
-mlx_lm.lora --config configs/qwen3-14b-balanced.yaml
+# Verify the adapter really covers attention + MLP layers
+python scripts/check_lora.py --model mlx-community/Qwen3-14B-4bit \
+  --num-layers -1 --rank 16 --scale 2
+
+# The real run (14B, 4-bit QLoRA, all layers)
+mlx_lm.lora --config configs/qwen3-14b-all-layers.yaml
 ```
 
 Monitor loss, tokens/sec and peak memory. Stop when validation loss stops improving. Full runbook: [`docs/08-finetuning.md`](docs/08-finetuning.md).
@@ -129,7 +152,7 @@ Monitor loss, tokens/sec and peak memory. Stop when validation loss stops improv
 # Merge adapter into the 4-bit MLX model
 mlx_lm.fuse \
   --model mlx-community/Qwen3-14B-4bit \
-  --adapter-path adapters/qwen3-14b-pentest \
+  --adapter-path adapters/qwen3-14b-all-layers \
   --save-path fused/qwen3-14b-pentest-4bit
 
 # Serve to the Kali VM over loopback + SSH tunnel
@@ -137,7 +160,7 @@ mlx_lm.server \
   --model fused/qwen3-14b-pentest-4bit \
   --host 127.0.0.1 --port 8080 \
   --max-tokens 2048 \
-  --chat-template-args '{"enable_thinking": false}'
+  --temp 0.2
 ```
 
 For a GGUF/Ollama deployment, use llama.cpp's converter — `mlx_lm.fuse --export-gguf` only supports Llama/Mistral/Mixtral model types, **not Qwen3**. See [`docs/10-export-serving.md`](docs/10-export-serving.md).
