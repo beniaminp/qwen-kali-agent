@@ -73,7 +73,7 @@ This repository is documentation first, with runnable configs and scripts second
 ```bash
 xcode-select --install
 brew install uv python@3.12 git-lfs jq
-git clone <this-repo> qwen-kali-agent
+git clone https://github.com/beniaminp/qwen-kali-agent.git qwen-kali-agent
 cd qwen-kali-agent
 uv venv --python 3.12 .venv
 source .venv/bin/activate

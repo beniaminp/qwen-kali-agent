@@ -64,7 +64,7 @@ llama-server --version 2>/dev/null || true
 ```bash
 mkdir -p ~/work/qwen-kali-agent
 cd ~/work/qwen-kali-agent
-git clone <this-repo> .
+git clone https://github.com/beniaminp/qwen-kali-agent.git .
 # or: unzip the handbook and cd into it
 
 mkdir -p data/{raw,interim,processed,golden} \
