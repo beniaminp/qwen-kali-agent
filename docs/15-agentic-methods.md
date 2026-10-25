@@ -183,6 +183,18 @@ The biggest gains often come from the environment, not the algorithm:
 
 A model trained on a narrow environment will fail the moment the tool output changes. Randomize ports, banners, latency, and error messages in the lab.
 
+### 8.1 Front-end agent RL
+
+The 2026 **WebCoder** work applies artifact-grounded agentic RL to front-end development: it grades the running application, distributes credit across multi-round requirements, compacts context, and trains on long trajectories. On **Webdev-Bench**, WebCoder-27B reports a requirement-satisfaction score of 72.8 versus 64.8 for its Qwen3.8-27B base and 65.1 for Claude-Opus-4.8.
+
+That is a 27B model trained with RL on web artifacts, not a 14B QLoRA on a 32 GB Mac. Use it as a roadmap:
+
+- local: SFT on verified React/Tailwind tasks, then rejection sampling with Playwright/axe;
+- rented GPU: DPO/GRPO on Webdev-Bench-style milestones;
+- always: grade the **running app**, not the code text.
+
+The benchmark and task format are in [23 — React datasets](23-react-datasets.md); the verifier design is in [24 — React fine-tuning](24-react-finetuning.md) §8 and [25 — React synthetic data](25-react-synthetic.md).
+
 ---
 
 ## 9. A realistic roadmap
@@ -223,5 +235,6 @@ Always include a **safety eval**. Preference/RL methods can increase capability 
 - ToolRL / tool-use RL — search current 2025–2026 work; the field is moving.
 - Multi-turn RL reward design — <https://fireworks.ai/blog/best-practices-for-multi-turn-RL>
 - Multi-turn GRPO experiment — <https://builder.aws.com/content/30atJ2tkb88UPTQXFOu7OoxpCDS/fine-tuning-an-llm-to-improve-complicated-agentic-tool-calling-workflows>
+- WebCoder (front-end agentic RL) — <https://arxiv.org/abs/2610.23104>
 - TRL — <https://github.com/huggingface/trl>
 - verl — <https://github.com/volcengine/verl>

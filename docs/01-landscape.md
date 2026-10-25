@@ -2,7 +2,7 @@
 
 *Last verified: 25 October 2026.*
 
-> This chapter is the Kali/agent track. If you are specialising in **Java/Quarkus**, the base model and data are different: start at [18 — Java landscape](18-java-quarkus.md).
+> This chapter is the Kali/agent track. If you are specialising in **Java/Quarkus** or **React/Tailwind**, the base model and data are different: start at [18 — Java landscape](18-java-quarkus.md) or [22 — React & Tailwind](22-react-tailwind.md).
 
 The Qwen family moves fast. This chapter fixes the vocabulary, lays out the open-weight options as they exist today, and explains why the rest of the handbook trains **Qwen3-14B** locally rather than a newer, larger, or more fashionable model.
 

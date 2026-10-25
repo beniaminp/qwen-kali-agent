@@ -184,7 +184,21 @@ Renting an L40S for the 14B run would cut the training wall clock to hours for ~
 
 ---
 
+## Specialised tracks
+
+The day-by-day plan above is the Kali/agent track. The two coding tracks reuse the same MLX setup but have their own runbooks:
+
+| Track | Base | Smoke | Main run | Verifier |
+|---|---|---|---|---|
+| **Java/Quarkus** | Qwen2.5-Coder-14B 4-bit | 7B all layers | 24/48, seq 2K | Maven tests + ArchUnit |
+| **React/Tailwind** | Qwen2.5-Coder-14B 4-bit | 7B all layers, seq 4K | 24/48, seq 3K | TypeScript + Vitest + Playwright + axe |
+
+Start with [18 — Java landscape](18-java-quarkus.md) or [22 — React & Tailwind](22-react-tailwind.md). Expect 2–4M tokens of verified data and a 2–4 day 14B run on the M1 Pro.
+
+---
+
 ## What “done” looks like
+
 
 - A reproducible dataset with a manifest and card.
 - An adapter that beats the base on a held-out golden set.

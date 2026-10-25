@@ -1,11 +1,11 @@
-site_name: Qwen Kali Agent Handbook
-site_description: Fine-tuning and deploying a Qwen agentic model for authorized Kali Linux and network-security work on a 32 GB M1 Pro.
+site_name: Qwen Agent Handbook
+site_description: Fine-tuning and deploying Qwen agents for authorized Kali Linux work, Java/Quarkus services and React/Tailwind front-ends on a 32 GB M1 Pro.
 site_author: Beniamin Pantiru
 site_url: https://beniaminp.github.io/qwen-kali-agent/
 repo_url: https://github.com/beniaminp/qwen-kali-agent
 repo_name: beniaminp/qwen-kali-agent
 edit_uri: edit/main/docs/
-copyright: Apache-2.0 · Qwen Kali Agent Handbook
+copyright: Apache-2.0 · Qwen Agent Handbook
 
 theme:
   name: material
@@ -111,6 +111,11 @@ nav:
       - Java datasets: 19-java-datasets.md
       - Java fine-tuning: 20-java-finetuning.md
       - Java synthetic data: 21-java-synthetic.md
+  - React & Tailwind:
+      - React landscape: 22-react-tailwind.md
+      - React datasets: 23-react-datasets.md
+      - React fine-tuning: 24-react-finetuning.md
+      - React synthetic data: 25-react-synthetic.md
   - Reference:
       - References: 14-references.md
       - Appendix A — configs: appendix-a-configs.md

@@ -207,7 +207,20 @@ The Java configs point at `data/java/processed` and use `arguments` objects for 
 
 ---
 
-## A.10 Config validation
+## A.10 React/Tailwind configs
+
+| Config | Role | Layers | Rank | Scale | Seq | LR |
+|---|---|---|---:|---:|---:|---:|
+| `qwen2.5-coder-7b-react.yaml` | 7B long-context smoke | -1 (28) | 16 | 2.0 | 4096 | 1.5e-4 |
+| `qwen2.5-coder-14b-react.yaml` | **recommended 14B** | 24/48 | 16 | 2.0 | 3072 | 1e-4 |
+| `qwen2.5-coder-14b-react-all-layers.yaml` | capacity test | -1 (48) | 16 | 2.0 | 2048 | 8e-5 |
+| `qwen2.5-coder-14b-react-longctx.yaml` | 4K page context | 16/48 | 16 | 2.0 | 4096 | 8e-5 |
+
+The React configs point at `data/react/processed` (or `processed-long`) and use `arguments` objects for the Qwen2.5-Coder template. Details: [22 — React & Tailwind](22-react-tailwind.md) and [24 — React fine-tuning](24-react-finetuning.md).
+
+---
+
+## A.11 Config validation
 
 ```bash
 python - <<'PY'

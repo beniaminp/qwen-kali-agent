@@ -1,0 +1,32 @@
+# Qwen2.5-Coder 7B — React/Tailwind long-context smoke run.
+# All 28 blocks, seq 4096, rank 16, alpha=32 (scale 2.0). Fits comfortably in 32 GB.
+model: mlx-community/Qwen2.5-Coder-7B-Instruct-4bit
+train: true
+data: data/react/processed
+fine_tune_type: lora
+optimizer: adamw
+num_layers: -1
+batch_size: 1
+iters: 300
+val_batches: 25
+learning_rate: 1.5e-4
+steps_per_report: 10
+steps_per_eval: 100
+save_every: 100
+max_seq_length: 4096
+grad_checkpoint: true
+grad_accumulation_steps: 8
+mask_prompt: true
+adapter_path: adapters/qwen25-coder-7b-react
+seed: 42
+lora_parameters:
+  rank: 16
+  dropout: 0.05
+  scale: 2.0
+lr_schedule:
+  name: cosine_decay
+  warmup: 30
+  arguments: [1.5e-4, 300, 1.0e-6]
+optimizer_config:
+  adamw:
+    weight_decay: 0.01

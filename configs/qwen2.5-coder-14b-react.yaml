@@ -1,0 +1,33 @@
+# Qwen2.5-Coder 14B — recommended React/Tailwind run.
+# 24 of 48 blocks, seq 3072. Front-end tasks need component + styles + tests.
+# If this OOMs: seq 2048 first, then 16 blocks.
+model: mlx-community/Qwen2.5-Coder-14B-Instruct-4bit
+train: true
+data: data/react/processed
+fine_tune_type: lora
+optimizer: adamw
+num_layers: 24
+batch_size: 1
+iters: 300
+val_batches: 25
+learning_rate: 1.0e-4
+steps_per_report: 10
+steps_per_eval: 100
+save_every: 50
+max_seq_length: 3072
+grad_checkpoint: true
+grad_accumulation_steps: 8
+mask_prompt: true
+adapter_path: adapters/qwen25-coder-14b-react
+seed: 42
+lora_parameters:
+  rank: 16
+  dropout: 0.05
+  scale: 2.0
+lr_schedule:
+  name: cosine_decay
+  warmup: 30
+  arguments: [1.0e-4, 300, 1.0e-6]
+optimizer_config:
+  adamw:
+    weight_decay: 0.01

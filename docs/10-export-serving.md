@@ -2,7 +2,7 @@
 
 *Last verified: 25 October 2026 against mlx-lm 0.32.2 and current llama.cpp/Ollama docs.*
 
-> The serving mechanics are shared. For the **Qwen2.5-Coder Java/Quarkus** model, note that it has no thinking block and its template expects tool `arguments` as objects; see [20 — Java fine-tuning](20-java-finetuning.md) §9.
+> The serving mechanics are shared. For the **Qwen2.5-Coder Java/Quarkus** or **React/Tailwind** models, note that they have no thinking block and their template expects tool `arguments` as objects; see [20 — Java fine-tuning](20-java-finetuning.md) §9 and [24 — React fine-tuning](24-react-finetuning.md) §9.
 
 You have three deployment paths:
 

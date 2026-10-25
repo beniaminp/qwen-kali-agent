@@ -127,4 +127,8 @@
 - [Java datasets](19-java-datasets.md) — Java/Quarkus corpora, licenses, quality filters.
 - [Java fine-tuning](20-java-finetuning.md) — Qwen2.5-Coder Java/Quarkus runbook.
 - [Java synthetic data](21-java-synthetic.md) — verified Java/Quarkus generation.
+- [React & Tailwind](22-react-tailwind.md) — React 19 / Tailwind 4.3, architecture, design systems.
+- [React datasets](23-react-datasets.md) — React/Tailwind corpora, licenses, quality filters.
+- [React fine-tuning](24-react-finetuning.md) — Qwen2.5-Coder React/Tailwind runbook.
+- [React synthetic data](25-react-synthetic.md) — verified React/Tailwind generation.
 - [Network security](16-network-security.md) — asset inventory, TLS, segmentation, packet evidence.

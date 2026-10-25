@@ -210,7 +210,7 @@ You should see `<|im_start|>system`, a `<tools>` block with JSON, `<tool_call>` 
 
 ---
 
-## 8. Optional: serving stack
+## 8. Optional: serving and language toolchains
 
 ### MLX server
 
@@ -250,6 +250,21 @@ ollama list
 Ollama runs a background service on `127.0.0.1:11434`. It is convenient for GGUF inference, but it cannot apply an MLX/PEFT adapter directory directly; you must fuse and convert first.
 
 ---
+
+### React / Tailwind toolchain (optional track)
+
+The front-end track needs Node 24 LTS, npm and Playwright browsers:
+
+```bash
+brew install node@24
+node -v            # 24.x LTS
+npm -v
+
+# Chromium for Playwright (and the other browsers if you need them)
+npx playwright install chromium
+```
+
+Use the project's `package-lock.json` and `npm ci`; do not mix package managers in one repo. TypeScript 7 is the latest compiler, but the ESLint toolchain may need the TypeScript 6 API bridge; see [`22-react-tailwind.md`](22-react-tailwind.md) §1.3.
 
 ### Java / Quarkus toolchain (optional track)
 

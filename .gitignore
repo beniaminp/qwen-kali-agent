@@ -34,8 +34,14 @@ data/java/interim/
 data/java/processed/
 data/java/processed-*/
 data/java/golden/
+data/react/raw/
+data/react/interim/
+data/react/processed/
+data/react/processed-*/
+data/react/golden/
 !data/README.md
 !data/java/README.md
+!data/react/README.md
 !data/examples/
 
 # Logs and reports

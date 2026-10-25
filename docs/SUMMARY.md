@@ -38,6 +38,13 @@ A GitBook-style table of contents, mirrored by the site navigation.
 - [Java fine-tuning](20-java-finetuning.md)
 - [Java synthetic data](21-java-synthetic.md)
 
+## React & Tailwind
+
+- [React landscape](22-react-tailwind.md)
+- [React datasets](23-react-datasets.md)
+- [React fine-tuning](24-react-finetuning.md)
+- [React synthetic data](25-react-synthetic.md)
+
 ## Reference
 
 - [References](14-references.md)

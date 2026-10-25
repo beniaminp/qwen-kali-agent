@@ -1,0 +1,149 @@
+[
+  {
+    "type": "function",
+    "function": {
+      "name": "read_file",
+      "description": "Read a UTF-8 file inside the repository. Read before editing; do not read secrets, node_modules or build output.",
+      "parameters": {
+        "type": "object",
+        "properties": {
+          "path": {"type": "string", "description": "Repository-relative path, e.g. src/features/orders/components/OrderTable.tsx."},
+          "start_line": {"type": "integer", "minimum": 1},
+          "end_line": {"type": "integer", "minimum": 1}
+        },
+        "required": ["path"],
+        "additionalProperties": false
+      }
+    }
+  },
+  {
+    "type": "function",
+    "function": {
+      "name": "search_code",
+      "description": "Search TS/TSX/JS/JSX/CSS/JSON for a literal string or regular expression. Read-only.",
+      "parameters": {
+        "type": "object",
+        "properties": {
+          "query": {"type": "string"},
+          "glob": {"type": "string", "description": "Optional glob, e.g. src/**/*.tsx.", "default": "src/**/*.{ts,tsx,js,jsx,css}"},
+          "max_results": {"type": "integer", "minimum": 1, "maximum": 100, "default": 20}
+        },
+        "required": ["query"],
+        "additionalProperties": false
+      }
+    }
+  },
+  {
+    "type": "function",
+    "function": {
+      "name": "write_file",
+      "description": "Create or replace a file inside the repository. Prefer apply_patch for existing files. Never write outside the repository or into .git/node_modules.",
+      "parameters": {
+        "type": "object",
+        "properties": {
+          "path": {"type": "string"},
+          "content": {"type": "string"}
+        },
+        "required": ["path", "content"],
+        "additionalProperties": false
+      }
+    }
+  },
+  {
+    "type": "function",
+    "function": {
+      "name": "apply_patch",
+      "description": "Apply a unified diff to the repository. The patch must apply cleanly to the current working tree. Use for multi-file changes.",
+      "parameters": {
+        "type": "object",
+        "properties": {
+          "patch": {"type": "string", "description": "Unified diff starting with diff --git or ---/+++ headers."}
+        },
+        "required": ["patch"],
+        "additionalProperties": false
+      }
+    }
+  },
+  {
+    "type": "function",
+    "function": {
+      "name": "run_npm",
+      "description": "Run an allowlisted npm script in the project. Use after changes. This is not a shell and does not accept arbitrary commands.",
+      "parameters": {
+        "type": "object",
+        "properties": {
+          "script": {"type": "string", "enum": ["typecheck", "lint", "test", "build"], "default": "typecheck"},
+          "timeout_s": {"type": "integer", "minimum": 30, "maximum": 900, "default": 300}
+        },
+        "required": ["script"],
+        "additionalProperties": false
+      }
+    }
+  },
+  {
+    "type": "function",
+    "function": {
+      "name": "run_playwright",
+      "description": "Run the Playwright E2E suite, optionally filtered by project or spec. Read-only with respect to application code.",
+      "parameters": {
+        "type": "object",
+        "properties": {
+          "project": {"type": "string", "enum": ["mobile", "tablet", "desktop"], "default": "desktop"},
+          "spec": {"type": "string", "description": "Optional spec path, e.g. e2e/settings.spec.ts."},
+          "update_snapshots": {"type": "boolean", "default": false},
+          "timeout_s": {"type": "integer", "minimum": 30, "maximum": 900, "default": 300}
+        },
+        "additionalProperties": false
+      }
+    }
+  },
+  {
+    "type": "function",
+    "function": {
+      "name": "screenshot",
+      "description": "Capture a full-page screenshot of a route at a fixed viewport for visual review or regression.",
+      "parameters": {
+        "type": "object",
+        "properties": {
+          "path": {"type": "string", "description": "Route, e.g. /settings."},
+          "viewport": {"type": "string", "enum": ["mobile", "tablet", "desktop"], "default": "desktop"},
+          "full_page": {"type": "boolean", "default": true}
+        },
+        "required": ["path"],
+        "additionalProperties": false
+      }
+    }
+  },
+  {
+    "type": "function",
+    "function": {
+      "name": "axe_check",
+      "description": "Run an axe accessibility scan on a route and return violations by impact.",
+      "parameters": {
+        "type": "object",
+        "properties": {
+          "path": {"type": "string", "description": "Route, e.g. /settings."},
+          "tags": {
+            "type": "array",
+            "items": {"type": "string"},
+            "default": ["wcag2a", "wcag2aa", "wcag22aa"]
+          }
+        },
+        "required": ["path"],
+        "additionalProperties": false
+      }
+    }
+  },
+  {
+    "type": "function",
+    "function": {
+      "name": "git_diff",
+      "description": "Show the current uncommitted diff. Read-only; use before summarizing changes.",
+      "parameters": {
+        "type": "object",
+        "properties": {"stat": {"type": "boolean", "default": false}},
+        "additionalProperties": false
+      }
+    }
+  }
+]

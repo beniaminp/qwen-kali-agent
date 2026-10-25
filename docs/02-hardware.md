@@ -99,6 +99,8 @@ Peak ≈ **19–21 GB** — fits under the default 21.3 GiB only if nothing else
 
 **Java/Quarkus note.** Qwen2.5-Coder-14B has 48 layers (hidden 5120, intermediate 13824). A 24-block rank-16 adapter is roughly 34M parameters; peak is in the same 18–23 GB range as Qwen3-14B. Adapting all 48 blocks raises activations and can exceed 24 GB, so the Java runbook starts at 24/48.
 
+**React/Tailwind note.** The same Qwen2.5-Coder-14B at 3,072 tokens peaks around 21–25 GB with 24/48 blocks; the 7B at 4,096 with all 28 blocks is the safer long-context run at 12–16 GB. Front-end examples include component code, styles and tests, so context is the pressure point.
+
 With `--grad-checkpoint`:
 
 - Activations ≈ `B × L × N_lora × 2H × 2` ≈ **0.67 GB**.

@@ -13,11 +13,18 @@ JAVA_TOOLS ?= examples/java/tools.json
 JAVA_ADAPTER ?= adapters/qwen25-coder-14b-java
 JAVA_FUSED ?= fused/qwen25-coder-14b-java-4bit
 JAVA_REPO ?= ../quarkus-quickstarts
+REACT_MODEL ?= mlx-community/Qwen2.5-Coder-14B-Instruct-4bit
+REACT_DATA ?= data/react/processed
+REACT_TOOLS ?= examples/react/tools.json
+REACT_ADAPTER ?= adapters/qwen25-coder-14b-react
+REACT_FUSED ?= fused/qwen25-coder-14b-react-4bit
+REACT_REPO ?= ../shadcn-ui/ui
 MKDOCS ?= $(PYTHON) -m mkdocs
 
 .PHONY: help setup check data-check stats train-8b train-8b-all train-14b train-14b-last16 \
         check-lora sweep eval fuse serve serve-llama tunnel \
         java-check java-mine java-train-7b java-train-14b java-check-lora java-fuse \
+        react-check react-mine react-train-7b react-train-14b react-check-lora react-fuse \
         docs-install docs docs-serve clean
 
 help: ## Show this help
@@ -74,6 +81,27 @@ java-check-lora: ## Verify the Java adapter covers MLP projections
 
 java-fuse: ## Fuse the Java adapter
 	mlx_lm.fuse --model $(JAVA_MODEL) --adapter-path $(JAVA_ADAPTER) --save-path $(JAVA_FUSED)
+
+react-check: ## Validate the React/Tailwind splits and token lengths
+	$(PYTHON) scripts/validate_dataset.py $(REACT_DATA)/train.jsonl --tools $(REACT_TOOLS)
+	$(PYTHON) scripts/validate_react_dataset.py $(REACT_DATA)/train.jsonl --tools $(REACT_TOOLS) --require-dict-arguments --strict
+	$(PYTHON) scripts/token_stats.py $(REACT_DATA)/train.jsonl --model Qwen/Qwen2.5-Coder-14B-Instruct
+
+react-mine: ## Mine React commit seeds from a permissive repo
+	$(PYTHON) scripts/mine_react_commits.py --repo $(REACT_REPO) \
+	  --out data/react/interim/commit-seeds.jsonl --limit 300 --only-with-tests --license MIT
+
+react-train-7b: ## React/Tailwind 7B long-context smoke run
+	mlx_lm.lora --config configs/qwen2.5-coder-7b-react.yaml
+
+react-train-14b: ## React/Tailwind 14B run (24/48 blocks, 3K)
+	mlx_lm.lora --config configs/qwen2.5-coder-14b-react.yaml
+
+react-check-lora: ## Verify the React adapter covers MLP projections
+	$(PYTHON) scripts/check_lora.py --model $(REACT_MODEL) --num-layers 24 --rank 16 --scale 2
+
+react-fuse: ## Fuse the React adapter
+	mlx_lm.fuse --model $(REACT_MODEL) --adapter-path $(REACT_ADAPTER) --save-path $(REACT_FUSED)
 
 sweep: ## Generate a small rank/LR/layer sweep
 	$(PYTHON) scripts/make_sweep.py --base configs/qwen3-14b-all-layers.yaml \

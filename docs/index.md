@@ -1,4 +1,4 @@
-# Qwen Kali Agent Handbook
+# Qwen Agent Handbook
 
 **Fine-tuning a Qwen model into an agentic Kali Linux assistant on a 32 GB M1 Pro — with the memory math, datasets, training runbook, evaluation, serving and safety controls.**
 
@@ -13,6 +13,8 @@ This site is the long-form handbook. The repository root has the same material i
   <a class="gb-card" href="11-kali-agent/"><strong>Wire up Kali</strong><span>MCP tools, scope policy, audit logs, and the lab loop.</span></a>
   <a class="gb-card" href="18-java-quarkus/"><strong>Java &amp; Quarkus</strong><span>Java 25, Quarkus 3.40, hexagonal architecture and SOLID.</span></a>
   <a class="gb-card" href="20-java-finetuning/"><strong>Fine-tune a coder</strong><span>Qwen2.5-Coder on Java/Quarkus data, evaluated with Maven and ArchUnit.</span></a>
+  <a class="gb-card" href="22-react-tailwind/"><strong>React &amp; Tailwind</strong><span>React 19, Tailwind 4.3, accessible design systems and Vite 8.</span></a>
+  <a class="gb-card" href="24-react-finetuning/"><strong>Fine-tune a UI coder</strong><span>Qwen2.5-Coder on React data, verified by TypeScript, Playwright and axe.</span></a>
 </div>
 
 
@@ -43,6 +45,10 @@ This site is the long-form handbook. The repository root has the same material i
 | Find Java datasets | [19 — Java datasets](19-java-datasets.md) |
 | Fine-tune a Java coder | [20 — Java fine-tuning](20-java-finetuning.md) |
 | Generate Java data with an LLM | [21 — Java synthetic data](21-java-synthetic.md) |
+| Specialize in React/Tailwind | [22 — React & Tailwind](22-react-tailwind.md) |
+| Find React datasets | [23 — React datasets](23-react-datasets.md) |
+| Fine-tune a UI coder | [24 — React fine-tuning](24-react-finetuning.md) |
+| Generate React data with an LLM | [25 — React synthetic data](25-react-synthetic.md) |
 
 ---
 
@@ -53,6 +59,8 @@ This site is the long-form handbook. The repository root has the same material i
 **Kali/agent:** train **Qwen3-14B** with 4-bit QLoRA using **MLX-LM** on the M1 Pro. Use **Qwen3-8B** for the first smoke run. Build a **2–5M-token** mix of general tool calling, multi-turn agentic trajectories, Kali CLI data, execution-verified synthetic trajectories, and refusal/scope examples. Evaluate on **BFCL**, **KaliBench** (held-out test), **Cybench** and a private **240-task golden set**. Serve with **`llama-server`** for the best tool fidelity, or **`mlx_lm.server`** for speed, behind an **SSH tunnel** to the Kali VM. Put a deterministic **policy layer** between the model and the lab: scope file, allowlist, confirmation, audit log, kill switch. Publish only if the unsafe-action rate is zero and the licenses are clean.
 
 **Java/Quarkus:** train **Qwen2.5-Coder-14B-Instruct** with 4-bit QLoRA, adapting 24 of 48 blocks. Target **Java 25 LTS + Quarkus 3.40 LTS**, teach hexagonal architecture and SOLID, and verify every example with Maven tests and ArchUnit. Qwen3-Coder-30B-A3B is the teacher/judge, not a local training target. Start at [18 — Java landscape](18-java-quarkus.md).
+
+**React/Tailwind:** train **Qwen2.5-Coder-14B-Instruct** with 4-bit QLoRA at 3K context. Target **React 19.3 + Tailwind CSS 4.3 + Vite 8 + Node 24 LTS**, teach component architecture, design tokens and accessibility, and verify every example with TypeScript, Vitest, Playwright and axe. Start at [22 — React & Tailwind](22-react-tailwind.md).
 
 ---
 

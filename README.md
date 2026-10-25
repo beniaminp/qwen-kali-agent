@@ -1,6 +1,6 @@
-# Qwen Kali Agent
+# Qwen Agent Handbook
 
-**A practical, research-backed handbook for turning a Qwen open-weight model into an agentic Kali Linux / network-security assistant — trained locally on a 32 GB Apple M1 Pro, evaluated honestly, and served to an isolated Kali VM.**
+**A practical, research-backed handbook for turning Qwen open-weight models into an agentic Kali Linux assistant and specialised Java/Quarkus and React/Tailwind coding agents — trained locally on a 32 GB Apple M1 Pro, evaluated honestly, and deployed behind real guardrails.**
 
 This repository is documentation first, with runnable configs and scripts second. It is written to be useful months from now: every recommendation includes the reason, the memory math, the failure modes, and the primary sources.
 
@@ -23,6 +23,7 @@ This repository is documentation first, with runnable configs and scripts second
 | **Training framework** | **MLX-LM** (`mlx_lm.lora`). Native Apple Silicon, quantized LoRA (QLoRA), no CUDA. |
 | **LoRA recipe (Oct 2026)** | **All layers**, rank 16, `scale: 2.0` (= PEFT alpha 32), LR `1e-4`, effective batch 8, one to two epochs. Verify with `scripts/check_lora.py`; details in [`docs/17-finetune-2026-update.md`](docs/17-finetune-2026-update.md). |
 | **Java/Quarkus track** | **Qwen2.5-Coder-14B-Instruct 4-bit**, 24/48 blocks, Java 25 LTS + Quarkus 3.40 LTS. Qwen3-Coder-30B-A3B is the teacher/judge, not a local training target. Start at [`docs/18-java-quarkus.md`](docs/18-java-quarkus.md). |
+| **React/Tailwind track** | **Qwen2.5-Coder-14B-Instruct 4-bit**, 24/48 blocks at 3K, React 19.3 + Tailwind 4.3 + Vite 8 + Node 24 LTS. TypeScript 7-compatible source; TypeScript 6 API bridge for ESLint. Start at [`docs/22-react-tailwind.md`](docs/22-react-tailwind.md). |
 | **Dataset size** | **2–5M tokens** for a first serious adapter; 10M+ only if evaluation proves it helps. Quality and trajectory realism dominate raw row count. |
 | **Serving** | **`llama-server`** (llama.cpp) for the best tool-call fidelity; **`mlx_lm.server`** for the fastest local iteration; **Ollama** for convenience. All are unauthenticated — put them behind loopback + SSH, never on an untrusted LAN. |
 | **Agent harness** | **OpenCode + MCP-Kali-Server** (small, typed tool surface) or **hackingBuddyGPT** (minimal research baseline). Avoid mega-tool MCP servers with a 14B. |
@@ -76,6 +77,10 @@ Or use `make docs-serve` / `make docs`. `site/` is generated and git-ignored.
 │   ├── 19-java-datasets.md    Java/Quarkus datasets, licenses, quality filters
 │   ├── 20-java-finetuning.md  Qwen2.5-Coder Java/Quarkus runbook
 │   ├── 21-java-synthetic.md   generating verified Java/Quarkus data with an LLM
+│   ├── 22-react-tailwind.md   React 19 / Tailwind 4.3, architecture, design systems
+│   ├── 23-react-datasets.md   React/Tailwind datasets, licenses, quality filters
+│   ├── 24-react-finetuning.md Qwen2.5-Coder React/Tailwind runbook
+│   ├── 25-react-synthetic.md  generating verified React/Tailwind data with an LLM
 │   ├── appendix-a-configs.md  every config, explained
 │   ├── appendix-b-scripts.md  what each script does
 │   └── appendix-c-runbook.md  day-by-day execution plan
@@ -220,6 +225,39 @@ Read in order: [18 — Java landscape](docs/18-java-quarkus.md), [19 — Java da
 
 ---
 
+## React / Tailwind track
+
+The third track specialises **Qwen2.5-Coder-14B-Instruct** in React 19.3, Tailwind CSS 4.3, Vite 8 and accessible design systems. It uses the same MLX setup, but a different data layout and verifier (TypeScript, Vitest, Playwright and axe).
+
+```bash
+mkdir -p data/react/{raw,interim,processed,processed-long,golden}
+
+# 1. Mine commit seeds from a permissive React repo
+python scripts/mine_react_commits.py \
+  --repo ~/src/shadcn-ui/ui \
+  --out data/react/interim/commit-seeds.jsonl \
+  --limit 300 --only-with-tests --license MIT
+
+# 2. Normalize the merged/verified rows for Qwen2.5-Coder
+python scripts/prepare_dataset.py data/react/interim/all.jsonl \
+  --out data/react/processed --arguments-format dict
+
+# 3. Validate React/Tailwind idioms and tool-argument shape
+python scripts/validate_react_dataset.py data/react/processed/train.jsonl \
+  --tools examples/react/tools.json --require-dict-arguments --strict
+
+# 4. Verify the adapter covers MLP projections, then train
+python scripts/check_lora.py \
+  --model mlx-community/Qwen2.5-Coder-14B-Instruct-4bit \
+  --num-layers 24 --rank 16 --scale 2
+
+mlx_lm.lora --config configs/qwen2.5-coder-14b-react.yaml
+```
+
+Read in order: [22 — React & Tailwind](docs/22-react-tailwind.md), [23 — React datasets](docs/23-react-datasets.md), [24 — React fine-tuning](docs/24-react-finetuning.md), [25 — React synthetic data](docs/25-react-synthetic.md).
+
+---
+
 ## The data strategy in one table
 
 | Bucket | Share | What it teaches | Example sources |
@@ -243,6 +281,8 @@ Do **not** train on BFCL, KaliBench test, Cybench, NYU CTF or CyberMetric. Hold 
 | Qwen3-14B 4-bit weights | ~8.3 GB |
 | Qwen2.5-Coder-14B 4-bit weights | ~8.7 GB |
 | Realistic QLoRA peak (seq 2K, batch 1, grad-checkpoint) | ~18–23 GB |
+| React QLoRA peak (seq 3K, 24/48 blocks) | ~21–25 GB |
+| React 7B QLoRA peak (seq 4K, all layers) | ~12–16 GB |
 | Practical ceiling before macOS swaps/panics | ~24–26 GB wired |
 | Qwen3-14B QLoRA throughput (estimate) | 20–30 tokens/s |
 | 5M tokens at 25 tok/s | ~56 hours |

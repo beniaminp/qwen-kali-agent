@@ -11,6 +11,8 @@ All scripts live in `scripts/` and are run from the repository root with the pro
 | `make_sweep.py` | Generate rank/LR/layer configs and a `commands.sh`. | `python scripts/make_sweep.py --base configs/qwen3-14b-all-layers.yaml --out configs/sweeps/r1 --rank 16,32 --lr 5e-5,1e-4` |
 | `validate_java_dataset.py` | Java/Quarkus-specific lint: javax, Spring, version tags, secrets, argument shape. | `python scripts/validate_java_dataset.py data/java/processed/train.jsonl --tools examples/java/tools.json --require-dict-arguments --strict` |
 | `mine_java_commits.py` | Mine Java commit seeds (base commit, task, patch, test command) from a git repo. | `python scripts/mine_java_commits.py --repo ~/src/quarkus-quickstarts --out data/java/interim/seeds.jsonl --limit 300 --only-with-tests` |
+| `validate_react_dataset.py` | React/Tailwind lint: v3 directives, legacy React, dynamic classes, XSS, a11y smells, argument shape. | `python scripts/validate_react_dataset.py data/react/processed/train.jsonl --tools examples/react/tools.json --require-dict-arguments --strict` |
+| `mine_react_commits.py` | Mine React/TS commit seeds from a git repo. | `python scripts/mine_react_commits.py --repo ~/src/shadcn-ui/ui --out data/react/interim/seeds.jsonl --limit 300 --only-with-tests` |
 | `prepare_dataset.py` | Normalize a canonical JSONL, split train/valid/test, write a manifest. | `python scripts/prepare_dataset.py data/interim/all.jsonl --out data/processed --split 0.9 0.05 0.05` |
 | `split_dataset.py` | Deterministic split with exact/near-dup filtering. | `python scripts/split_dataset.py data/interim/all.jsonl --out data/processed` |
 | `generate_synthetic.py` | DeepSeek/OpenAI-compatible generation with retries, cost tracking and JSON validation. | `python scripts/generate_synthetic.py --tasks 50 --out data/interim/gen.jsonl` |
@@ -142,7 +144,17 @@ python scripts/generate_synthetic.py --mode tasks --tasks 300 --batch 10 \
   --out data/java/interim/tasks.jsonl
 ```
 
-It does **not** execute commands. Pair it with `execute_verified.py` for Kali or the Maven sandbox in [21 — Java synthetic data](21-java-synthetic.md) for Java.
+For React/Tailwind:
+
+```bash
+python scripts/generate_synthetic.py --mode tasks --tasks 300 --batch 10 \
+  --model deepseek-flash \
+  --system-file examples/react/teacher-system.md \
+  --prompt-file examples/react/task-prompt.md \
+  --out data/react/interim/tasks.jsonl
+```
+
+It does **not** execute commands. Pair it with `execute_verified.py` for Kali, the Maven sandbox in [21 — Java synthetic data](21-java-synthetic.md) for Java, or the Playwright sandbox in [25 — React synthetic data](25-react-synthetic.md) for React.
 
 ```bash
 export DEEPSEEK_API_KEY=...
@@ -318,7 +330,49 @@ It is read-only and does not execute code. The seeds are inputs for the LLM + sa
 
 ---
 
-## B.15 Shell helpers
+## B.15 `validate_react_dataset.py`
+
+A React/Tailwind linter for canonical chat JSONL. It scans code blocks for:
+
+- `@tailwind base/components/utilities` (allowed only in a migration task);
+- `tailwind.config.*` in a v4 task;
+- removed v4 utilities (`bg-opacity-*`, `flex-shrink-*`, `overflow-ellipsis`, …);
+- `outline-none` on focusable elements;
+- `ReactDOM.render`, `useFormState`, `React.FC`, class components, `propTypes`, `defaultProps`;
+- dynamic Tailwind class construction and arbitrary hex;
+- unsanitized `dangerouslySetInnerHTML`;
+- `<img>` without `alt`, `<button>` without `type`, clickable `div` without role;
+- `target="_blank"` without `rel`;
+- `key={index}`, `any`, `@ts-ignore`, `console.log`, `TODO`;
+- probable secrets;
+- tool arguments stored as strings when `--require-dict-arguments` is set.
+
+It does not compile, render or test. Pair it with `npm run typecheck`, Vitest, Playwright and axe.
+
+---
+
+## B.16 `mine_react_commits.py`
+
+Reads a git repository and writes React/TS commit seeds:
+
+```json
+{"schema":"react-commit-task-v1","repo":"...","base_commit":"...","commit":"...",
+ "task":"...","files":["..."],"patch":"diff --git ...","setup_command":"npm ci",
+ "test_command":"npm run typecheck && npm test -- --run && npm run build"}
+```
+
+Options:
+
+- `--limit`, `--since` — commit range;
+- `--only-with-tests` — require a changed test/E2E file;
+- `--max-patch-bytes`, `--max-files` — skip huge commits;
+- `--license` — record the source license.
+
+It detects npm/pnpm/yarn from `package.json` and builds a check command from the scripts that exist. It is read-only and does not execute code. The seeds are inputs for the LLM + browser sandbox in [25 — React synthetic data](25-react-synthetic.md), not training rows by themselves.
+
+---
+
+## B.17 Shell helpers
 
 `export_gguf.sh`:
 
@@ -338,7 +392,7 @@ It is read-only and does not execute code. The seeds are inputs for the LLM + sa
 
 ---
 
-## B.16 Exit codes
+## B.18 Exit codes
 
 | Code | Meaning |
 |---|---|

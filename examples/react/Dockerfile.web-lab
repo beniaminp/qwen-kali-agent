@@ -1,0 +1,15 @@
+# React/Tailwind verification container.
+# Official Playwright image: browsers + a supported Node runtime.
+FROM mcr.microsoft.com/playwright:v1.64.1-noble
+
+USER root
+RUN mkdir -p /workspace && chown pwuser:pwuser /workspace
+USER pwuser
+WORKDIR /workspace
+
+ENV CI=1
+ENV PLAYWRIGHT_BROWSERS_PATH=/ms-playwright
+
+# Application dependencies are installed by the job (`npm ci`), not baked in.
+# Mount a cache at $HOME/.npm; the examples set HOME=/tmp and mount the host cache.
+ENTRYPOINT ["/bin/bash"]
