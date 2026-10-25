@@ -6,10 +6,10 @@
     .qwen { fill: #ede9fe; stroke: #6d28d9; stroke-width: 1.5; rx: 6; }
     .local { fill: #e0f2fe; stroke: #0284c7; stroke-width: 1.5; rx: 6; }
     .global { fill: #fef3c7; stroke: #d97706; stroke-width: 1.5; rx: 6; }
-    .txt { font-family: Inter, Arial, sans-serif; font-size: 13px; fill: #1f2937; }
-    .small { font-family: Inter, Arial, sans-serif; font-size: 11px; fill: #4b5563; }
-    .label { font-family: Inter, Arial, sans-serif; font-size: 14px; font-weight: 600; fill: #5b21b6; }
-    .mono { font-family: "JetBrains Mono", monospace; font-size: 11px; fill: #4c1d95; }
+    .txt { font-family: Inter, Arial, sans-serif; font-size: 16px; fill: #1f2937; }
+    .small { font-family: Inter, Arial, sans-serif; font-size: 14px; fill: #4b5563; }
+    .label { font-family: Inter, Arial, sans-serif; font-size: 17px; font-weight: 600; fill: #5b21b6; }
+    .mono { font-family: "JetBrains Mono", monospace; font-size: 14px; fill: #4c1d95; }
   </style>
   <rect class="bg" width="900" height="430"/>
   <text class="label" x="30" y="30">Qwen3-14B: 40 × full GQA</text>

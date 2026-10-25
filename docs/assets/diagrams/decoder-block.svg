@@ -7,10 +7,10 @@
     .soft { fill: #f3e8ff; stroke: #a78bfa; stroke-width: 1.5; rx: 10; }
     .res { fill: #ede9fe; stroke: #7c3aed; stroke-width: 1.5; rx: 8; }
     .arrow { stroke: #4c1d95; stroke-width: 2; fill: none; marker-end: url(#arrow); }
-    .txt { font-family: Inter, Arial, sans-serif; font-size: 15px; fill: #1f2937; }
-    .small { font-family: Inter, Arial, sans-serif; font-size: 12px; fill: #4b5563; }
-    .mono { font-family: "JetBrains Mono", monospace; font-size: 12px; fill: #4c1d95; }
-    .label { font-family: Inter, Arial, sans-serif; font-size: 13px; font-weight: 600; fill: #5b21b6; }
+    .txt { font-family: Inter, Arial, sans-serif; font-size: 18px; fill: #1f2937; }
+    .small { font-family: Inter, Arial, sans-serif; font-size: 15px; fill: #4b5563; }
+    .mono { font-family: "JetBrains Mono", monospace; font-size: 15px; fill: #4c1d95; }
+    .label { font-family: Inter, Arial, sans-serif; font-size: 16px; font-weight: 600; fill: #5b21b6; }
   </style>
   <defs>
     <marker id="arrow" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse">

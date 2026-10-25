@@ -1,10 +1,10 @@
-# Qwen Agent Handbook
+# Qwen & Gemma Handbook
 
-**A practical, research-backed handbook for turning Qwen open-weight models into an agentic Kali Linux assistant and specialised Java/Quarkus and React/Tailwind coding agents — trained locally on a 32 GB Apple M1 Pro, evaluated honestly, and deployed behind real guardrails.**
+**A practical, research-backed handbook for turning Qwen and Gemma open-weight models into an agentic Kali Linux assistant and specialised Java/Quarkus and React/Tailwind coding agents — trained locally on a 32 GB Apple M1 Pro, evaluated honestly, and deployed behind real guardrails.**
 
 This repository is documentation first, with runnable configs and scripts second. It is written to be useful months from now: every recommendation includes the reason, the memory math, the failure modes, and the primary sources.
 
-**Live site:** <https://beniaminp.github.io/qwen-kali-agent/>
+**Live site:** <https://beniaminp.github.io/qwen-kali-agent/>  ·  **Quick start:** <https://beniaminp.github.io/qwen-kali-agent/00-start/>
 
 > **Status (25 October 2026).** Research, commands and links were checked against upstream documentation and source on 25 Oct 2026. The MLX training runs were **not** executed on the target Mac in the environment where this handbook was assembled, so treat every command as *verified but not hardware-tested*. Run the preflight in [`docs/03-macos-setup.md`](docs/03-macos-setup.md) before committing to a multi-day run.
 
@@ -37,7 +37,7 @@ This repository is documentation first, with runnable configs and scripts second
 
 ## Documentation site
 
-The handbook is also a **GitBook-style MkDocs site** ([Material for MkDocs](https://squidfunk.github.io/mkdocs-material/) with a custom GitBook theme, search, grouped navigation and edit links). **Live:** <https://beniaminp.github.io/qwen-kali-agent/>
+The handbook is also a **GitBook-style MkDocs site** ([Material for MkDocs](https://squidfunk.github.io/mkdocs-material/) with a custom GitBook theme, tabbed navigation, search, reading progress and edit links). **Live:** <https://beniaminp.github.io/qwen-kali-agent/>
 
 ```bash
 # from the repo root, with the project venv active
@@ -58,6 +58,7 @@ Or use `make docs-serve` / `make docs`. `site/` is generated and git-ignored.
 .
 ├── README.md                  ← you are here
 ├── docs/
+│   ├── 00-start.md            shortest path: track picker and chapter map
 │   ├── 01-landscape.md        Qwen model landscape and what to train
 │   ├── 02-hardware.md         M1 Pro memory math, throughput, limits
 │   ├── 03-macos-setup.md      reproducible environment from zero

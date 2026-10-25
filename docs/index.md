@@ -1,106 +1,173 @@
-# Qwen Agent Handbook
+---
+title: Qwen & Gemma Handbook
+hide:
+  - navigation
+  - toc
+---
 
-**Fine-tuning a Qwen model into an agentic Kali Linux assistant on a 32 GB M1 Pro — with the memory math, datasets, training runbook, evaluation, serving and safety controls.**
-
-This site is the long-form handbook. The repository root has the same material in [`README.md`](https://github.com/beniaminp/qwen-kali-agent/blob/main/README.md), plus configs, scripts and examples.
-
-<div class="gb-cards">
-  <a class="gb-card" href="01-landscape/"><strong>Choose the model</strong><span>Qwen3-14B locally, Qwen3-8B as the fallback, and why Qwen3.5 is a GPU job.</span></a>
-  <a class="gb-card" href="08-finetuning/"><strong>Train the adapter</strong><span>MLX QLoRA runbook: flags, memory, checkpoints, loss reading.</span></a>
-  <a class="gb-card" href="17-finetune-2026-update/"><strong>Use the 2026 recipe</strong><span>All-layer LoRA, the MLX scale trap, one epoch, new configs.</span></a>
-  <a class="gb-card" href="04-data-strategy/"><strong>Build the data</strong><span>Tool-calling mix, agentic trajectories, negative examples, synthetic data.</span></a>
-  <a class="gb-card" href="10-export-serving/"><strong>Serve it</strong><span>MLX, GGUF, llama.cpp, Ollama, and the SSH tunnel to Kali.</span></a>
-  <a class="gb-card" href="11-kali-agent/"><strong>Wire up Kali</strong><span>MCP tools, scope policy, audit logs, and the lab loop.</span></a>
-  <a class="gb-card" href="18-java-quarkus/"><strong>Java &amp; Quarkus</strong><span>Java 25, Quarkus 3.40, hexagonal architecture and SOLID.</span></a>
-  <a class="gb-card" href="20-java-finetuning/"><strong>Fine-tune a coder</strong><span>Qwen2.5-Coder on Java/Quarkus data, evaluated with Maven and ArchUnit.</span></a>
-  <a class="gb-card" href="22-react-tailwind/"><strong>React &amp; Tailwind</strong><span>React 19, Tailwind 4.3, accessible design systems and Vite 8.</span></a>
-  <a class="gb-card" href="24-react-finetuning/"><strong>Fine-tune a UI coder</strong><span>Qwen2.5-Coder on React data, verified by TypeScript, Playwright and axe.</span></a>
-  <a class="gb-card" href="26-one-model-for-all/"><strong>One Qwen3 for all</strong><span>Qwen3-14B + three adapters, or one mixed adapter for Kali, Java and React.</span></a>
-  <a class="gb-card" href="27-gemma4-12b/"><strong>Gemma 4 12B track</strong><span>Apache-2.0, 256K context, vision, native tool calls and a separate MLX runbook.</span></a>
-  <a class="gb-card" href="31-gemma-vs-qwen/"><strong>Compare Gemma vs Qwen</strong><span>Keep both stacks, same prompts and tools, and decide with the real verifier.</span></a>
-  <a class="gb-card" href="32-mathematics/"><strong>The mathematics</strong><span>Attention, RoPE, GQA, MoE, Gated DeltaNet, FLOPs and KV cache, from first principles.</span></a>
-  <a class="gb-card" href="37-architecture/"><strong>Architecture anatomy</strong><span>From config.json to tensor shapes, GQA and KV cache, with diagrams.</span></a>
-  <a class="gb-card" href="38-derivations/"><strong>Derivations and proofs</strong><span>Softmax gradients, RoPE, RMSNorm, GDN, quantization and speculative decoding.</span></a>
-  <a class="gb-card" href="35-from-zero/"><strong>Build from zero</strong><span>Train a small model you can actually afford; the full budget and recipe.</span></a>
+<div class="gb-hero">
+  <p class="gb-eyebrow"><span class="gb-dot"></span> Open handbook · Oct 2026</p>
+  <h1 class="gb-hero__title">Build, fine-tune and ship <span class="gb-gradient">Qwen &amp; Gemma</span> agents.</h1>
+  <p class="gb-hero__lead">A source-backed, practical handbook for local model training on a 32 GB Apple M1 Pro — agents for authorized Kali Linux work, Java/Quarkus services and React/Tailwind front-ends.</p>
+  <div class="gb-actions">
+    <a class="gb-btn gb-btn--primary" href="00-start/">Start here <span aria-hidden="true">→</span></a>
+    <a class="gb-btn" href="17-finetune-2026-update/">2026 LoRA recipe</a>
+    <a class="gb-btn gb-btn--ghost" href="https://github.com/beniaminp/qwen-kali-agent" target="_blank" rel="noopener">GitHub</a>
+  </div>
+  <div class="gb-stats">
+    <div class="gb-stat"><strong>3</strong><span>specializations</span></div>
+    <div class="gb-stat"><strong>2</strong><span>model families</span></div>
+    <div class="gb-stat"><strong>40</strong><span>chapters</span></div>
+    <div class="gb-stat"><strong>32 GB</strong><span>target hardware</span></div>
+  </div>
 </div>
 
+## Choose your track
+
+<div class="gb-track-grid">
+  <a class="gb-track gb-track--kali" href="01-landscape/">
+    <div class="gb-track__top"><span class="gb-pill">Agent</span><span class="gb-track__arrow">→</span></div>
+    <h3>Kali &amp; network security</h3>
+    <p>Qwen3-14B, tool calling, multi-turn trajectories, scope policy and an execution-verified Kali loop.</p>
+    <ul>
+      <li>Qwen3-14B / 8B smoke run</li>
+      <li>BFCL, KaliBench, Cybench</li>
+      <li>MCP + policy layer</li>
+    </ul>
+    <span class="gb-track__cta">Start the track</span>
+  </a>
+  <a class="gb-track gb-track--java" href="18-java-quarkus/">
+    <div class="gb-track__top"><span class="gb-pill">Code</span><span class="gb-track__arrow">→</span></div>
+    <h3>Java &amp; Quarkus</h3>
+    <p>Java 25 LTS, Quarkus 3.40 LTS, hexagonal architecture and SOLID — verified with Maven and ArchUnit.</p>
+    <ul>
+      <li>Qwen2.5-Coder-14B</li>
+      <li>repository + commit data</li>
+      <li>compile and test gates</li>
+    </ul>
+    <span class="gb-track__cta">Start the track</span>
+  </a>
+  <a class="gb-track gb-track--react" href="22-react-tailwind/">
+    <div class="gb-track__top"><span class="gb-pill">UI</span><span class="gb-track__arrow">→</span></div>
+    <h3>React &amp; Tailwind</h3>
+    <p>React 19.3, Tailwind 4.3, Vite 8 and accessible design systems — checked by TypeScript, Playwright and axe.</p>
+    <ul>
+      <li>Qwen2.5-Coder-14B</li>
+      <li>components, pages, a11y</li>
+      <li>browser-verified output</li>
+    </ul>
+    <span class="gb-track__cta">Start the track</span>
+  </a>
+</div>
+
+<div class="gb-banner">
+  <div>
+    <span class="gb-pill gb-pill--gemma">Alternative</span>
+    <h3>Gemma 4 12B — the second stack</h3>
+    <p>Apache-2.0, 11.95B dense, 256K context, natively multimodal. Train separate adapters and compare with Qwen on the same golden set.</p>
+  </div>
+  <a class="gb-btn" href="27-gemma4-12b/">Explore Gemma 4</a>
+</div>
+
+## The core path
+
+<div class="gb-path">
+  <a class="gb-path__item" href="01-landscape/">
+    <span class="gb-path__num">01</span>
+    <strong>Pick the model</strong>
+    <span>What fits, what does not, and why Qwen3-14B is the local default.</span>
+  </a>
+  <a class="gb-path__item" href="02-hardware/">
+    <span class="gb-path__num">02</span>
+    <strong>Check the memory</strong>
+    <span>Unified-memory math, sequence length, batch and QLoRA peak.</span>
+  </a>
+  <a class="gb-path__item" href="04-data-strategy/">
+    <span class="gb-path__num">03</span>
+    <strong>Build the data</strong>
+    <span>Capability mix, trajectories, negative examples and quality gates.</span>
+  </a>
+  <a class="gb-path__item" href="08-finetuning/">
+    <span class="gb-path__num">04</span>
+    <strong>Train the adapter</strong>
+    <span>MLX runbook, flags, checkpoints and loss reading.</span>
+  </a>
+  <a class="gb-path__item" href="09-evaluation/">
+    <span class="gb-path__num">05</span>
+    <strong>Prove it works</strong>
+    <span>Benchmarks, private golden set and release gates.</span>
+  </a>
+  <a class="gb-path__item" href="11-kali-agent/">
+    <span class="gb-path__num">06</span>
+    <strong>Ship with guardrails</strong>
+    <span>Serving, MCP, scope enforcement, audit and kill switch.</span>
+  </a>
+</div>
+
+## Go deeper
+
+<div class="gb-mini-grid">
+  <a class="gb-mini" href="17-finetune-2026-update/">
+    <span class="gb-mini__icon">✦</span>
+    <strong>2026 LoRA recipe</strong>
+    <span>All-layer LoRA, the MLX scale trap and one-epoch training.</span>
+  </a>
+  <a class="gb-mini" href="32-mathematics/">
+    <span class="gb-mini__icon">∑</span>
+    <strong>Mathematics</strong>
+    <span>Attention, RoPE, GQA, MoE, Gated DeltaNet, FLOPs and cache.</span>
+  </a>
+  <a class="gb-mini" href="37-architecture/">
+    <span class="gb-mini__icon">▦</span>
+    <strong>Architecture anatomy</strong>
+    <span>From config.json to tensor shapes, with diagrams.</span>
+  </a>
+  <a class="gb-mini" href="38-derivations/">
+    <span class="gb-mini__icon">ƒ</span>
+    <strong>Derivations</strong>
+    <span>Softmax, attention backward, RMSNorm, RoPE and GDN proofs.</span>
+  </a>
+  <a class="gb-mini" href="26-one-model-for-all/">
+    <span class="gb-mini__icon">◇</span>
+    <strong>One model for all</strong>
+    <span>Qwen3-14B plus three adapters, or one mixed adapter.</span>
+  </a>
+  <a class="gb-mini" href="35-from-zero/">
+    <span class="gb-mini__icon">↑</span>
+    <strong>From zero</strong>
+    <span>Train a small model you can actually afford.</span>
+  </a>
+</div>
+
+## What is new
+
+<div class="gb-new">
+  <div class="gb-new__item">
+    <span class="gb-new__date">25 Oct 2026</span>
+    <strong><a href="37-architecture/">Architecture anatomy and proofs</a></strong>
+    <p>Tensor-level diagrams, config-to-shape mapping and full derivations for attention, RoPE, RMSNorm, GDN and quantization.</p>
+  </div>
+  <div class="gb-new__item">
+    <span class="gb-new__date">25 Oct 2026</span>
+    <strong><a href="27-gemma4-12b/">Gemma 4 12B track</a></strong>
+    <p>A parallel model family with its own configs, datasets, validation, synthetic pipeline and comparison protocol.</p>
+  </div>
+  <div class="gb-new__item">
+    <span class="gb-new__date">25 Oct 2026</span>
+    <strong><a href="17-finetune-2026-update/">Corrected LoRA recipe</a></strong>
+    <p>All-layer adapters, the MLX <code>scale</code> trap, one-epoch training and new sweep tools.</p>
+  </div>
+</div>
 
 ---
-
-## Start here
-
-| If you want to… | Read |
-|---|---|
-| Understand which Qwen model to train and why | [01 — Landscape](01-landscape.md) |
-| Know whether it fits in 32 GB | [02 — Hardware](02-hardware.md) |
-| Set up the Mac from zero | [03 — macOS setup](03-macos-setup.md) |
-| Design the data mix | [04 — Data strategy](04-data-strategy.md) |
-| Find datasets and licenses | [05 — Datasets](05-datasets.md) |
-| Get the JSONL/template exactly right | [06 — Data format](06-data-format.md) |
-| Generate synthetic trajectories safely | [07 — Synthetic data](07-synthetic-data.md) |
-| Run the training | [08 — Fine-tuning](08-finetuning.md) |
-| Prove it works | [09 — Evaluation](09-evaluation.md) |
-| Export to GGUF/Ollama/MLX | [10 — Export & serving](10-export-serving.md) |
-| Wire it to Kali with MCP | [11 — Kali agent](11-kali-agent.md) |
-| Stay legal and in scope | [12 — Safety & legal](12-safety-legal.md) |
-| Fix a failure | [13 — Troubleshooting](13-troubleshooting.md) |
-| See the sources | [14 — References](14-references.md) |
-| Go beyond SFT | [15 — Agentic methods](15-agentic-methods.md) |
-| Test networks, not just web apps | [16 — Network security](16-network-security.md) |
-| Fix the LoRA recipe | [17 — Fine-tuning update](17-finetune-2026-update.md) |
-| Specialize in Java/Quarkus | [18 — Java landscape](18-java-quarkus.md) |
-| Find Java datasets | [19 — Java datasets](19-java-datasets.md) |
-| Fine-tune a Java coder | [20 — Java fine-tuning](20-java-finetuning.md) |
-| Generate Java data with an LLM | [21 — Java synthetic data](21-java-synthetic.md) |
-| Specialize in React/Tailwind | [22 — React & Tailwind](22-react-tailwind.md) |
-| Find React datasets | [23 — React datasets](23-react-datasets.md) |
-| Fine-tune a UI coder | [24 — React fine-tuning](24-react-finetuning.md) |
-| Generate React data with an LLM | [25 — React synthetic data](25-react-synthetic.md) |
-| Use one Qwen3 for all tracks | [26 — One Qwen3 for all](26-one-model-for-all.md) |
-| Try Gemma 4 12B | [27 — Gemma 4 12B](27-gemma4-12b.md) |
-| Fine-tune Gemma | [29 — Gemma fine-tuning](29-gemma4-finetuning.md) |
-| Compare Gemma and Qwen | [31 — Gemma vs Qwen](31-gemma-vs-qwen.md) |
-| Understand the mathematics | [32 — Mathematics](32-mathematics.md) |
-| Map math to real tensor shapes | [37 — Architecture anatomy](37-architecture.md) |
-| Read the proofs | [38 — Derivations and proofs](38-derivations.md) |
-| See how Qwen was built | [33 — How Qwen was built](33-qwen-creation.md) |
-| See how Gemma 4 was built | [34 — How Gemma 4 was built](34-gemma4-creation.md) |
-| Train a model from zero | [35 — From zero](35-from-zero.md) |
-| Reproduce a 12B–14B | [36 — Reproducing 12B–14B](36-reproducing-12b-14b.md) |
-
----
-
-## The one-paragraph answer
-
-**Three primary tracks.**
-
-**Kali/agent:** train **Qwen3-14B** with 4-bit QLoRA using **MLX-LM** on the M1 Pro. Use **Qwen3-8B** for the first smoke run. Build a **2–5M-token** mix of general tool calling, multi-turn agentic trajectories, Kali CLI data, execution-verified synthetic trajectories, and refusal/scope examples. Evaluate on **BFCL**, **KaliBench** (held-out test), **Cybench** and a private **240-task golden set**. Serve with **`llama-server`** for the best tool fidelity, or **`mlx_lm.server`** for speed, behind an **SSH tunnel** to the Kali VM. Put a deterministic **policy layer** between the model and the lab: scope file, allowlist, confirmation, audit log, kill switch. Publish only if the unsafe-action rate is zero and the licenses are clean.
-
-**Java/Quarkus:** train **Qwen2.5-Coder-14B-Instruct** with 4-bit QLoRA, adapting 24 of 48 blocks. Target **Java 25 LTS + Quarkus 3.40 LTS**, teach hexagonal architecture and SOLID, and verify every example with Maven tests and ArchUnit. Qwen3-Coder-30B-A3B is the teacher/judge, not a local training target. Start at [18 — Java landscape](18-java-quarkus.md).
-
-**React/Tailwind:** train **Qwen2.5-Coder-14B-Instruct** with 4-bit QLoRA at 3K context. Target **React 19.3 + Tailwind CSS 4.3 + Vite 8 + Node 24 LTS**, teach component architecture, design tokens and accessibility, and verify every example with TypeScript, Vitest, Playwright and axe. Start at [22 — React & Tailwind](22-react-tailwind.md).
-
-**Gemma 4 12B (optional second stack):** Apache-2.0, 11.95B dense, 256K context, text/image/audio, native tool calling. It is a strong React/vision base and a credible Java/Kali challenger. Train separate adapters and compare with Qwen on the same golden set; start at [27 — Gemma 4 12B](27-gemma4-12b.md).
-
----
-
-## Warnings
 
 > **Authorized testing only.** A model is not authorization. Use a written scope, a lab you own, and a policy layer that enforces both.
+>
+> **A handbook, not a tested product.** Commands were checked against upstream source/docs on 25 Oct 2026, but the MLX runs were not executed on the target Mac. Run the preflight and a smoke test before a multi-day run.
 
-> **This is a handbook, not a tested product.** Commands were verified against upstream source/docs on 25 Oct 2026, but not executed on the target Mac in the environment where the handbook was assembled. Run the preflight and a 1-iteration smoke test before a multi-day run.
-
----
-
-## Repository map
-
-```text
-README.md
-docs/            this handbook
-configs/         MLX YAML configs
-scripts/         env, data, training, eval, serving helpers
-examples/        tool schemas, system prompt, scope, MCP config, lab compose
-data/            dataset layout and tiny examples
-```
-
-License: Apache-2.0. Model and dataset licenses are separate; see [12 — Safety & legal](12-safety-legal.md).
+<p class="gb-footer-links">
+  <a href="00-start/">Quick start</a>
+  <a href="14-references/">References</a>
+  <a href="appendix-c-runbook/">Runbook</a>
+  <a href="https://github.com/beniaminp/qwen-kali-agent">Repository</a>
+</p>
