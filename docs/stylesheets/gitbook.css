@@ -1297,3 +1297,92 @@ body:has(.gb-hero) .md-content__button {
 [data-md-color-scheme="slate"] .md-nav__title {
   color: #b6bcc8;
 }
+
+.gb-pill--distill {
+  background: #fef3c7;
+  color: #92400e;
+}
+
+.gb-banner--distill {
+  background:
+    radial-gradient(circle at 92% 10%, rgba(245, 158, 11, 0.18), transparent 35%),
+    linear-gradient(120deg, #161018, #21131f 58%, #1c1220);
+}
+
+[data-md-color-scheme="slate"] .gb-banner--distill {
+  border-color: #3a2a2a;
+}
+
+/* Accessible syntax highlighting on the dark code surface */
+.md-typeset .highlight .c,
+.md-typeset .highlight .c1,
+.md-typeset .highlight .ch,
+.md-typeset .highlight .cm,
+.md-typeset .highlight .cs,
+.md-typeset .highlight .sd {
+  color: #94a3b8;
+}
+
+.md-typeset .highlight .nt,
+.md-typeset .highlight .nb,
+.md-typeset .highlight .bp {
+  color: #7dd3fc;
+}
+
+.md-typeset .highlight .s,
+.md-typeset .highlight .s1,
+.md-typeset .highlight .s2,
+.md-typeset .highlight .sb,
+.md-typeset .highlight .sc,
+.md-typeset .highlight .si,
+.md-typeset .highlight .ss {
+  color: #86efac;
+}
+
+.md-typeset .highlight .k,
+.md-typeset .highlight .kd,
+.md-typeset .highlight .kn,
+.md-typeset .highlight .kp,
+.md-typeset .highlight .kr,
+.md-typeset .highlight .kt {
+  color: #c4b5fd;
+}
+
+.md-typeset .highlight .nf,
+.md-typeset .highlight .nc,
+.md-typeset .highlight .ne,
+.md-typeset .highlight .nn {
+  color: #fcd34d;
+}
+
+.md-typeset .highlight .n,
+.md-typeset .highlight .na,
+.md-typeset .highlight .nv,
+.md-typeset .highlight .vc,
+.md-typeset .highlight .vg,
+.md-typeset .highlight .vi {
+  color: #e5e7eb;
+}
+
+.md-typeset .highlight .o,
+.md-typeset .highlight .ow,
+.md-typeset .highlight .p {
+  color: #cbd5e1;
+}
+
+.md-typeset .highlight .gh,
+.md-typeset .highlight .gu,
+.md-typeset .highlight .gd,
+.md-typeset .highlight .gi {
+  color: #f9a8d4;
+}
+
+.md-typeset .highlight .kc {
+  color: #fcd34d;
+}
+
+.md-typeset .highlight .l,
+.md-typeset .highlight .l-Scalar,
+.md-typeset .highlight .l-Scalar-Plain {
+  color: #86efac;
+}

@@ -1,0 +1,33 @@
+# Gemma 4 E2B — sequence-level distillation from Gemma 4 12B.
+# All 35 blocks, seq 2048, batch 4, grad accum 2 = effective 8.
+# Total weights ~5.1B due to PLE; only ~2.6 GB at 4-bit.
+model: mlx-community/gemma-4-e2b-it-4bit
+train: true
+data: data/distill/e2b/processed
+fine_tune_type: lora
+optimizer: adamw
+num_layers: -1
+batch_size: 4
+iters: 300
+val_batches: 25
+learning_rate: 1.5e-4
+steps_per_report: 10
+steps_per_eval: 100
+save_every: 50
+max_seq_length: 2048
+grad_checkpoint: true
+grad_accumulation_steps: 2
+mask_prompt: true
+adapter_path: adapters/gemma4-e2b-distill
+seed: 42
+lora_parameters:
+  rank: 16
+  dropout: 0.05
+  scale: 2.0
+lr_schedule:
+  name: cosine_decay
+  warmup: 30
+  arguments: [1.5e-4, 300, 1.0e-6]
+optimizer_config:
+  adamw:
+    weight_decay: 0.01

@@ -23,6 +23,15 @@
   </a>
 </div>
 
+<div class="gb-banner gb-banner--distill">
+  <div>
+    <span class="gb-pill gb-pill--distill">Compress</span>
+    <h3>Gemma 12B distillation</h3>
+    <p>Teacher → 12B, 12B → E4B/E2B, or 12B as a data teacher. Sequence KD runs on 32 GB; logit KD needs a GPU.</p>
+  </div>
+  <a class="gb-btn" href="../39-gemma-distillation/">Open the track</a>
+</div>
+
 ---
 
 ## Pick your path
@@ -78,6 +87,18 @@
     **Trade-off:** Qwen3 has the stronger documented tool-call track record; test Gemma on your own Kali harness before switching.
 
     **Start:** [27 — Gemma 4 12B](27-gemma4-12b.md), then compare with [31 — Gemma vs Qwen](31-gemma-vs-qwen.md).
+
+=== "Distillation"
+
+    **Goal:** transfer behaviour, not just labels.
+
+    **32 GB Mac:** sequence KD — teacher traces → Gemma 12B LoRA with MLX. Start at [40 — Teachers and data](40-distill-data.md) and [41 — Training](41-distill-training.md).
+
+    **GPU:** logit KD with `scripts/distill_logits.py`; same-tokenizer Gemma pairs only.
+
+    **Cheap deployment:** Gemma 12B → E4B/E2B; same 262k tokenizer, logit KD is valid.
+
+    **Decide:** [39 — Gemma 12B distillation](39-gemma-distillation.md), then [42 — Evaluation](42-distill-eval.md).
 
 ---
 
@@ -142,6 +163,10 @@
 | See how Gemma 4 was built | [34 — How Gemma 4 was built](34-gemma4-creation.md) |
 | Train a model from zero | [35 — From zero](35-from-zero.md) |
 | Reproduce a 12B–14B | [36 — Reproducing 12B–14B](36-reproducing-12b-14b.md) |
+| Distil a teacher into Gemma 12B | [39 — Gemma 12B distillation](39-gemma-distillation.md) |
+| Build teacher traces and logits | [40 — Teachers and data](40-distill-data.md) |
+| Run sequence or logit KD | [41 — Distillation training](41-distill-training.md) |
+| Evaluate and deploy the student | [42 — Distillation evaluation](42-distill-eval.md) |
 
 ---
 

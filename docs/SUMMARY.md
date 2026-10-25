@@ -56,6 +56,13 @@ A GitBook-style table of contents, mirrored by the site navigation.
 - [Gemma synthetic data](30-gemma4-synthetic.md)
 - [Gemma vs Qwen](31-gemma-vs-qwen.md)
 
+### Distillation
+
+- [Gemma 12B distillation](39-gemma-distillation.md)
+- [Teachers and data](40-distill-data.md)
+- [Training](41-distill-training.md)
+- [Evaluation](42-distill-eval.md)
+
 ### One model for all
 
 - [Qwen3 for all three tracks](26-one-model-for-all.md)

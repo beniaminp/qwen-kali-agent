@@ -1,0 +1,33 @@
+# Gemma 4 12B — long-context sequence distillation.
+# 16 of 48 blocks, seq 4096. Use only if the teacher data has long files,
+# repositories or multi-turn tool traces; otherwise stay at 2048.
+model: mlx-community/gemma-4-12b-it-4bit
+train: true
+data: data/distill/12b-long/processed
+fine_tune_type: lora
+optimizer: adamw
+num_layers: 16
+batch_size: 1
+iters: 200
+val_batches: 20
+learning_rate: 5.0e-5
+steps_per_report: 10
+steps_per_eval: 50
+save_every: 50
+max_seq_length: 4096
+grad_checkpoint: true
+grad_accumulation_steps: 8
+mask_prompt: true
+adapter_path: adapters/gemma4-12b-distill-long
+seed: 42
+lora_parameters:
+  rank: 16
+  dropout: 0.05
+  scale: 2.0
+lr_schedule:
+  name: cosine_decay
+  warmup: 20
+  arguments: [5.0e-5, 200, 5.0e-6]
+optimizer_config:
+  adamw:
+    weight_decay: 0.01

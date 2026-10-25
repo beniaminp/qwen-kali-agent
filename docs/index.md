@@ -17,7 +17,7 @@ hide:
   <div class="gb-stats">
     <div class="gb-stat"><strong>3</strong><span>specializations</span></div>
     <div class="gb-stat"><strong>2</strong><span>model families</span></div>
-    <div class="gb-stat"><strong>40</strong><span>chapters</span></div>
+    <div class="gb-stat"><strong>44</strong><span>chapters</span></div>
     <div class="gb-stat"><strong>32 GB</strong><span>target hardware</span></div>
   </div>
 </div>
@@ -67,6 +67,15 @@ hide:
     <p>Apache-2.0, 11.95B dense, 256K context, natively multimodal. Train separate adapters and compare with Qwen on the same golden set.</p>
   </div>
   <a class="gb-btn" href="27-gemma4-12b/">Explore Gemma 4</a>
+</div>
+
+<div class="gb-banner gb-banner--distill">
+  <div>
+    <span class="gb-pill gb-pill--distill">Compress</span>
+    <h3>Gemma 12B distillation — teacher, student, or both</h3>
+    <p>Distil a stronger teacher into 12B, compress 12B into E4B/E2B, or use 12B as a data teacher. Includes the KL math, a GPU logit-KD trainer and the 32 GB sequence-KD path.</p>
+  </div>
+  <a class="gb-btn" href="39-gemma-distillation/">Open the track</a>
 </div>
 
 ## The core path
@@ -137,6 +146,11 @@ hide:
     <strong>From zero</strong>
     <span>Train a small model you can actually afford.</span>
   </a>
+  <a class="gb-mini" href="39-gemma-distillation/">
+    <span class="gb-mini__icon">⇣</span>
+    <strong>Distillation</strong>
+    <span>Teacher logits, sequence KD and 12B → E4B/E2B compression.</span>
+  </a>
 </div>
 
 ## What is new
@@ -156,6 +170,11 @@ hide:
     <span class="gb-new__date">25 Oct 2026</span>
     <strong><a href="17-finetune-2026-update/">Corrected LoRA recipe</a></strong>
     <p>All-layer adapters, the MLX <code>scale</code> trap, one-epoch training and new sweep tools.</p>
+  </div>
+  <div class="gb-new__item">
+    <span class="gb-new__date">25 Oct 2026</span>
+    <strong><a href="39-gemma-distillation/">Gemma 12B distillation</a></strong>
+    <p>A three-direction track: teacher → 12B, 12B → E4B/E2B, and 12B as a data teacher, with sequence and logit KD.</p>
   </div>
 </div>
 

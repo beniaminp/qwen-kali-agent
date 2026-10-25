@@ -26,6 +26,7 @@ This repository is documentation first, with runnable configs and scripts second
 | **React/Tailwind track** | **Qwen2.5-Coder-14B-Instruct 4-bit**, 24/48 blocks at 3K, React 19.3 + Tailwind 4.3 + Vite 8 + Node 24 LTS. TypeScript 7-compatible source; TypeScript 6 API bridge for ESLint. Start at [`docs/22-react-tailwind.md`](docs/22-react-tailwind.md). |
 | **One Qwen3 for all** | **Qwen3-14B 4-bit** with **three LoRA adapters** (Kali, Java, React) is the best local “one model for all”. One mixed adapter is possible with [`docs/26-one-model-for-all.md`](docs/26-one-model-for-all.md). For training-free serving, Qwen3-Coder-30B-A3B or Qwen3-30B-A3B-2507 at 4-bit fits 32 GB. |
 | **Gemma 4 12B track** | **Gemma 4 12B 4-bit**, 24/48 blocks, Apache-2.0, 256K context, vision/native tool calls. Separate configs/data/ports; keep Qwen unchanged and compare with [`docs/31-gemma-vs-qwen.md`](docs/31-gemma-vs-qwen.md). |
+| **Gemma 12B distillation** | **Sequence KD** into Gemma 12B on 32 GB (teacher traces + MLX LoRA); **logit KD** 12B → E4B/E2B on a GPU. Default teacher: Gemma 4 31B (same tokenizer) or DeepSeek. Start at [`docs/39-gemma-distillation.md`](docs/39-gemma-distillation.md). |
 | **Dataset size** | **2–5M tokens** for a first serious adapter; 10M+ only if evaluation proves it helps. Quality and trajectory realism dominate raw row count. |
 | **Serving** | **`llama-server`** (llama.cpp) for the best tool-call fidelity; **`mlx_lm.server`** for the fastest local iteration; **Ollama** for convenience. All are unauthenticated — put them behind loopback + SSH, never on an untrusted LAN. |
 | **Agent harness** | **OpenCode + MCP-Kali-Server** (small, typed tool surface) or **hackingBuddyGPT** (minimal research baseline). Avoid mega-tool MCP servers with a 14B. |
@@ -93,6 +94,10 @@ Or use `make docs-serve` / `make docs`. `site/` is generated and git-ignored.
 │   ├── 32-mathematics.md      transformer, attention, RoPE, MoE, GDN, FLOPs
 │   ├── 37-architecture.md     config.json to tensors, shapes, cache, trade-offs
 │   ├── 38-derivations.md      softmax/attention/RMSNorm/RoPE/GDN proofs
+│   ├── 39-gemma-distillation.md  teacher/student directions and memory
+│   ├── 40-distill-data.md     teacher traces, logits, filtering and data cards
+│   ├── 41-distill-training.md sequence KD, logit KD and on-policy loops
+│   ├── 42-distill-eval.md     teacher/base/SFT/distilled evaluation gates
 │   ├── 33-qwen-creation.md    how Qwen2.5/3/3.5 were pretrained and post-trained
 │   ├── 34-gemma4-creation.md  how Gemma 4 was built, including the 12B
 │   ├── 35-from-zero.md        train a small model you can afford
@@ -333,9 +338,42 @@ The script records both outputs. Apply each patch and grade with the real verifi
 
 ---
 
+## Gemma 12B distillation track
+
+Distillation is a separate track with three directions:
+
+1. **stronger teacher → Gemma 4 12B** — compress behaviour from 31B/Qwen/DeepSeek into the 12B;
+2. **Gemma 4 12B → E4B/E2B** — cheap deployment; the family shares a 262k tokenizer, so logit KD is valid;
+3. **Gemma 4 12B as teacher** — generate data for any student.
+
+On a 32 GB Mac, the practical path is **sequence-level distillation**: generate teacher traces, validate them, then train a 12B/E4B/E2B LoRA with MLX. Logit KD needs a custom trainer and a GPU; `scripts/distill_logits.py` is the reference. Install the optional GPU dependencies with `uv pip install -r requirements-distill.txt`.
+
+```bash
+# 1. teacher traces
+python scripts/generate_distill_data.py \
+  --prompts examples/distill/prompts.jsonl \
+  --system-file examples/distill/teacher-system.md \
+  --model deepseek-flash --out data/distill/raw/deepseek.jsonl \
+  --n 2 --temperature 0.8 --max-tokens 2048
+
+# 2. validate and prepare
+python scripts/validate_gemma4_dataset.py \
+  data/distill/raw/deepseek.jsonl --tools examples/distill/tools.json --strict
+python scripts/prepare_dataset.py \
+  data/distill/raw/deepseek.jsonl --out data/distill/12b/processed \
+  --arguments-format dict --split 0.9 0.05 0.05
+
+# 3. train (sequence KD)
+mlx_lm.lora --config configs/gemma4-12b-distill.yaml
+```
+
+Read in order: [39 — Gemma 12B distillation](docs/39-gemma-distillation.md), [40 — Teachers, students and data](docs/40-distill-data.md), [41 — Distillation training](docs/41-distill-training.md), [42 — Evaluation](docs/42-distill-eval.md).
+
+---
+
 ## Model internals: how Qwen and Gemma 4 were built
 
-Five chapters cover the mathematics and the public training pipelines:
+The internals section covers the mathematics and the public training pipelines:
 
 - [32 — Mathematics](docs/32-mathematics.md): tokenization, cross-entropy, RMSNorm, GQA, RoPE/p-RoPE, SwiGLU/GeGLU, MoE routing, Gated DeltaNet, hybrid attention, MTP, parameter/FLOP/KV-cache formulas, quantization.
 - [37 — Architecture anatomy](docs/37-architecture.md): config keys, exact tensor shapes for Qwen3-14B and Gemma 4 12B, GQA/cache, stack patterns and design trade-offs.

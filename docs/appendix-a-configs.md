@@ -243,7 +243,20 @@ Data lives under `data/gemma4/<track>/processed`; tool arguments must be **objec
 
 ---
 
-## A.13 Config validation
+## A.13 Distillation configs
+
+| Config | Student | Role | Layers | Rank | Scale | Seq | LR |
+|---|---|---|---|---:|---:|---:|---:|
+| `gemma4-12b-distill.yaml` | Gemma 4 12B | sequence KD from 31B/DeepSeek | 24/48 | 16 | 2.0 | 2048 | 8e-5 |
+| `gemma4-12b-distill-longctx.yaml` | Gemma 4 12B | long traces | 16/48 | 16 | 2.0 | 4096 | 5e-5 |
+| `gemma4-e4b-distill.yaml` | Gemma 4 E4B | 12B → E4B | all 42 | 16 | 2.0 | 2048 | 1e-4 |
+| `gemma4-e2b-distill.yaml` | Gemma 4 E2B | 12B → E2B | all 35 | 16 | 2.0 | 2048 | 1.5e-4 |
+
+These configs train on **teacher traces** with ordinary masked SFT; they are sequence-level distillation. Logit KD uses `scripts/distill_logits.py`, not MLX-LM. Data: `data/distill/{12b,12b-long,e4b,e2b}/processed`; arguments must be objects. Details: [39 — Gemma 12B distillation](39-gemma-distillation.md), [41 — Distillation training](41-distill-training.md).
+
+---
+
+## A.14 Config validation
 
 ```bash
 python - <<'PY'

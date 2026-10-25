@@ -509,7 +509,48 @@ The KV estimate is an upper bound for full attention; it does not model sliding 
 
 ---
 
-## B.23 Shell helpers
+## B.23 `generate_distill_data.py`
+
+Generate sequence-level distillation data from any OpenAI-compatible teacher:
+
+```bash
+python scripts/generate_distill_data.py \
+  --prompts examples/distill/prompts.jsonl \
+  --system-file examples/distill/teacher-system.md \
+  --model deepseek-flash \
+  --out data/distill/raw/deepseek.jsonl \
+  --n 2 --temperature 0.8 --max-tokens 2048
+```
+
+Use `--base-url http://127.0.0.1:8080/v1 --allow-empty-key` for a local
+`mlx_lm.server`. It writes canonical `messages` rows, preserves
+`reasoning_content` and `tool_calls`, supports `--resume` and `--dry-run`, and
+never executes tools. See [40 — Teachers, students and data](40-distill-data.md).
+
+---
+
+## B.24 `distill_logits.py`
+
+A GPU reference for logit KD with top-k teacher logits and LoRA:
+
+```bash
+python scripts/distill_logits.py \
+  --teacher google/gemma-4-12B-it \
+  --student google/gemma-4-E4B-it \
+  --data data/distill/e4b/train.jsonl \
+  --out adapters/gemma4-e4b-distill \
+  --device cuda:0 --dtype bf16 --max-seq-length 1024 \
+  --top-k 64 --temperature 2.0 --alpha 0.6 --lora-r 16
+```
+
+It checks that teacher and student vocabularies match, masks the prompt, computes
+CE + top-k KL over the response span, supports separate teacher/student devices,
+and saves the adapter plus `distill_config.json`. It is not an MLX trainer; on
+32 GB use sequence KD. See [41 — Distillation training](41-distill-training.md).
+
+---
+
+## B.25 Shell helpers
 
 `export_gguf.sh`:
 
@@ -529,7 +570,7 @@ The KV estimate is an upper bound for full attention; it does not model sliding 
 
 ---
 
-## B.24 Exit codes
+## B.26 Exit codes
 
 | Code | Meaning |
 |---|---|

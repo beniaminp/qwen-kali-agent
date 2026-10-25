@@ -27,6 +27,13 @@ GEMMA_ROOT ?= data/gemma4
 GEMMA_TRACK ?= react
 GEMMA_ADAPTER ?= adapters/gemma4-12b-react
 GEMMA_FUSED ?= fused/gemma4-12b-react-4bit
+DISTILL_TEACHER ?= deepseek-flash
+DISTILL_BASE_URL ?= https://api.deepseek.com
+DISTILL_PROMPTS ?= examples/distill/prompts.jsonl
+DISTILL_DATA ?= data/distill/raw/deepseek.jsonl
+DISTILL_STUDENT ?= mlx-community/gemma-4-12b-it-4bit
+DISTILL_ADAPTER ?= adapters/gemma4-12b-distill
+DISTILL_FUSED ?= fused/gemma4-12b-distill-4bit
 MKDOCS ?= $(PYTHON) -m mkdocs
 
 .PHONY: help setup check data-check stats train-8b train-8b-all train-14b train-14b-last16 \
@@ -36,6 +43,8 @@ MKDOCS ?= $(PYTHON) -m mkdocs
         unified-mix unified-check unified-train unified-check-lora \
         gemma4-check gemma4-train-kali gemma4-train-java gemma4-train-react \
         gemma4-train-unified gemma4-check-lora gemma4-fuse gemma4-serve \
+        distill-generate distill-check distill-train-12b distill-train-e4b \
+        distill-train-e2b distill-check-lora distill-dry-logits distill-fuse \
         docs-install docs docs-serve clean
 
 help: ## Show this help
@@ -113,6 +122,40 @@ react-check-lora: ## Verify the React adapter covers MLP projections
 
 react-fuse: ## Fuse the React adapter
 	mlx_lm.fuse --model $(REACT_MODEL) --adapter-path $(REACT_ADAPTER) --save-path $(REACT_FUSED)
+
+distill-generate: ## Generate teacher traces for sequence distillation
+	$(PYTHON) scripts/generate_distill_data.py \
+	  --prompts $(DISTILL_PROMPTS) \
+	  --system-file examples/distill/teacher-system.md \
+	  --model $(DISTILL_TEACHER) --base-url $(DISTILL_BASE_URL) \
+	  --out $(DISTILL_DATA) --n 2 --temperature 0.8 --max-tokens 2048
+
+distill-check: ## Validate and prepare Gemma 12B distillation data
+	$(PYTHON) scripts/validate_gemma4_dataset.py $(DISTILL_DATA) \
+	  --tools examples/distill/tools.json --strict
+	$(PYTHON) scripts/prepare_dataset.py $(DISTILL_DATA) \
+	  --out data/distill/12b/processed --arguments-format dict --split 0.9 0.05 0.05
+
+distill-train-12b: ## Sequence-KD 12B run (24/48 blocks)
+	mlx_lm.lora --config configs/gemma4-12b-distill.yaml
+
+distill-train-e4b: ## Sequence-KD E4B run (all blocks)
+	mlx_lm.lora --config configs/gemma4-e4b-distill.yaml
+
+distill-train-e2b: ## Sequence-KD E2B run (all blocks)
+	mlx_lm.lora --config configs/gemma4-e2b-distill.yaml
+
+distill-check-lora: ## Verify the Gemma distillation adapter scope
+	$(PYTHON) scripts/check_lora.py --model $(DISTILL_STUDENT) \
+	  --num-layers 24 --rank 16 --scale 2
+
+distill-dry-logits: ## Dry-run the GPU logit-KD trainer without loading models
+	$(PYTHON) scripts/distill_logits.py \
+	  --teacher google/gemma-4-31B-it --student $(DISTILL_STUDENT) \
+	  --data data/distill/12b/processed/train.jsonl --out /tmp/distill-dry --dry-run
+
+distill-fuse: ## Fuse the 12B distillation adapter
+	mlx_lm.fuse --model $(DISTILL_STUDENT) --adapter-path $(DISTILL_ADAPTER) --save-path $(DISTILL_FUSED)
 
 unified-mix: ## Mix Kali + Java + React data for one Qwen3 adapter
 	$(PYTHON) scripts/mix_datasets.py \

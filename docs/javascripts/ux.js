@@ -78,6 +78,17 @@
     });
   };
 
+  var makeTablesFocusable = function () {
+    var content = document.querySelector(".md-content__inner");
+    if (!content) return;
+    content.querySelectorAll(".md-typeset__scrollwrap").forEach(function (wrap) {
+      if (wrap.getAttribute("tabindex")) return;
+      wrap.setAttribute("tabindex", "0");
+      wrap.setAttribute("role", "region");
+      wrap.setAttribute("aria-label", "Scrollable table");
+    });
+  };
+
   var labelTaskCheckboxes = function () {
     var content = document.querySelector(".md-content__inner");
     if (!content) return;
@@ -110,6 +121,7 @@
     addReadingTime();
     markExternalLinks();
     makeDiagramsZoomable();
+    makeTablesFocusable();
     labelTaskCheckboxes();
     addSearchShortcut();
   });

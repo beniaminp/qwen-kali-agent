@@ -144,4 +144,8 @@
 - [How Gemma 4 was built](34-gemma4-creation.md) — encoder-free 12B, hybrid attention, QAT, MTP and data.
 - [From zero](35-from-zero.md) — a small model you can actually train.
 - [Reproducing 12B–14B](36-reproducing-12b-14b.md) — the real compute, data and infrastructure.
+- [Gemma 12B distillation](39-gemma-distillation.md) — teacher/student directions, tokenizer and memory constraints.
+- [Teachers and distillation data](40-distill-data.md) — prompt mix, teacher traces, top-k logits, filtering and data cards.
+- [Distillation training](41-distill-training.md) — sequence KD with MLX, logit KD with the reference trainer, on-policy loops.
+- [Distillation evaluation](42-distill-eval.md) — teacher/base/SFT/distilled comparison, gates and deployment.
 - [Network security](16-network-security.md) — asset inventory, TLS, segmentation, packet evidence.
