@@ -4,6 +4,8 @@
 
 This repository is documentation first, with runnable configs and scripts second. It is written to be useful months from now: every recommendation includes the reason, the memory math, the failure modes, and the primary sources.
 
+**Live site:** <https://beniaminp.github.io/qwen-kali-agent/>
+
 > **Status (25 October 2026).** Research, commands and links were checked against upstream documentation and source on 25 Oct 2026. The MLX training runs were **not** executed on the target Mac in the environment where this handbook was assembled, so treat every command as *verified but not hardware-tested*. Run the preflight in [`docs/03-macos-setup.md`](docs/03-macos-setup.md) before committing to a multi-day run.
 
 > **Authorized testing only.** Everything here is for systems you own or have explicit written permission to test. The agent patterns in this repo are deliberately constrained by scope files, target allowlists, command confirmation and audit logs. See [`docs/12-safety-legal.md`](docs/12-safety-legal.md).
@@ -31,7 +33,7 @@ This repository is documentation first, with runnable configs and scripts second
 
 ## Documentation site
 
-The handbook is also a **GitBook-style MkDocs site** ([Material for MkDocs](https://squidfunk.github.io/mkdocs-material/) with a custom GitBook theme, search, grouped navigation and edit links).
+The handbook is also a **GitBook-style MkDocs site** ([Material for MkDocs](https://squidfunk.github.io/mkdocs-material/) with a custom GitBook theme, search, grouped navigation and edit links). **Live:** <https://beniaminp.github.io/qwen-kali-agent/>
 
 ```bash
 # from the repo root, with the project venv active
@@ -42,7 +44,7 @@ mkdocs build --strict         # static site in site/
 
 Or use `make docs-serve` / `make docs`. `site/` is generated and git-ignored.
 
-**Publishing:** `.github/workflows/docs.yml` builds and deploys to GitHub Pages when Pages is enabled. This repository is currently **private**; GitHub Pages for private repositories requires a paid plan. To publish for free, make the repository public, then set **Settings → Pages → Source: GitHub Actions** and push to `main`. Alternatively, deploy `site/` to Cloudflare Pages, Netlify or any static host.
+**Publishing:** `.github/workflows/docs.yml` runs `mkdocs build --strict` and publishes to the `gh-pages` branch on every push to `main`. GitHub Pages serves that branch at the live URL above. To deploy elsewhere, point Cloudflare Pages, Netlify or any static host at `site/`.
 
 ---
 

@@ -261,7 +261,7 @@ mkdocs serve --dev-addr 127.0.0.1:8000
 mkdocs build --strict
 ```
 
-The site is styled as a GitBook (sidebar, search, grouped parts, edit links) and lives in `site/`. See the repository README for GitHub Pages publishing.
+The site is styled as a GitBook (sidebar, search, grouped parts, edit links) and lives in `site/`. The live copy is <https://beniaminp.github.io/qwen-kali-agent/>; `.github/workflows/docs.yml` publishes to `gh-pages`.
 
 ## 9. Reproducibility notes
 
