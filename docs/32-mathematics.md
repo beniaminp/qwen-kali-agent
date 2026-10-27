@@ -1,6 +1,6 @@
 # 32 — The mathematics inside Qwen and Gemma 4
 
-*Last verified: 25 October 2026. Equations are standard transformer/linear-attention math; model-specific numbers come from the Qwen3, Qwen2.5-Coder, Qwen3.5 and Gemma 4 technical reports cited at the end.*
+*Last verified: 27 October 2026. Equations are standard transformer/linear-attention math; model-specific numbers come from the Qwen3, Qwen2.5-Coder, Qwen3.5 and Gemma 4 technical reports cited at the end.*
 
 This chapter is the common mathematical foundation for the next four. It explains what a decoder-only language model computes, why Qwen and Gemma choose different pieces, and how to count parameters, FLOPs, memory and KV cache.
 
@@ -236,7 +236,7 @@ M_{ij} =
 \end{cases}
 \]
 
-The \(\sqrt{d_k}\) scaling keeps the logits at unit variance if \(q,k\) have unit variance: \(\operatorname{Var}(q\cdot k)=d_k\). [43 §5](43-math-examples.md) computes a full \(3\times3\) attention example, including the causal mask and the backward pass.
+The \(\sqrt{d_k}\) scaling keeps the logits at unit variance if \(q,k\) have unit variance: \(\operatorname{Var}(q\cdot k)=d_k\). [43 §5](43-math-examples.md) runs one query against three keys, then the causal mask and a \(2\times2\) backward pass.
 
 ### 6.1 Multi-head attention
 
@@ -437,7 +437,7 @@ For a dense model, inference FLOPs per token are \(2N\). For an MoE, use the **a
 N_{\text{active}} \approx N_{\text{attention}} + N_{\text{router}} + \frac{k}{E}N_{\text{experts}} + N_{\text{embed}}.
 \]
 
-That is why Qwen3-30B-A3B generates at roughly 3B speed while storing 30B weights. [43 §10](43-math-examples.md) routes four tokens through two experts and computes the load-balancing loss.
+That is why Qwen3-30B-A3B generates at roughly 3B speed while storing 30B weights. [43 §10](43-math-examples.md) routes one token to the top 2 of four experts and computes the load-balancing loss.
 
 ---
 
@@ -606,7 +606,7 @@ Why 6: forward is \(2ND\) (one multiply-add per weight per token), backward is \
 12\,L\,T^2\,H\,d_h
 \]
 
-for training (forward + backward), where \(H d_h\) is the total query width. This equals \(12LT^2d\) only when \(H d_h=d\), which is true for Qwen3-14B but not for Gemma’s global layers. It is negligible at 2K and significant at 32K. The exact constant depends on the implementation; measure tokens/sec rather than trusting a formula. See [38 — Derivations and proofs](38-derivations.md) §13 and [43 — Worked examples](43-math-examples.md) §17.
+for training (forward + backward), where \(H d_h\) is the total query width. This equals \(12LT^2d\) only when \(H d_h=d\), which is true for Qwen3-14B but not for Gemma’s global layers. It is negligible at 2K and significant at 32K. The exact constant depends on the implementation; measure tokens/sec rather than trusting a formula. See [38 — Derivations and proofs](38-derivations.md) §13 and [43 — Worked examples](43-math-examples.md) §15.
 
 ### 14.2 Inference compute
 
@@ -660,7 +660,7 @@ For symmetric weights, \(z=0\). A **blockwise** format (Q4_0, GGUF) uses one sca
 s_b = \frac{\max_{i\in b}|w_i|}{2^{k-1}-1}.
 \]
 
-This is the clean symmetric grid \(-(2^{k-1}-1)\ldots(2^{k-1}-1)\). Real Q4_0 uses the code range \(-8\ldots7\) and a scale of \(\max/8\), so its positive maximum is represented by 7 rather than 8. The error bound below is therefore a good approximation, not the exact GGML quantizer behaviour; see [43 — Worked examples](43-math-examples.md) §18.
+This is the clean symmetric grid \(-(2^{k-1}-1)\ldots(2^{k-1}-1)\). Real Q4_0 uses the code range \(-8\ldots7\) and a scale of \(\max/8\), so its positive maximum is represented by 7 rather than 8. The error bound below is therefore a good approximation, not the exact GGML quantizer behaviour; see [43 — Worked examples](43-math-examples.md) §16.
 
 Quantization-aware training (QAT) inserts the quantize/dequantize function in the forward pass and uses a straight-through estimator for the gradient:
 

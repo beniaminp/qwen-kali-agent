@@ -1,6 +1,6 @@
 # 37 — Architecture anatomy: from `config.json` to tensors
 
-*Last verified: 25 October 2026.*
+*Last verified: 27 October 2026.*
 
 [32 — Mathematics](32-mathematics.md) gives the equations. This chapter connects them to the actual files, shapes and design choices in Qwen3-14B, Qwen2.5-Coder-14B and Gemma 4 12B. It is the page to read when you want to know **why a checkpoint uses so much memory**, **what a config key changes**, or **where a fine-tune actually attaches**.
 
@@ -51,22 +51,27 @@ With \(B=1\), \(T=2{,}048\), \(d=5{,}120\), \(H=40\), \(G=8\), \(d_h=128\), \(d_
 
 The logits tensor is enormous: \(1\cdot2048\cdot151{,}936\approx311\text{M}\) values. In fp32 that is 1.24 GB; in bf16 0.62 GB. This is why training uses fused cross-entropy and why long-context training is memory-bound even before attention.
 
+On the 32 GB Mac this is why `max_seq_length` is the first knob to turn. The fp32 logits grow linearly with \(T\): 2.49 GB at 4,096 tokens and 4.98 GB at 8,192, before a single attention score is stored.
+
 ### 1.2 Shape trace for Gemma 4 12B
 
 With \(B=1\), \(T=2{,}048\), \(d=3{,}840\), \(H=16\), \(G=8\), local \(d_h=256\), global \(d_h=512\), \(d_{\text{ff}}=15{,}360\):
 
-| Tensor | Shape |
-|---|---|
-| token ids | `[1, 2048]` |
-| embedding | `[1, 2048, 3840]` |
-| Q | `[1, 16, 2048, 256]` |
-| K, V (local) | `[1, 8, 2048, 256]` |
-| K=V (global) | `[1, 8, 2048, 512]` |
-| local scores | `[1, 16, 2048, 2048]` masked to window 1024 |
-| global scores | `[1, 16, 2048, 2048]` every sixth layer |
-| logits | `[1, 2048, 262144]` |
+| Tensor | Shape | Notes |
+|---|---|---|
+| token ids | `[1, 2048]` | int32/int64 |
+| embedding | `[1, 2048, 3840]` | tied with the LM head |
+| Q (local) | `[1, 16, 2048, 256]` | \(H d_h=4096\ne d\) |
+| K, V (local) | `[1, 8, 2048, 256]` | \(G=8\); cache capped at window 1024 |
+| Q (global) | `[1, 16, 2048, 512]` | \(H d_h=8192\) |
+| K=V (global) | `[1, 1, 2048, 512]` | **one** KV head; a single tensor serves as K and V |
+| local scores | `[1, 16, 2048, 2048]` | masked to window 1024 |
+| global scores | `[1, 16, 2048, 2048]` | every sixth layer |
+| logits | `[1, 2048, 262144]` | \(V\) per position |
 
 The output logits for Gemma are even larger: \(1\cdot2048\cdot262{,}144\approx537\text{M}\) values. The 262k vocabulary is a real inference cost, not a footnote.
+
+Look at the global K=V row: one head of width 512 in bf16 is \(512\cdot2=1{,}024\) bytes, so each global layer caches exactly **1 KB per token**. Eight global layers at 32,768 tokens is \(8\cdot32{,}768\cdot1\text{ KB}=268.4\text{ MB}\), the global term in §2.1. Reading the shape table correctly is the KV-cache calculation.
 
 ### 1.3 Parameter budget
 

@@ -6,13 +6,29 @@ hide:
 ---
 
 <div class="gb-hero">
-  <p class="gb-eyebrow"><span class="gb-dot"></span> Open handbook · Oct 2026</p>
-  <h1 class="gb-hero__title">Build, fine-tune and ship <span class="gb-gradient">Qwen &amp; Gemma</span> agents.</h1>
-  <p class="gb-hero__lead">A source-backed, practical handbook for local model training on a 32 GB Apple M1 Pro — agents for authorized Kali Linux work, Java/Quarkus services and React/Tailwind front-ends.</p>
-  <div class="gb-actions">
-    <a class="gb-btn gb-btn--primary" href="00-start/">Start here <span aria-hidden="true">→</span></a>
-    <a class="gb-btn" href="17-finetune-2026-update/">2026 LoRA recipe</a>
-    <a class="gb-btn gb-btn--ghost" href="https://github.com/beniaminp/qwen-kali-agent" target="_blank" rel="noopener">GitHub</a>
+  <div class="gb-hero__main">
+    <p class="gb-eyebrow"><span class="gb-dot"></span> Open handbook · Oct 2026</p>
+    <h1 class="gb-hero__title">Build, fine-tune and ship <span class="gb-gradient">Qwen &amp; Gemma</span> agents.</h1>
+    <p class="gb-hero__lead">A source-backed, practical handbook for local model training on a 32 GB Apple M1 Pro — agents for authorized Kali Linux work, Java/Quarkus services and React/Tailwind front-ends.</p>
+    <div class="gb-actions">
+      <a class="gb-btn gb-btn--primary" href="00-start/">Start here <span aria-hidden="true">→</span></a>
+      <a class="gb-btn" href="17-finetune-2026-update/">2026 LoRA recipe</a>
+      <a class="gb-btn gb-btn--ghost" href="https://github.com/beniaminp/qwen-kali-agent" target="_blank" rel="noopener">GitHub</a>
+    </div>
+  </div>
+  <div class="gb-term" role="group" aria-label="Quick start commands">
+    <div class="gb-term__bar" aria-hidden="true"><span></span><span></span><span></span><em>qwen-kali-agent — make</em></div>
+    <div class="gb-term__body">
+      <span class="gb-term__note"># 1 · environment and memory headroom</span>
+      <span><b aria-hidden="true">$</b> make setup &amp;&amp; make check</span>
+      <span class="gb-term__note"># 2 · validate the training splits</span>
+      <span><b aria-hidden="true">$</b> make data-check</span>
+      <span class="gb-term__note"># 3 · 8B smoke run, then the 14B adapter</span>
+      <span><b aria-hidden="true">$</b> make train-8b</span>
+      <span><b aria-hidden="true">$</b> make train-14b</span>
+      <span class="gb-term__note"># 4 · score it on the golden set</span>
+      <span><b aria-hidden="true">$</b> make eval<i class="gb-term__cursor" aria-hidden="true"></i></span>
+    </div>
   </div>
   <div class="gb-stats">
     <div class="gb-stat"><strong>3</strong><span>specializations</span></div>
@@ -121,6 +137,21 @@ hide:
     <strong>2026 LoRA recipe</strong>
     <span>All-layer LoRA, the MLX scale trap and one-epoch training.</span>
   </a>
+  <a class="gb-mini" href="26-one-model-for-all/">
+    <span class="gb-mini__icon">◇</span>
+    <strong>One model for all</strong>
+    <span>Qwen3-14B plus three adapters, or one mixed adapter.</span>
+  </a>
+  <a class="gb-mini" href="39-gemma-distillation/">
+    <span class="gb-mini__icon">⇣</span>
+    <strong>Distillation</strong>
+    <span>Teacher logits, sequence KD and 12B → E4B/E2B compression.</span>
+  </a>
+  <a class="gb-mini" href="35-from-zero/">
+    <span class="gb-mini__icon">↑</span>
+    <strong>From zero</strong>
+    <span>Train a small model you can actually afford.</span>
+  </a>
   <a class="gb-mini" href="32-mathematics/">
     <span class="gb-mini__icon">∑</span>
     <strong>Mathematics</strong>
@@ -136,26 +167,26 @@ hide:
     <strong>Derivations</strong>
     <span>Softmax, attention backward, RMSNorm, RoPE and GDN proofs.</span>
   </a>
-  <a class="gb-mini" href="26-one-model-for-all/">
-    <span class="gb-mini__icon">◇</span>
-    <strong>One model for all</strong>
-    <span>Qwen3-14B plus three adapters, or one mixed adapter.</span>
-  </a>
-  <a class="gb-mini" href="35-from-zero/">
-    <span class="gb-mini__icon">↑</span>
-    <strong>From zero</strong>
-    <span>Train a small model you can actually afford.</span>
-  </a>
-  <a class="gb-mini" href="39-gemma-distillation/">
-    <span class="gb-mini__icon">⇣</span>
-    <strong>Distillation</strong>
-    <span>Teacher logits, sequence KD and 12B → E4B/E2B compression.</span>
+  <a class="gb-mini" href="43-math-examples/">
+    <span class="gb-mini__icon">✓</span>
+    <strong>Worked examples</strong>
+    <span>Every formula on a toy model, checked by a 46-value script.</span>
   </a>
 </div>
 
 ## What is new
 
 <div class="gb-new">
+  <div class="gb-new__item">
+    <span class="gb-new__date">27 Oct 2026</span>
+    <strong><a href="43-math-examples/">Worked examples, grounded</a></strong>
+    <p>Every formula now starts from a real situation — a next token, a weight row, an eval batch — with a corrected Wilson interval and 46 checked values.</p>
+  </div>
+  <div class="gb-new__item">
+    <span class="gb-new__date">27 Oct 2026</span>
+    <strong><a href="37-architecture/">Gemma shapes corrected</a></strong>
+    <p>The global K=V tensor is <code>[1, 1, T, 512]</code> — one KV head, not eight — which is exactly where the 1 KB-per-token global cache comes from.</p>
+  </div>
   <div class="gb-new__item">
     <span class="gb-new__date">25 Oct 2026</span>
     <strong><a href="37-architecture/">Architecture anatomy and proofs</a></strong>
@@ -175,11 +206,6 @@ hide:
     <span class="gb-new__date">25 Oct 2026</span>
     <strong><a href="39-gemma-distillation/">Gemma 12B distillation</a></strong>
     <p>A three-direction track: teacher → 12B, 12B → E4B/E2B, and 12B as a data teacher, with sequence and logit KD.</p>
-  </div>
-  <div class="gb-new__item">
-    <span class="gb-new__date">25 Oct 2026</span>
-    <strong><a href="43-math-examples/">Math, checked with numbers</a></strong>
-    <p>Every formula on a toy model, including the corrected Gemma parameter count, hybrid KV cache and dense-vs-sparse H100 peak.</p>
   </div>
 </div>
 
