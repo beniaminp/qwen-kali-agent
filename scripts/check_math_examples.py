@@ -177,6 +177,46 @@ def main() -> int:
     assert close(ece, 0.15)
     checks += 1
 
+    # 21. Wilson score interval (43 §20): 40/100 at 95%
+    p_hat, n_obs, zc = 0.4, 100, 1.96
+    z2 = zc * zc
+    denom = 1 + z2 / n_obs
+    center = (p_hat + z2 / (2 * n_obs)) / denom
+    half = zc * math.sqrt(p_hat * (1 - p_hat) / n_obs + z2 / (4 * n_obs ** 2)) / denom
+    lo, hi = center - half, center + half
+    assert close(center, 0.403699, 1e-4)
+    assert close(lo, 0.309389, 1e-4) and close(hi, 0.498009, 1e-4)
+    checks += 2
+
+    # 22. Real-model parameter counts (43 §14, 37 §1.3).
+    # One formula, two configs: attention = Q + K + V + O projections.
+    def attn_params(dm: int, h: int, g: int, dh: int) -> int:
+        return dm * h * dh + 2 * dm * g * dh + h * dh * dm
+
+    # Qwen3-14B: d=5120, L=40, ffn=17408, H=40, G=8, dh=128, V=151936, untied.
+    q_attn = attn_params(5120, 40, 8, 128)
+    q_mlp = 3 * 5120 * 17408
+    q_layer = q_attn + q_mlp + 2 * 5120  # + two RMSNorm vectors
+    q_total = 40 * q_layer + 2 * 151936 * 5120 + 5120  # untied head + final norm
+    assert q_attn == 62_914_560 and q_mlp == 267_386_880
+    assert q_total == 14_768_296_960
+    checks += 2
+
+    # Gemma 4 12B: d=3840, 40 local + 8 global, ffn=15360, V=262144, tied.
+    g_local = attn_params(3840, 16, 8, 256)
+    g_global = attn_params(3840, 16, 1, 512)
+    g_mlp = 3 * 3840 * 15360
+    g_embed = 3840 * 262144
+    g_local_layer = g_local + g_mlp + 2 * 3840
+    g_global_layer = g_global + g_mlp + 2 * 3840
+    g_total = 40 * g_local_layer + 8 * g_global_layer + g_embed + 3840
+    g_all_local = 48 * g_local_layer + g_embed + 3840  # the common miscount
+    assert g_local == 47_185_920 and g_global == 66_846_720 and g_mlp == 176_947_200
+    assert g_total == 11_922_681_600
+    assert g_all_local == 11_765_395_200
+    assert g_total - g_all_local == 157_286_400  # ~0.15B the naive count misses
+    checks += 4
+
     print(f"all {checks} checks passed")
     return 0
 

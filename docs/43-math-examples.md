@@ -1,8 +1,10 @@
 # 43 — Worked examples: every formula on a small model
 
-*Last verified: 25 October 2026. Every number below was computed directly from the formula with a small model; the arithmetic is reproducible with a calculator or a short Python script.*
+*Last verified: 27 October 2026. Every number below was computed directly from the formula with a small model; the arithmetic is reproducible with a calculator or a short Python script.*
 
-This chapter is the numerical companion to [32 — Mathematics](32-mathematics.md) and [38 — Derivations and proofs](38-derivations.md). Each section states the formula, says what it means in plain language, and runs it on a tiny example with real numbers. The goal is not to replace the derivations; it is to let you **check** that you understand them.
+This chapter is the numerical companion to [32 — Mathematics](32-mathematics.md) and [38 — Derivations and proofs](38-derivations.md). Each section follows the same shape: it **states the formula**, says in one line **what it means**, grounds it in a **concrete situation** (a next token, a weight row, a batch of eval tasks), runs the arithmetic on a **tiny example you can check by hand**, and ends with **why it matters** on a real model.
+
+The numbers are deliberately small. That is not unrealistic — it is the only way to verify a formula with a calculator instead of a GPU. A toy model that gets the softmax right gets it right for the same reason a 14B model does; the shapes and the signs are what you are checking, and those do not change with scale. Each box also carries a *reality bridge*: the same formula applied to Qwen3-14B or Gemma 4 12B, so you can see the toy number grow into the production one.
 
 Run the arithmetic yourself:
 
@@ -10,11 +12,11 @@ Run the arithmetic yourself:
 python scripts/check_math_examples.py
 ```
 
-It asserts 38 values from this chapter, including the corrected Gemma parameter and KV numbers.
+It asserts 46 values from this chapter, including the corrected Gemma parameter counts, the hybrid KV cache and the Wilson interval.
 
 ---
 
-## 0. The toy model and what this review fixed
+## 0. The toy model and six things people get wrong
 
 Most examples use one consistent toy model:
 
@@ -31,14 +33,14 @@ Most examples use one consistent toy model:
 
 Some examples use \(V=4\) or \(T=2\) when a smaller matrix is clearer; each box states its own numbers.
 
-This review found and corrected six things in the earlier math pages:
+These are the six places this chapter's arithmetic contradicts a plausible-looking shortcut. Each one is a mistake that looks right until you run the numbers; the section in parentheses has the full worked check:
 
-1. **Gemma 4 12B parameter count.** Global layers use `num_global_key_value_heads = 1` and `global_head_dim = 512`, not the local `G=8, d_h=256`. The correct formula count is **11.92B**, not 11.77B.
-2. **Gemma 4 12B KV cache.** The 12.9 GB figure is a full-attention upper bound. The real hybrid cache at 32K is about **604 MB**, and about **2.48 GB** at 256K.
-3. **SwiGLU backward.** The earlier derivative mixed a matrix and an upstream gradient. The correct form multiplies \(W_d^\top\bar y\), \(b\), and \(g'(a)\).
-4. **Q4_0 scale.** The clean symmetric grid uses \(\max/(2^{k-1}-1)\); real Q4_0 uses a code range \(-8\ldots7\) and a scale of \(\max/8\).
-5. **Attention FLOPs.** The exact term uses \(H d_h\), not \(d\). They are equal for Qwen3-14B but not for Gemma’s global layers.
-6. **H100 peak.** The cost examples used 989 TFLOP/s as if it were dense. 989 is the sparse peak; dense BF16 is 494.5 TFLOP/s. At 40% MFU the 36T-token Qwen3-14B run is ~4.48M GPU-hours, ~18.7 days and ~$11.2M at $2.50/GPU-hour, not 2.24M / 9.3 days / $5.6M. Alternatively, use 20% MFU with the 989 number.
+1. **Gemma 4 12B parameter count.** It is tempting to count all 48 layers with the local shape `G=8, d_h=256`. But 8 of them are global layers with `num_global_key_value_heads = 1` and `global_head_dim = 512`. Counting them correctly gives **11.92B**; the shortcut gives 11.77B and silently drops ~0.15B (§14).
+2. **Gemma 4 12B KV cache.** Applying the full-attention formula to all 48 layers gives 12.9 GB. That is an upper bound, not the deployed cache: the real hybrid cache is about **604 MB** at 32K and **2.48 GB** at 256K (§7).
+3. **SwiGLU backward.** The gate's gradient is not just the scalar derivative \(g'(a)\). The correct form multiplies the upstream gradient \(W_d^\top\bar y\), the up-projection \(b\), and \(g'(a)\) elementwise (§9).
+4. **Q4_0 scale.** The clean symmetric grid uses \(\max/(2^{k-1}-1)\), but real GGML Q4_0 uses a code range \(-8\ldots7\) and a scale of \(\max/8\). Close, but not identical (§16).
+5. **Attention FLOPs.** The attention term scales with the query width \(H d_h\), not the hidden size \(d\). They are equal for Qwen3-14B but not for Gemma's global layers, where \(H d_h = 8192\) and \(d = 3840\) (§15).
+6. **H100 peak.** 989 TFLOP/s is the *sparse* peak; dense BF16 is 494.5 TFLOP/s — half of it. Use the dense number for planning: at 40% MFU the 36T-token Qwen3-14B run is ~4.48M GPU-hours, ~18.7 days and ~$11.2M at $2.50/GPU-hour. Using 989 as if it were dense halves every one of those and underquotes the budget by 2× (§15).
 
 If you only remember one thing: a formula is a **shape and a count**. Check the shapes first, then the numbers.
 
@@ -58,14 +60,14 @@ Softmax turns arbitrary scores into a probability distribution. Cross-entropy as
 
 ### Example
 
-Let \(V=4\), logits \(z=(2,1,0,-1)\), target \(y=0\).
+The model has just read `return ` and must pick the next token. Suppose its vocabulary here is four candidates and it emits the logits \(z=(2,1,0,-1)\). The training text says the next token is `self`, so the target is \(y=0\).
 
-| \(j\) | \(z_j\) | \(e^{z_j}\) | \(p_j\) |
-|---:|---:|---:|---:|
-| 0 | 2.0 | 7.3891 | **0.6439** |
-| 1 | 1.0 | 2.7183 | 0.2369 |
-| 2 | 0.0 | 1.0000 | 0.0871 |
-| 3 | -1.0 | 0.3679 | 0.0321 |
+| token | \(z_j\) | \(e^{z_j}\) | \(p_j\) |
+|---|---:|---:|---:|
+| `self` (target) | 2.0 | 7.3891 | **0.6439** |
+| `None` | 1.0 | 2.7183 | 0.2369 |
+| `0` | 0.0 | 1.0000 | 0.0871 |
+| `[]` | -1.0 | 0.3679 | 0.0321 |
 
 \[
 Z=7.3891+2.7183+1.0000+0.3679=11.4752.
@@ -77,9 +79,11 @@ Z=7.3891+2.7183+1.0000+0.3679=11.4752.
 \text{perplexity}=e^{0.4402}=1.553.
 \]
 
-Interpretation: the model gives the right token 64.4% probability; the loss is low. If all four tokens were equally likely, \(p_y=0.25\), \(\mathcal{L}=1.386\), perplexity 4.
+Interpretation: the model puts 64.4% on the correct token `self`, so the loss is low — a perplexity of 1.55 means it is effectively choosing between about 1.5 tokens, not 4. If it had no idea and spread probability evenly, \(p_y=0.25\), \(\mathcal{L}=\log 4=1.386\), and perplexity would be exactly 4, the full vocabulary.
 
-A useful check: the probabilities sum to 1.0001 here because of rounding; the exact sum is 1.
+A useful check: the four probabilities sum to 1. With these rounded figures \(0.6439+0.2369+0.0871+0.0321=1.0000\); rounding can leave the visible digits at 0.9999 or 1.0001, but the exact softmax always sums to exactly 1 — that is the whole point of the denominator \(Z\).
+
+**Why it matters.** This is one position. A real forward pass over Qwen3-14B does exactly this at every position, but over \(V=151{,}936\) tokens, and the loss you watch in training is the mean of these per-token cross-entropies. A loss of 0.44 nats per token is a perplexity of 1.55; a freshly initialised model starts near \(\log V\approx11.9\).
 
 ---
 
@@ -212,13 +216,13 @@ For one head,
 
 ### Example
 
-Let \(d_h=2\), \(q=(1,0)\), and three keys
+The current token wants to gather information from three earlier tokens. Its query is \(q=(1,0)\) — think of it as asking “which earlier token is aligned with direction 0?” The three earlier tokens expose keys
 
 \[
 k_1=(1,0),\quad k_2=(0,1),\quad k_3=(1,1).
 \]
 
-The raw scores are
+\(k_1\) points exactly along the query, \(k_2\) is orthogonal to it, and \(k_3\) is in between. The raw scores are
 
 \[
 qK^\top=(1,0,1),
@@ -239,7 +243,7 @@ O=0.4011(1,0)+0.1978(0,1)+0.4011(1,1)
 =(0.8022,\;0.5989).
 \]
 
-The output is a weighted average of the values. The weights sum to 1.
+The output is a weighted average of the values. The weights sum to 1. Notice the aligned key \(k_1\) and the in-between key \(k_3\) each get weight 0.40, while the orthogonal key \(k_2\) gets only 0.20: attention copies more from the tokens whose keys point the way the query asks. That is the whole mechanism — a content-addressed, soft lookup.
 
 ### Causal mask
 
@@ -309,6 +313,8 @@ dS=(0.2(0-0.8),\;0.8(1-0.8))=(-0.16,0.16).
 \]
 
 Each row of \(dS\) sums to zero, just like the softmax Jacobian. That is the same probability-budget constraint.
+
+**Why it matters.** Scale this up: Qwen3-14B runs 40 of these heads per layer across 40 layers, each with \(d_h=128\) instead of 2, over thousands of tokens instead of three. The arithmetic is identical; only the dimensions grow. The \(T\times T\) score matrix is also what makes long context expensive — at \(T=32{,}768\) it has a billion entries per head, which is why FlashAttention never materialises it and why §15's attention FLOP term scales as \(T^2\).
 
 ---
 
@@ -408,7 +414,9 @@ At 256K, the local term is unchanged and the global term becomes
 8\cdot1\cdot512\cdot262{,}144\cdot2=2.147\text{ GB},
 \]
 
-so the total is **2.48 GB**. The naive full-attention calculation \(2\cdot48\cdot8\cdot256\cdot32{,}768\cdot2=12.88\text{ GB}\) is an upper bound, not the deployed cache. This is the single most important correction in this review.
+so the total is **2.48 GB**. The naive full-attention calculation \(2\cdot48\cdot8\cdot256\cdot32{,}768\cdot2=12.88\text{ GB}\) is an upper bound, not the deployed cache. This is the single most important correction in this chapter.
+
+**Why it matters.** On the handbook's 32 GB Mac this is the difference between fitting a long context and not. A 4-bit Qwen3-14B is about 8.3 GB of weights; its 5.37 GB bf16 KV cache at 32K is the *second* largest consumer of memory, and int8 KV (§16) halves it to 2.68 GB. Gemma's hybrid design keeps even a 256K cache (2.48 GB) smaller than Qwen's 32K cache — the sliding window and single global KV head, not the parameter count, are what let a 12B model serve a quarter-million tokens.
 
 ---
 
@@ -921,10 +929,10 @@ s=\frac{\max|w|}{2^{k-1}-1}.
 
 ### Example: 4-bit
 
-Let \(w=(-1,-0.4,0,0.4,1)\) and \(k=4\), so \(2^{3}-1=7\).
+Take five weights from one row of a projection matrix, \(w=(-1,-0.4,0,0.4,1)\), and store them in 4 bits (\(k=4\)), so the integer grid runs \(-7\ldots7\): \(2^{3}-1=7\). The scale is the largest magnitude divided by 7:
 
 \[
-s=\frac{1}{7}=0.142857.
+s=\frac{\max|w|}{7}=\frac{1}{7}=0.142857.
 \]
 
 \[
@@ -939,7 +947,7 @@ The representable values are spaced by \(s\); the quantization error is at most 
 
 ### Blockwise scales
 
-Take two blocks: \(w_1=(-1,-0.4)\), \(w_2=(0.02,0.04)\).
+Real weight rows are not uniform: one stretch can be large and another tiny. Split the row into two blocks, \(w_1=(-1,-0.4)\) with large values and \(w_2=(0.02,0.04)\) with small ones.
 
 Per-tensor scale \(s=1/7=0.142857\):
 
@@ -951,7 +959,7 @@ Per-block scales:
 - \(s_1=1/7=0.142857\), same as above;
 - \(s_2=0.04/7=0.005714\), \(q=(4,7)\), errors \(0.00286,0\).
 
-The second block’s maximum error falls from 0.04 to 0.00286. That is why blockwise quantization is better: each block gets a scale matched to its own range.
+The second block’s maximum error falls from 0.04 to 0.00286 — a 14× improvement on the small-value block, because its scale no longer has to reach all the way to 1. That is why blockwise quantization is better: each block gets a scale matched to its own range. Real GGUF Q4_0 does exactly this with 32-weight blocks, one fp16 scale each; a model's weights span orders of magnitude, so a single per-tensor scale would waste almost all of the 4-bit grid on the few largest weights.
 
 **Q4_0 caveat.** The formula above uses a symmetric grid \([-7,7]\). GGML Q4_0 uses codes \(-8\ldots7\) and \(s=\max/8\), so the positive maximum maps to 7 and the negative extreme to -8. The error bound \(s/2\) is approximate for that format. The practical lesson is the same: smaller blocks and a suitable scale reduce error.
 
@@ -1111,7 +1119,7 @@ BA=\begin{pmatrix}0.5&0\\0&0.5\end{pmatrix},
 \text{scale}\cdot BA=\begin{pmatrix}1&0\\0&1\end{pmatrix}.
 \]
 
-The adapter adds the identity to \(W\). If you mistakenly set `scale: 20` with rank 4, you add \(5I\), five times too large. For rank 16 and PEFT alpha 32, the correct scale is \(32/16=2.0\), not 20.
+The adapter adds the identity to \(W\). If you mistakenly set `scale: 20` with rank 4, you add \(5I\), five times too large — the adapter overwhelms the pretrained weight and the model forgets what it knew. This is the single most common LoRA config error: `scale` is \(\alpha_{\text{PEFT}}/r\), not \(\alpha_{\text{PEFT}}\). For rank 16 and PEFT alpha 32, the correct scale is \(32/16=2.0\), not 32 and not 20. Run `scripts/check_lora.py` to confirm the value before a long run.
 
 ### Parameter count
 
@@ -1122,6 +1130,8 @@ r(d+k)=16(4096+4096)=131{,}072
 \]
 
 trainable parameters, about 0.78% of the full matrix. Rank 4 has 32,768, about 0.20%.
+
+**Why it matters.** Across all attention and MLP projections, a rank-16 adapter on Qwen3-14B trains on the order of tens of millions of parameters while the 14.77B base stays frozen (and 4-bit). That ratio is the entire reason fine-tuning fits in 32 GB: you store the big model once, quantized, and only the small \(BA\) factors carry gradients and optimizer state.
 
 ---
 
@@ -1146,7 +1156,7 @@ p_S^{T}=\operatorname{softmax}\left(\frac{z_S}{T_{\text{temp}}}\right),
 
 ### Example
 
-Let \(V=3\), teacher logits \(z_T=(2,1,0)\), student logits \(z_S=(1,2,0)\), \(T_{\text{temp}}=2\), \(\alpha=0.5\), target \(y=0\).
+A large teacher (say Qwen3-14B) and a small student (say an 8B) both score the same next-token position over three candidates. The teacher's logits are \(z_T=(2,1,0)\) and the student's are \(z_S=(1,2,0)\); we soften both with temperature \(T_{\text{temp}}=2\), weight the two losses equally (\(\alpha=0.5\)), and the ground-truth token is \(y=0\).
 
 At temperature 2:
 
@@ -1247,18 +1257,30 @@ There is a 97.6% chance that at least one of five samples is correct, given 4 of
 
 ### Wilson interval
 
-For \(p=0.4\), \(n=100\), \(z=1.96\):
+Your model solved 40 of 100 eval tasks, so \(\hat p=0.4\), \(n=100\). For a 95% interval, \(z=1.96\), so \(z^2=3.8416\). The Wilson score interval is
 
 \[
-\frac{0.4+0.0192\pm1.96\sqrt{0.4\cdot0.6/100+0.000384}}{1.0192}
+\frac{\hat p+\dfrac{z^2}{2n}\;\pm\;z\sqrt{\dfrac{\hat p(1-\hat p)}{n}+\dfrac{z^2}{4n^2}}}{1+\dfrac{z^2}{n}}.
+\]
+
+The denominator is \(1+z^2/n=1.038416\). The centre is shifted slightly above \(\hat p\):
+
+\[
+\text{centre}=\frac{0.4+0.019208}{1.038416}=\frac{0.419208}{1.038416}=0.4037.
+\]
+
+The half-width uses both terms under the root, \(\hat p(1-\hat p)/n=0.0024\) and \(z^2/4n^2=0.000096\):
+
+\[
+\text{half-width}=\frac{1.96\sqrt{0.0024+0.000096}}{1.038416}
+=\frac{1.96\cdot0.049960}{1.038416}=0.0943.
 \]
 
 \[
-=\frac{0.4192\pm0.0961}{1.0192}
-=(0.3094,\;0.4980).
+\text{interval}=0.4037\pm0.0943=(0.3094,\;0.4980).
 \]
 
-So “40% success” on 100 tasks is consistent with a true rate anywhere from 31% to 50%. A two-point difference on 100 tasks is noise. Report the interval.
+So “40 of 100” is consistent with a true pass rate anywhere from 31% to 50%. A two-point difference between two models on 100 tasks is well inside the noise. Report the interval, not just the point estimate — and if you need to distinguish a two-point gap, you need far more than 100 tasks.
 
 ### Agreement
 

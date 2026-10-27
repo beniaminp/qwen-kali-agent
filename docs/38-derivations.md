@@ -1,6 +1,6 @@
 # 38 — Derivations and proofs
 
-*Last verified: 25 October 2026. These are the derivations behind [32 — Mathematics](32-mathematics.md); they are written for someone who wants to implement or debug a model, not just read about one.*
+*Last verified: 27 October 2026. These are the derivations behind [32 — Mathematics](32-mathematics.md); they are written for someone who wants to implement or debug a model, not just read about one.*
 
 Notation follows chapter 32. \(B\) is batch, \(T\) sequence, \(d\) hidden size, \(H\) query heads, \(G\) KV heads, \(d_h\) head dimension, \(V\) vocabulary.
 
@@ -606,7 +606,7 @@ The \(\sqrt{\hat v_t}\) normalizes each parameter by its gradient scale, which i
 
 ## 15. Worked numerical example
 
-Suppose \(V=4\), logits \(z=(2.0,1.0,0.0,-1.0)\), target \(y=1\) (index 0).
+Suppose \(V=4\), logits \(z=(2.0,1.0,0.0,-1.0)\), and the target is the first token, index \(0\).
 
 \[
 e^z=(7.389,2.718,1.000,0.368),\quad Z=11.475.
