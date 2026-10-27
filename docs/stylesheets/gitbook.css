@@ -1569,3 +1569,10 @@ body:has(.gb-hero) .md-content__button {
     grid-column: 1 / -1;
   }
 }
+
+/* Config-key tables (wrapped in <div class="gb-keys">): keep identifiers
+   such as `hidden_size_per_layer_input` whole. Material breaks inline code
+   anywhere; scoped so long error strings elsewhere still wrap. */
+.md-typeset .gb-keys td:first-child code {
+  word-break: normal;
+}

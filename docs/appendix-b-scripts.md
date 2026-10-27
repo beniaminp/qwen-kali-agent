@@ -495,6 +495,7 @@ Reads only `config.json` — no weights, no PyTorch — and prints:
 
 - hidden size, layers, FFN, heads, KV heads, head dimension, vocabulary;
 - parameter count for attention, MLP, embedding, LM head and total;
+- for Gemma 4 edge models, the per-layer embedding table and the “effective” size without it;
 - active parameters for MoE;
 - KV cache at a chosen sequence length;
 - training/inference FLOPs for a batch.
@@ -503,12 +504,13 @@ Reads only `config.json` — no weights, no PyTorch — and prints:
 python scripts/inspect_architecture.py --hf Qwen/Qwen3-14B --seq 32768
 python scripts/inspect_architecture.py --hf Qwen/Qwen3-30B-A3B --seq 4096
 python scripts/inspect_architecture.py --preset gemma4-12b --seq 32768
+python scripts/inspect_architecture.py --hf google/gemma-4-E4B-it --seq 131072
 python scripts/inspect_architecture.py --config config.json --json
 ```
 
-Presets: `qwen3-14b`, `qwen25-coder-14b`, `gemma4-12b`, `qwen3-30b-a3b`.
+Presets: `qwen3-14b`, `qwen25-coder-14b`, `gemma4-12b`, `gemma4-e4b`, `gemma4-e2b`, `qwen3-30b-a3b`.
 
-The KV estimate models local sliding windows and global K=V sharing when the config provides `layer_types`, `sliding_window`, `num_global_key_value_heads`, `global_head_dim` and `attention_k_eq_v`. Otherwise it is a full-attention upper bound. See [37 — Architecture anatomy](37-architecture.md) and [43 — Worked examples](43-math-examples.md).
+The estimate models local sliding windows, K=V global layers (no `v_proj`, one cached tensor), KV-shared final layers (no K/V projections, no cache), per-layer embeddings and the double-wide MLP when the config provides `layer_types`, `sliding_window`, `num_global_key_value_heads`, `global_head_dim`, `attention_k_eq_v`, `num_kv_shared_layers`, `hidden_size_per_layer_input` and `use_double_wide_mlp`. Otherwise the cache is a full-attention upper bound. For the Gemma 4 12B, E4B and E2B checkpoints it is within 0.0004% of their text-decoder parameters (the remainder is q/k norms and layer scalars); vision/audio encoders are not described by the text config. See [37 — Architecture anatomy](37-architecture.md) and [43 — Worked examples](43-math-examples.md).
 
 ---
 
@@ -559,10 +561,10 @@ Pure-stdlib assertions for the worked examples in [43 — Worked examples](43-ma
 
 ```bash
 python scripts/check_math_examples.py
-# all 38 checks passed
+# all 64 checks passed
 ```
 
-It checks 38 values: softmax/CE, the Jacobian, RMSNorm, attention, GQA, KV cache (including the Gemma hybrid), RoPE, SwiGLU, MoE, GDN, speculative decoding, parameter counts, FLOPs, quantization, AdamW, LoRA and KD. No model or network is loaded.
+It checks 64 values: softmax/CE, the Jacobian, RMSNorm, attention, GQA, KV cache (the Gemma 12B hybrid and the E4B/E2B shared caches), RoPE, SwiGLU, MoE, GDN, speculative decoding, parameter counts, FLOPs, quantization, AdamW, LoRA, KD, pass@k, ECE and the Wilson interval. The Gemma 4 12B, E4B and E2B parameter counts are reproduced exactly from their safetensors headers. No model or network is loaded.
 
 ---
 

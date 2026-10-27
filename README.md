@@ -395,6 +395,7 @@ python scripts/estimate_pretraining.py --preset qwen3-14b --tokens 36e12 \
 # Read config.json only: shapes, GQA, parameter breakdown, cache
 python scripts/inspect_architecture.py --hf Qwen/Qwen3-14B --seq 32768
 python scripts/inspect_architecture.py --preset gemma4-12b --seq 32768
+python scripts/inspect_architecture.py --preset gemma4-e4b --seq 131072   # PLE + shared KV
 
 # A tiny, runnable Llama-style model (requires PyTorch)
 uv pip install -r requirements-pretrain.txt

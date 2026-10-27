@@ -12,11 +12,11 @@ Run the arithmetic yourself:
 python scripts/check_math_examples.py
 ```
 
-It asserts 46 values from this chapter, including the corrected Gemma parameter counts, the hybrid KV cache and the Wilson interval.
+It asserts 64 values from this chapter, including the Wilson interval, the hybrid and shared KV caches, and Gemma 4 12B, E4B and E2B parameter counts reproduced to the parameter from their published checkpoints.
 
 ---
 
-## 0. The toy model and six things people get wrong
+## 0. The toy model and seven things people get wrong
 
 Most examples use one consistent toy model:
 
@@ -33,14 +33,15 @@ Most examples use one consistent toy model:
 
 Some examples use \(V=4\) or \(T=2\) when a smaller matrix is clearer; each box states its own numbers.
 
-These are the six places this chapter's arithmetic contradicts a plausible-looking shortcut. Each one is a mistake that looks right until you run the numbers; the section in parentheses has the full worked check:
+These are the seven places this chapter's arithmetic contradicts a plausible-looking shortcut. Each one is a mistake that looks right until you run the numbers; the section in parentheses has the full worked check:
 
-1. **Gemma 4 12B parameter count.** It is tempting to count all 48 layers with the local shape `G=8, d_h=256`. But 8 of them are global layers with `num_global_key_value_heads = 1` and `global_head_dim = 512`. Counting them correctly gives **11.92B**; the shortcut gives 11.77B and silently drops ~0.15B (§14).
+1. **Gemma 4 12B parameter count.** It is tempting to count all 48 layers with the local shape `G=8, d_h=256`. But 8 of them are global layers with `num_global_key_value_heads = 1`, `global_head_dim = 512` and K=V — so they have **no `v_proj`**. Counting them correctly gives **11.91B** of text decoder (11.96B with the multimodal embedders); the shortcut gives 11.77B and silently drops ~0.14B (§14).
 2. **Gemma 4 12B KV cache.** Applying the full-attention formula to all 48 layers gives 12.9 GB. That is an upper bound, not the deployed cache: the real hybrid cache is about **604 MB** at 32K and **2.48 GB** at 256K (§7).
 3. **SwiGLU backward.** The gate's gradient is not just the scalar derivative \(g'(a)\). The correct form multiplies the upstream gradient \(W_d^\top\bar y\), the up-projection \(b\), and \(g'(a)\) elementwise (§9).
 4. **Q4_0 scale.** The clean symmetric grid uses \(\max/(2^{k-1}-1)\), but real GGML Q4_0 uses a code range \(-8\ldots7\) and a scale of \(\max/8\). Close, but not identical (§16).
 5. **Attention FLOPs.** The attention term scales with the query width \(H d_h\), not the hidden size \(d\). They are equal for Qwen3-14B but not for Gemma's global layers, where \(H d_h = 8192\) and \(d = 3840\) (§15).
 6. **H100 peak.** 989 TFLOP/s is the *sparse* peak; dense BF16 is 494.5 TFLOP/s — half of it. Use the dense number for planning: at 40% MFU the 36T-token Qwen3-14B run is ~4.48M GPU-hours, ~18.7 days and ~$11.2M at $2.50/GPU-hour. Using 989 as if it were dense halves every one of those and underquotes the budget by 2× (§15).
+7. **Smaller model, smaller cache.** Gemma 4 E4B computes with a third of the 12B's parameters (3.97B vs 11.91B), yet at 128K its KV cache is **2.17 GB against the 12B's 1.41 GB**: it keeps two KV heads with separate K and V in its global layers, while the 12B keeps one K=V head. The global-layer shape, not the parameter count, sets the cache (§7).
 
 If you only remember one thing: a formula is a **shape and a count**. Check the shapes first, then the numbers.
 
@@ -415,6 +416,36 @@ At 256K, the local term is unchanged and the global term becomes
 \]
 
 so the total is **2.48 GB**. The naive full-attention calculation \(2\cdot48\cdot8\cdot256\cdot32{,}768\cdot2=12.88\text{ GB}\) is an upper bound, not the deployed cache. This is the single most important correction in this chapter.
+
+### Gemma 4 E4B and E2B: shared KV
+
+The edge models add one more rule: the last `num_kv_shared_layers` layers reuse the K/V of an earlier layer and **cache nothing** ([37 §4.3](37-architecture.md)). E4B has 42 layers and shares the last 18, so only layers 0–23 cache — 20 local and 4 global. There is no K=V, so a global layer stores both K and V, with \(G=2\), \(d_h=512\); the local window is \(W=512\).
+
+Local term, capped at the window:
+
+\[
+2\cdot20\cdot2\cdot256\cdot512\cdot2=21.0\text{ MB}.
+\]
+
+Global term, per token:
+
+\[
+4\cdot2\cdot2\cdot512\cdot2=16{,}384\text{ bytes}=16\text{ KB}.
+\]
+
+At 32K that is \(16{,}384\cdot32{,}768=536.9\) MB, so the cache is **558 MB**. At 128K (131,072 tokens) the global term is 2.15 GB and the cache **2.17 GB**.
+
+Now compare with the 12B at the same 128K: \(335.5\text{ MB}+8\cdot1\cdot512\cdot131{,}072\cdot2=1.41\) GB. The 12B pays 8 KB per token for its global layers (one K=V head each); E4B pays 16 KB (two heads, K and V). **The 4B-class model needs the bigger long-context cache.**
+
+E2B shares 20 of 35 layers, leaving 12 local and 3 global with \(G=1\):
+
+\[
+2\cdot12\cdot1\cdot256\cdot512\cdot2=6.3\text{ MB},
+\qquad
+3\cdot2\cdot1\cdot512\cdot2=6\text{ KB per token},
+\]
+
+so 208 MB at 32K and 812 MB at 128K. A runtime that ignored the sharing and cached every layer would need 0.98 GB (E4B) and 0.48 GB (E2B) at 32K; sharing removes 43% and 57%.
 
 **Why it matters.** On the handbook's 32 GB Mac this is the difference between fitting a long context and not. A 4-bit Qwen3-14B is about 8.3 GB of weights; its 5.37 GB bf16 KV cache at 32K is the *second* largest consumer of memory, and int8 KV (§16) halves it to 2.68 GB. Gemma's hybrid design keeps even a 256K cache (2.48 GB) smaller than Qwen's 32K cache — the sliding window and single global KV head, not the parameter count, are what let a 12B model serve a quarter-million tokens.
 
@@ -818,10 +849,36 @@ If the embedding is tied, the total is \(308\).
 |---|---:|---:|---:|---:|---:|
 | Qwen3-14B | 62.91M | 267.39M | 40 | 777.91M + 777.91M head | 14.77B |
 | Gemma 4 12B local | 47.19M | 176.95M | 40 | 1,006.63M (tied) | — |
-| Gemma 4 12B global | 66.85M | 176.95M | 8 | — | — |
-| **Gemma 4 12B total** | — | — | 48 | — | **11.92B** |
+| Gemma 4 12B global | 64.88M | 176.95M | 8 | — | — |
+| **Gemma 4 12B total** | — | — | 48 | — | **11.91B** |
 
-Gemma’s global layer uses \(G=1\), \(d_h=512\); its attention block is larger than a local layer. The official 11.95B includes norms and implementation details. If you count all 48 layers as local, you get 11.77B and miss about 0.15B.
+Gemma’s global layer uses \(G=1\), \(d_h=512\) and K=V, so its attention is \(Q+K+O\) with **no value projection**:
+
+\[
+\underbrace{3840\cdot16\cdot512}_{Q}+\underbrace{3840\cdot1\cdot512}_{K=V}+\underbrace{16\cdot512\cdot3840}_{O}=64.88\text{M}.
+\]
+
+It is still larger than a local layer (47.19M), because its heads are twice as wide. If you count all 48 layers as local, you get 11.77B and miss about 0.14B; if you add a \(V\) projection to the global layers, you invent 15.7M weights. The published checkpoint holds 11,959,730,224 parameters: this 11.907B text decoder plus 52.4M of multimodal embedders (norms are only 0.7M). The model card rounds it to 11.95B.
+
+### Edge models: total versus effective
+
+The model card lists Gemma 4 E2B as “5.1B with embeddings, 2.3B effective”. Both numbers are real; they count different things. Besides the token embedding \(Vd\), E2B stores a per-layer embedding table of \(V\cdot L\cdot256\) values:
+
+\[
+\underbrace{262{,}144\cdot1{,}536}_{\text{token embedding}}=402.7\text{M},
+\qquad
+\underbrace{262{,}144\cdot35\cdot256}_{\text{per-layer table}}=2{,}348.8\text{M}.
+\]
+
+Those 2.75B are lookups: a token reads one row of each, so they cost storage but no matmuls. The checkpoint holds 5,123,178,979 parameters; subtract the tables and you get
+
+\[
+5.123\text{B}-2.751\text{B}=2.37\text{B},
+\]
+
+the “effective” size (the card rounds it to 2.3B). Like the file total, it still includes the 0.48B vision and audio encoders. For E4B the same subtraction gives \(7.996-3.490=4.51\)B (card: 4.5B). The text decoder that actually computes per token is smaller still: 1.88B for E2B and 3.97B for E4B.
+
+Two edge-specific shapes make the count non-uniform. The last 20 layers of E2B share K/V, so they have no K/V projections (the file still ships 18.9M unused ones), and they have a **double-wide MLP**, \(3\cdot1536\cdot12{,}288=56.6\)M instead of 28.3M. A count that treats all 35 layers alike — what a generic estimator does — gets **1.69B** instead of 4.63B for the text decoder: it misses the per-layer table and the double-wide MLPs and wrongly adds K/V projections to the shared layers.
 
 Check the shapes before trusting a parameter count: \(Hd_h\) is 4,096 for Gemma local, 8,192 for Gemma global, and 5,120 for Qwen3-14B. Only Qwen satisfies \(Hd_h=d\).
 
@@ -1326,6 +1383,7 @@ If you can reproduce these numbers, you can debug most transformer math:
 | GQA params, toy | \(dHd_h+2dGd_h+Hd_hd\) | 48 (GQA) vs 64 (MHA) |
 | KV cache, toy | \(2LGd_hTb\) | 48 bytes |
 | Gemma 12B KV, 32K | hybrid sum | 604 MB |
+| Gemma E4B KV, 128K | shared-KV sum | 2.17 GB (12B: 1.41 GB) |
 | RoPE, \(t=1,s=0\) | \(\cos((t-s)\omega)\) | 0.5403 |
 | SwiGLU, toy | \(W_d(\mathrm{SiLU}(W_gx)\odot W_ux)\) | 1.0000 |
 | MoE top-2, toy | renormalised \(g\) | (0.7311,0.2689) |

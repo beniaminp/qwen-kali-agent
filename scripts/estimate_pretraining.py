@@ -45,9 +45,10 @@ PRESETS = {
 }
 
 
-def _attn(d: int, heads: int, kv_heads: int, head_dim: int) -> int:
+def _attn(d: int, heads: int, kv_heads: int, head_dim: int, k_eq_v: bool = False) -> int:
     q = d * heads * head_dim
-    kv = 2 * d * kv_heads * head_dim
+    # With K=V the key projection doubles as the value; there is no v_proj.
+    kv = (1 if k_eq_v else 2) * d * kv_heads * head_dim
     o = heads * head_dim * d
     return q + kv + o
 
@@ -56,7 +57,8 @@ def params(c: Config) -> dict:
     local_layers = c.layers - c.global_layers
     attn_local = _attn(c.d_model, c.heads, c.kv_heads, c.head_dim)
     attn_global = _attn(c.d_model, c.heads, c.global_kv_heads or c.kv_heads,
-                        c.global_head_dim or c.head_dim) if c.global_layers else attn_local
+                        c.global_head_dim or c.head_dim,
+                        k_eq_v=c.attention_k_eq_v) if c.global_layers else attn_local
     mlp = 3 * c.d_model * c.ffn
     norms = 2 * c.d_model
     per_local = attn_local + mlp + norms

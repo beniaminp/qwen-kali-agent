@@ -1,6 +1,6 @@
 # 42 — Distillation evaluation and deployment
 
-*Last verified: 25 October 2026.*
+*Last verified: 27 October 2026.*
 
 A distillation run is not done when the loss goes down. It is done when the student is measurably better than the base on your tasks, no worse on the behaviours you refuse to lose, and cheap enough to deploy. This chapter is the protocol.
 
@@ -266,7 +266,15 @@ At inference:
 \text{memory}\approx\text{weights}+\text{KV cache}+\text{runtime}.
 \]
 
-For Gemma 4 12B at 32K, the KV cache is several GB even with GQA and K=V; see [37 — Architecture anatomy](37-architecture.md). A 16 GB device should use E4B/E2B or a shorter context.
+The bf16 KV cache is smaller than you might expect, and it does not shrink with the model:
+
+| Student | KV at 32K | KV at 128K |
+|---|---:|---:|
+| Gemma 4 12B | 0.60 GB | 1.41 GB |
+| Gemma 4 E4B | 0.56 GB | 2.17 GB |
+| Gemma 4 E2B | 0.21 GB | 0.81 GB |
+
+On a 16 GB device the **weights** are the constraint, so E4B or E2B is the right student. But for long context, E4B's cache outgrows the 12B's: it keeps two KV heads with separate K and V in its global layers, while the 12B keeps one K=V head. E2B is the cheap long-context option. Int8 KV halves every number. See [37 — Architecture anatomy](37-architecture.md) §2.1 and §4.3.
 
 ### 8.2 Serve and compare
 

@@ -502,7 +502,7 @@ A local layer attends only to the last \(W\) tokens:
 A_{ij} = 0 \quad\text{if } j<i-W+1.
 \]
 
-Gemma 4 uses \(W=1024\), with a 5:1 local:global ratio. Local layers cost \(O(TW)\) instead of \(O(T^2)\) and their KV cache is bounded by \(W\). Global layers keep full attention every sixth layer for long-range retrieval.
+Gemma 4 12B uses \(W=1024\), with a 5:1 local:global ratio (E2B/E4B use \(W=512\), and E2B a 4:1 ratio). Local layers cost \(O(TW)\) instead of \(O(T^2)\) and their KV cache is bounded by \(W\). Global layers keep full attention every sixth layer for long-range retrieval.
 
 ![Qwen3 full attention and Gemma 4 hybrid stack](assets/diagrams/hybrid-stacks.svg)
 
@@ -513,7 +513,7 @@ The cache for a hybrid stack is
 + \sum_{\ell\in\text{global}} 2G d_h T b,
 \]
 
-and with K=V in global layers the second term loses the V factor. This is the math behind Gemma 4’s 256K context on a 12B model.
+and with K=V in global layers the second term loses the V factor. This is the math behind Gemma 4’s 256K context on a 12B model. The edge models add a third rule: KV-shared layers cache nothing, so only the first \(L-S\) layers appear in the sum ([37 §4.3](37-architecture.md)).
 
 ---
 
@@ -571,16 +571,18 @@ Gemma 4 12B has two attention shapes:
 | Layer type | \(H\) | \(G\) | \(d_h\) | \(P_{\text{attn}}\) | \(P_{\text{MLP}}\) | layers |
 |---|---:|---:|---:|---:|---:|---:|
 | local (sliding window) | 16 | 8 | 256 | 47.19M | 176.95M | 40 |
-| global (full attention) | 16 | **1** | **512** | 66.85M | 176.95M | 8 |
+| global (full attention) | 16 | **1** | **512** | 64.88M | 176.95M | 8 |
 
-The global layers use `num_global_key_value_heads = 1` and `global_head_dim = 512` in the checkpoint config. With tied embeddings:
+The global layers use `num_global_key_value_heads = 1` and `global_head_dim = 512` in the checkpoint config, and they are **K=V**: the key projection doubles as the value, so the \(2dGd_h\) term becomes \(dGd_h\) — there is no `v_proj`. With tied embeddings:
 
 \[
-40(47.19+176.95) + 8(66.85+176.95) + 3840\cdot262{,}144
-\approx 11.92\text{B}.
+40(47.19+176.95) + 8(64.88+176.95) + 3840\cdot262{,}144
+\approx 11.91\text{B}.
 \]
 
-The official figure is 11.95B; norms, fused kernels and implementation-specific parameters account for the 0.03B difference. A naive count that uses 48 local layers would give 11.77B and undercount the global attention by about 0.15B.
+The published checkpoint holds 11.96B: this 11.91B text decoder plus 52M of multimodal embedders; the model card rounds it to 11.95B. A naive count that uses 48 local layers gives 11.77B and undercounts the global attention by about 0.14B.
+
+**Edge models.** Gemma 4 E2B and E4B add three terms the formula above does not have: a per-layer embedding table of \(V\cdot L\cdot256\) lookups, KV-shared final layers with no K/V projections, and (E2B) double-wide MLPs in those layers. Their “E” sizes — 2.3B and 4.5B effective out of 5.1B and 8.0B — are the totals minus the embedding tables. [37 §4](37-architecture.md) decomposes both checkpoints.
 
 Run `scripts/inspect_architecture.py` for any config.
 
@@ -626,7 +628,7 @@ As above:
 \text{KV bytes} \approx 2LGd_hTb.
 \]
 
-At 32K, Qwen3-14B bf16 is ~5.37 GB. Gemma 4 12B is hybrid, not full attention: 40 local layers with \(W=1024\) plus 8 global layers with \(G=1\), \(d_h=512\), and \(K=V\), for about **604 MB** at 32K and **2.48 GB** at 256K. The 12.9 GB full-attention calculation is only an upper bound. Quantizing the cache to int8 halves either number. See [37 — Architecture anatomy](37-architecture.md) §2.1 and [43 — Worked examples](43-math-examples.md) §7.
+At 32K, Qwen3-14B bf16 is ~5.37 GB. Gemma 4 12B is hybrid, not full attention: 40 local layers with \(W=1024\) plus 8 global layers with \(G=1\), \(d_h=512\), and \(K=V\), for about **604 MB** at 32K and **2.48 GB** at 256K. The 12.9 GB full-attention calculation is only an upper bound. The edge models cache only their non-shared layers: Gemma 4 E2B needs about **208 MB** at 32K and **812 MB** at 128K, Gemma 4 E4B **558 MB** and **2.17 GB** — at 128K that is more than the 12B’s 1.41 GB, because E4B keeps two KV heads with separate K and V. Quantizing the cache to int8 halves any of these numbers. See [37 — Architecture anatomy](37-architecture.md) §2.1 and §4.3, and [43 — Worked examples](43-math-examples.md) §7.
 
 ### 14.4 Wall time and cost
 

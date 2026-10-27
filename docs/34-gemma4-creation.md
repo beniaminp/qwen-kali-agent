@@ -1,6 +1,6 @@
 # 34 — How Gemma 4 was built
 
-*Last verified: 25 October 2026 against the Gemma 4 technical report (arXiv:2607.02770), the Google model cards, and the Hugging Face config/chat template.*
+*Last verified: 27 October 2026 against the Gemma 4 technical report (arXiv:2607.02770), the Google model cards, and the Hugging Face config/chat template.*
 
 Gemma 4 is Google DeepMind’s open-weight, natively multimodal family. The public report is unusually detailed about architecture, tokenizer, training infrastructure and post-training. This chapter reconstructs the design and the mathematics; exact data mixtures and hyperparameters remain undisclosed.
 
@@ -20,7 +20,7 @@ Gemma 4 is Google DeepMind’s open-weight, natively multimodal family. The publ
 
 All are Apache-2.0. The 12B is the model used in this handbook because it trains in 32 GB at 4-bit and has native vision/audio input without separate encoders.
 
-The “E” in E2B/E4B means **effective** parameters: per-layer embeddings (PLE) store large lookup tables that are not all used per token, so the compute-relevant size is smaller than the stored size.
+The “E” in E2B/E4B means **effective** parameters: per-layer embeddings (PLE) store large lookup tables that are not all used per token, so the compute-relevant size is smaller than the stored size. Concretely, E2B’s 5.12B checkpoint holds 2.75B of embedding tables (a 0.40B token embedding and a 2.35B per-layer table); subtracting them leaves the 2.3B “effective” figure, of which 1.88B is the text decoder. [37 §4](37-architecture.md) decomposes both edge checkpoints.
 
 ---
 
@@ -33,7 +33,8 @@ Gemma 4 is a decoder-only transformer with:
 - **GeGLU** MLP;
 - **RoPE** on local layers, **p-RoPE** on global layers;
 - hybrid **local sliding-window / global** attention;
-- global layers reuse **keys as values** (K=V) in models above E4B;
+- global layers reuse **keys as values** (K=V) in models above E4B — those layers have no `v_proj`;
+- in E2B/E4B only: **per-layer embeddings** (a 256-wide vector per token per layer), **KV sharing** in the last layers (20 of 35 in E2B, 18 of 42 in E4B reuse earlier K/V and cache nothing), and in E2B a **double-wide MLP** in those shared layers;
 - vocabulary **262,144**, SentencePiece with split digits, preserved whitespace, byte-level fallback.
 
 The block is:
@@ -54,7 +55,7 @@ The exact placement of post-norm is implementation detail; the point is that Gem
 
 Gemma 4 uses a **5:1 local-to-global** ratio (4:1 for E2B):
 
-- five layers of sliding-window attention with window \(W=1024\);
+- five layers of sliding-window attention with window \(W=1024\) (four layers and \(W=512\) on E2B; \(W=512\) on E4B);
 - one layer of full global attention.
 
 Local attention:

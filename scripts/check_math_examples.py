@@ -203,19 +203,105 @@ def main() -> int:
     checks += 2
 
     # Gemma 4 12B: d=3840, 40 local + 8 global, ffn=15360, V=262144, tied.
+    # Global layers are K=V: the key projection doubles as the value, so
+    # there is no v_proj (the google/gemma-4-12B-it checkpoint has none).
     g_local = attn_params(3840, 16, 8, 256)
-    g_global = attn_params(3840, 16, 1, 512)
+    g_global = attn_params(3840, 16, 1, 512) - 3840 * 1 * 512  # no v_proj
     g_mlp = 3 * 3840 * 15360
     g_embed = 3840 * 262144
     g_local_layer = g_local + g_mlp + 2 * 3840
     g_global_layer = g_global + g_mlp + 2 * 3840
     g_total = 40 * g_local_layer + 8 * g_global_layer + g_embed + 3840
     g_all_local = 48 * g_local_layer + g_embed + 3840  # the common miscount
-    assert g_local == 47_185_920 and g_global == 66_846_720 and g_mlp == 176_947_200
-    assert g_total == 11_922_681_600
+    assert g_local == 47_185_920 and g_global == 64_880_640 and g_mlp == 176_947_200
+    assert g_total == 11_906_952_960
     assert g_all_local == 11_765_395_200
-    assert g_total - g_all_local == 157_286_400  # ~0.15B the naive count misses
+    assert g_total - g_all_local == 141_557_760  # ~0.14B the naive count misses
     checks += 4
+
+    # 23. Gemma 4 family, reproduced to the parameter from the safetensors
+    # headers of google/gemma-4-{12B,E4B,E2B}-it (37 §4, 43 §7 and §14).
+    # Counts every RMSNorm, q/k norm and layer scalar.
+    def gemma4(d, L, ffn, H, G, dh, Gg, dhg, pattern, kv_shared=0,
+               double_wide=False, k_eq_v=False, ple=0, V=262144):
+        types = (pattern * L)[:L]
+        first_shared = L - kv_shared
+        attn = mlp = rest = 0
+        for i, t in enumerate(types):
+            g, h = (Gg, dhg) if t == "G" else (G, dh)
+            shared = i >= first_shared
+            attn += 2 * d * H * h + h                    # q, o, q_norm
+            if not shared:                               # shared layers reuse K/V
+                attn += d * g * h + h                    # k, k_norm
+                if not (k_eq_v and t == "G"):
+                    attn += d * g * h                    # v (v_norm has no weight)
+            mlp += 3 * d * ffn * (2 if double_wide and shared else 1)
+            rest += 4 * d + 1                            # four RMSNorms + layer scalar
+            if ple:
+                rest += 2 * d * ple + d                  # PLE gate, projection, norm
+        rest += d + ((L * ple * d + ple) if ple else 0)  # final norm, PLE projection
+        tables = V * d + (V * L * ple if ple else 0)     # token + per-layer embeddings
+        return attn, mlp, attn + mlp + rest, tables
+
+    def file_params(size_bytes, header_bytes):           # bf16 safetensors
+        return (size_bytes - header_bytes - 8) // 2
+
+    # 12B: text decoder + 52.4M multimodal embedders = the 23.9 GB file.
+    a12, m12, c12, t12 = gemma4(3840, 48, 15360, 16, 8, 256, 1, 512, "LLLLLG", k_eq_v=True)
+    assert a12 == 2_406_510_592 and m12 == 8_493_465_600
+    assert c12 + t12 == 11_907_350_320
+    assert c12 + t12 + 52_379_904 == file_params(23_919_549_408, 88_952) == 11_959_730_224
+    checks += 3
+
+    # E4B: last 18 layers share KV; PLE 256 per layer; no K=V.
+    a4, m4, c4, t4 = gemma4(2560, 42, 10240, 8, 2, 256, 2, 512, "LLLLLG",
+                            kv_shared=18, ple=256)
+    unused_kv4, vision4, audio4 = 55_055_616, 169_331_136, 308_757_248
+    assert a4 == 587_222_272 and m4 == 3_303_014_400
+    assert c4 == 3_973_352_490 and t4 == 3_489_660_928
+    assert c4 + t4 + unused_kv4 + vision4 + audio4 == file_params(15_992_595_884, 281_040)
+    effective4 = file_params(15_992_595_884, 281_040) - t4
+    assert effective4 == 4_506_496_490                  # model card: "4.5B effective"
+    checks += 4
+
+    # E2B: last 20 layers share KV and have a double-wide MLP; 4:1 pattern.
+    a2, m2, c2, t2 = gemma4(1536, 35, 6144, 8, 1, 256, 1, 512, "LLLLG",
+                            kv_shared=20, double_wide=True, ple=256)
+    unused_kv2, vision2, audio2 = 18_880_512, 168_544_704, 307_184_384
+    assert a2 == 278_412_288 and m2 == 1_557_135_360
+    assert c2 == 1_877_105_955 and t2 == 2_751_463_424
+    assert c2 + t2 + unused_kv2 + vision2 + audio2 == file_params(10_246_621_918, 263_952)
+    effective2 = file_params(10_246_621_918, 263_952) - t2
+    assert effective2 == 2_371_715_555                  # model card: "2.3B effective"
+    assert t2 * 100 // file_params(10_246_621_918, 263_952) == 53  # tables are 53% of E2B
+    checks += 5
+
+    # 24. Gemma 4 KV cache with sliding windows, K=V and KV sharing (bf16).
+    def gemma4_kv(L, pattern, kv_shared, G, dh, Gg, dhg, W, T, k_eq_v=False):
+        types = (pattern * L)[:L]
+        total = 0
+        for t in types[:L - kv_shared]:                  # shared layers store nothing
+            if t == "L":
+                total += 2 * G * dh * min(T, W)
+            else:
+                total += (1 if k_eq_v else 2) * Gg * dhg * T
+        return 2 * total
+
+    T32, T128 = 32_768, 131_072
+    assert gemma4_kv(48, "LLLLLG", 0, 8, 256, 1, 512, 1024, T32, k_eq_v=True) == 603_979_776
+    kv12_128 = gemma4_kv(48, "LLLLLG", 0, 8, 256, 1, 512, 1024, T128, k_eq_v=True)
+    kv4_32 = gemma4_kv(42, "LLLLLG", 18, 2, 256, 2, 512, 512, T32)
+    kv4_128 = gemma4_kv(42, "LLLLLG", 18, 2, 256, 2, 512, 512, T128)
+    kv2_32 = gemma4_kv(35, "LLLLG", 20, 1, 256, 1, 512, 512, T32)
+    kv2_128 = gemma4_kv(35, "LLLLG", 20, 1, 256, 1, 512, 512, T128)
+    assert kv12_128 == 1_409_286_144
+    assert kv4_32 == 557_842_432 and kv4_128 == 2_168_455_168
+    assert kv2_32 == 207_618_048 and kv2_128 == 811_597_824
+    assert kv4_128 > kv12_128                            # the 4B-class cache outgrows the 12B
+    # Without KV sharing every layer would cache: E4B 0.98 GB, E2B 0.48 GB at 32K.
+    assert gemma4_kv(42, "LLLLLG", 0, 2, 256, 2, 512, 512, T32) == 976_224_256
+    assert gemma4_kv(35, "LLLLG", 0, 1, 256, 1, 512, 512, T32) == 484_442_112
+    checks += 6
 
     print(f"all {checks} checks passed")
     return 0

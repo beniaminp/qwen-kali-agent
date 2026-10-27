@@ -170,7 +170,7 @@ hide:
   <a class="gb-mini" href="43-math-examples/">
     <span class="gb-mini__icon">✓</span>
     <strong>Worked examples</strong>
-    <span>Every formula on a toy model, checked by a 46-value script.</span>
+    <span>Every formula on a toy model, checked by a 64-value script.</span>
   </a>
 </div>
 
@@ -179,18 +179,18 @@ hide:
 <div class="gb-new">
   <div class="gb-new__item">
     <span class="gb-new__date">27 Oct 2026</span>
-    <strong><a href="43-math-examples/">Worked examples, grounded</a></strong>
-    <p>Every formula now starts from a real situation — a next token, a weight row, an eval batch — with a corrected Wilson interval and 46 checked values.</p>
+    <strong><a href="37-architecture/#4-the-edge-models-gemma-4-e2b-and-e4b">Gemma 4 E2B and E4B, explained</a></strong>
+    <p>Per-layer embeddings, KV sharing and the double-wide MLP, read from the checkpoints — and why the E4B cache at 128K outgrows the 12B’s.</p>
   </div>
   <div class="gb-new__item">
     <span class="gb-new__date">27 Oct 2026</span>
-    <strong><a href="37-architecture/">Gemma shapes corrected</a></strong>
-    <p>The global K=V tensor is <code>[1, 1, T, 512]</code> — one KV head, not eight — which is exactly where the 1 KB-per-token global cache comes from.</p>
+    <strong><a href="43-math-examples/">Worked examples, grounded</a></strong>
+    <p>Every formula now starts from a real situation — a next token, a weight row, an eval batch — with a corrected Wilson interval and 64 checked values.</p>
   </div>
   <div class="gb-new__item">
-    <span class="gb-new__date">25 Oct 2026</span>
-    <strong><a href="37-architecture/">Architecture anatomy and proofs</a></strong>
-    <p>Tensor-level diagrams, config-to-shape mapping and full derivations for attention, RoPE, RMSNorm, GDN and quantization.</p>
+    <span class="gb-new__date">27 Oct 2026</span>
+    <strong><a href="37-architecture/">Gemma 12B count corrected</a></strong>
+    <p>Global layers are K=V with no <code>v_proj</code>, and their tensor is <code>[1, 1, T, 512]</code>: the text decoder is 11.91B, the checkpoint 11.96B.</p>
   </div>
   <div class="gb-new__item">
     <span class="gb-new__date">25 Oct 2026</span>
