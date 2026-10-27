@@ -998,14 +998,34 @@ body:has(.gb-hero) .md-content__button {
 
 /* Page metadata and progress */
 .gb-page-meta {
-  display: flex;
-  flex-wrap: wrap;
-  gap: 0.35rem 0.8rem;
-  margin: -0.25rem 0 1.5rem !important;
-  color: #9ca3af;
-  font-size: 0.64rem;
-  font-weight: 600;
+  display: inline-flex;
+  align-items: center;
+  gap: 0.45rem;
+  width: fit-content;
+  margin: -0.1rem 0 1.6rem !important;
+  padding: 0.24rem 0.62rem;
+  border: 1px solid var(--gb-line);
+  border-radius: 999px;
+  background: #faf9ff;
+  color: #6b6478;
+  font-size: 0.62rem;
+  font-weight: 650;
   letter-spacing: 0.02em;
+}
+
+.gb-page-meta::before {
+  content: "";
+  width: 6px;
+  height: 6px;
+  border-radius: 50%;
+  background: var(--gb-purple-light);
+  box-shadow: 0 0 0 3px rgba(139, 92, 246, 0.14);
+}
+
+[data-md-color-scheme="slate"] .gb-page-meta {
+  border-color: #2a2b35;
+  background: #15161c;
+  color: #a9a4b4;
 }
 
 .gb-progress {
@@ -1385,4 +1405,35 @@ body:has(.gb-hero) .md-content__button {
 .md-typeset .highlight .l-Scalar,
 .md-typeset .highlight .l-Scalar-Plain {
   color: #86efac;
+}
+
+/* ============================================================
+   UX refinements
+   - Home page uses more of the viewport on wide screens; article
+     pages keep the 860px measure for comfortable reading.
+   - Headings clear the sticky header when reached from the TOC.
+   ============================================================ */
+
+@media screen and (min-width: 76.25em) {
+  body:has(.gb-hero) .md-content__inner {
+    max-width: 1080px;
+  }
+}
+
+/* Clicking a table-of-contents link no longer hides the heading
+   under the sticky tabs/header. */
+.md-typeset h1,
+.md-typeset h2,
+.md-typeset h3,
+.md-typeset h4,
+.md-typeset :target {
+  scroll-margin-top: 5.4rem;
+}
+
+/* Keep the hero lead from stretching too wide in the roomier home
+   container. */
+@media screen and (min-width: 76.25em) {
+  .gb-hero__lead {
+    max-width: 64ch;
+  }
 }
