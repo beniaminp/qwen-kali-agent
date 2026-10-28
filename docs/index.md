@@ -33,7 +33,7 @@ hide:
   <div class="gb-stats">
     <div class="gb-stat"><strong>3</strong><span>specializations</span></div>
     <div class="gb-stat"><strong>2</strong><span>model families</span></div>
-    <div class="gb-stat"><strong>45</strong><span>chapters</span></div>
+    <div class="gb-stat"><strong>62</strong><span>chapters</span></div>
     <div class="gb-stat"><strong>32 GB</strong><span>target hardware</span></div>
   </div>
 </div>
@@ -179,6 +179,11 @@ hide:
 <div class="gb-new">
   <div class="gb-new__item">
     <span class="gb-new__date">28 Oct 2026</span>
+    <strong><a href="45-ai-engineer-path/">New menu: AI Engineer</a></strong>
+    <p>What it takes to move from software engineering to AI engineering: 17 chapters from vectors and gradients to data preparation, RAG, agents, MCP, agent frameworks, evals, serving and interviews, with on-paper examples and tested code.</p>
+  </div>
+  <div class="gb-new__item">
+    <span class="gb-new__date">28 Oct 2026</span>
     <strong><a href="32-mathematics/">Every formula, on paper</a></strong>
     <p>129 short examples you can redo with a pencil, one after every formula in chapters 32–42, each number checked by <code>make math-check</code>.</p>
   </div>
@@ -201,11 +206,6 @@ hide:
     <span class="gb-new__date">27 Oct 2026</span>
     <strong><a href="37-architecture/">Gemma 12B count corrected</a></strong>
     <p>Global layers are K=V with no <code>v_proj</code>, and their tensor is <code>[1, 1, T, 512]</code>: the text decoder is 11.91B, the checkpoint 11.96B.</p>
-  </div>
-  <div class="gb-new__item">
-    <span class="gb-new__date">25 Oct 2026</span>
-    <strong><a href="39-gemma-distillation/">Gemma 12B distillation</a></strong>
-    <p>A three-direction track: teacher → 12B, 12B → E4B/E2B, and 12B as a data teacher, with sequence and logit KD.</p>
   </div>
 </div>
 

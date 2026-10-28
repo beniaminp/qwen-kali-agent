@@ -103,6 +103,24 @@ Or use `make docs-serve` / `make docs`. `site/` is generated and git-ignored.
 │   ├── 34-gemma4-creation.md  how Gemma 4 was built, including the 12B
 │   ├── 35-from-zero.md        train a small model you can afford
 │   ├── 36-reproducing-12b-14b.md real budget for a 12B–14B from scratch
+│   ├── 44-more-models-32gb.md  Llama, Mistral, Phi, DeepSeek, Granite, Yi on 32 GB
+│   ├── 45-ai-engineer-path.md  AI Engineer menu: the path from software engineer
+│   ├── 46-ai-math.md           vectors, gradients, probability, statistics
+│   ├── 47-ai-classical-ml.md   splits, leakage, models, every common metric
+│   ├── 48-ai-deep-learning.md  backprop by hand, PyTorch loop, optimizers, precision
+│   ├── 49-ai-llm-internals.md  tokens, attention, decoding, KV cache, training stages
+│   ├── 50-ai-prompting-apis.md chat API, structured output, tools, streaming, cost
+│   ├── 51-ai-rag.md            embeddings, chunking, ANN, BM25, hybrid, RAG evals
+│   ├── 52-ai-agents.md         agent loop, tool design, MCP, reliability and budgets
+│   ├── 53-ai-fine-tuning.md    when to fine-tune, LoRA/QLoRA math, DPO, distillation
+│   ├── 54-ai-evaluation.md     evals as tests, judges, statistics, CI gates
+│   ├── 55-ai-production.md     serving math, batching, caching, routing, observability
+│   ├── 56-ai-safety.md         prompt injection, OWASP LLM Top 10, PII, fairness
+│   ├── 57-ai-career.md         learning plan, portfolio, interview questions
+│   ├── 58-ai-mcp.md            MCP: protocol, building servers and clients, security
+│   ├── 59-ai-glossary.md       AI engineering terms with examples
+│   ├── 60-ai-data-preparation.md sourcing, parsing, cleaning, dedup, labels, splits, versions
+│   ├── 61-ai-agent-frameworks.md agent frameworks compared: when to use, pros and cons
 │   ├── appendix-a-configs.md  every config, explained
 │   ├── appendix-b-scripts.md  what each script does
 │   └── appendix-c-runbook.md  day-by-day execution plan
@@ -369,6 +387,18 @@ mlx_lm.lora --config configs/gemma4-12b-distill.yaml
 ```
 
 Read in order: [39 — Gemma 12B distillation](docs/39-gemma-distillation.md), [40 — Teachers, students and data](docs/40-distill-data.md), [41 — Distillation training](docs/41-distill-training.md), [42 — Evaluation](docs/42-distill-eval.md).
+
+---
+
+## From software engineer to AI engineer
+
+A separate menu for engineers moving into AI work. Every concept comes with a plain definition, why it matters, a worked example you can redo on paper or run, and exercises with answers:
+
+- [45 — The path](docs/45-ai-engineer-path.md): what an AI engineer does, what transfers from software engineering, what is new, the skills map and a self-assessment.
+- Foundations: [46 — Math](docs/46-ai-math.md), [47 — Machine learning](docs/47-ai-classical-ml.md), [48 — Deep learning](docs/48-ai-deep-learning.md), [49 — How LLMs work](docs/49-ai-llm-internals.md).
+- Building: [50 — Prompting and APIs](docs/50-ai-prompting-apis.md), [60 — Data preparation](docs/60-ai-data-preparation.md), [51 — RAG](docs/51-ai-rag.md), [52 — Agents](docs/52-ai-agents.md), [58 — MCP](docs/58-ai-mcp.md), [61 — Agent frameworks](docs/61-ai-agent-frameworks.md), [53 — Fine-tuning](docs/53-ai-fine-tuning.md).
+- Shipping: [54 — Evaluation](docs/54-ai-evaluation.md), [55 — Production](docs/55-ai-production.md), [56 — Safety and security](docs/56-ai-safety.md).
+- Career: [57 — Roadmap, projects and interviews](docs/57-ai-career.md), [59 — Glossary](docs/59-ai-glossary.md).
 
 ---
 

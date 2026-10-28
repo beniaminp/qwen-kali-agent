@@ -302,7 +302,7 @@ Qwen3-14B has **hybrid thinking**:
 - `/think` and `/no_think` soft switches;
 - `enable_thinking=False` for a hard non-thinking mode.
 
-With MLX `--mask-prompt`, the completion starts at `assistant\n` and includes the think block, so the adapter learns to emit ` thinking…`. Train and serve with the **same** setting:
+With MLX `--mask-prompt`, the completion starts at `assistant\n` and includes the think block, so the adapter learns to emit `<think>…`. Train and serve with the **same** setting:
 
 - **Thinking on** (default): better reasoning, more tokens, more latency; use sequence 2,048+ and check truncation.
 - **Thinking off**: shorter, faster; requires patching the local `tokenizer_config.json` to default `enable_thinking=False` before training, because `mlx_lm.lora` has no chat-template flag. Do not train thinking-on and serve thinking-off; you get a duplicated or empty think block.

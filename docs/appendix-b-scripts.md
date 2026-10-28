@@ -29,7 +29,7 @@ All scripts live in `scripts/` and are run from the repository root with the pro
 | `generate_distill_data.py` | Teacher traces → canonical JSONL; preserves reasoning/tool calls; resume and dry-run. | `python scripts/generate_distill_data.py --prompts examples/distill/prompts.jsonl --out data/distill/raw/deepseek.jsonl` |
 | `distill_logits.py` | GPU reference for CE + top-k KL logit distillation with LoRA. | `python scripts/distill_logits.py --teacher google/gemma-4-12B-it --student google/gemma-4-E4B-it --data ... --out ... --dry-run` |
 | `check_math_examples.py` | Assert the arithmetic in the worked-examples chapter. | `python scripts/check_math_examples.py` |
-| `check_paper_examples.py` | Assert every number in the “On paper” example cards of chapters 32–42. | `python scripts/check_paper_examples.py` |
+| `check_paper_examples.py` | Assert every number in the “On paper” example cards of chapters 32–42 and the AI Engineer menu (45–61). | `python scripts/check_paper_examples.py` |
 | `export_gguf.sh` | Fuse, dequantize, convert, quantize. | `bash scripts/export_gguf.sh` |
 | `serve_mlx.sh` | Launch `mlx_lm.server` with safe defaults. | `bash scripts/serve_mlx.sh` |
 
@@ -62,7 +62,7 @@ Hard checks:
 - `arguments` parses as a JSON object;
 - required fields;
 - tool message follows an assistant tool call;
-- no ` thinking` in `content`;
+- no `<think>` in `content`;
 - no empty assistant message.
 
 Soft checks (warnings):
@@ -569,16 +569,29 @@ It checks 69 values: softmax/CE, the Jacobian, RMSNorm, attention, GQA, KV cache
 
 ### `check_paper_examples.py`
 
-Every formula in chapters 32–42 is followed by an “On paper” card: a small example you can redo with a pencil. This script asserts every number in those cards, one module per chapter group in `scripts/paper_examples/`:
+Every formula in chapters 32–42 and in the AI Engineer menu (45–61) is followed by an “On paper” card: a small example you can redo with a pencil. This script asserts every number in those cards, and in the AI Engineer chapters' worked examples and exercise answers too, one module per chapter group in `scripts/paper_examples/`. The glossary module (`ch59_glossary.py`) also checks the page's structure: alphabetical order, one example and at least one link per entry.
 
 ```bash
 python scripts/check_paper_examples.py
-# ch32_mathematics: 310 checks
+# ch32_mathematics: all 310 checks passed
 # ch33_37_creation: all 160 checks passed
 # ch38_derivations: all 407 checks passed
 # ch39_42_distillation: all 232 checks passed (chapters 39, 40, 41, 42)
-# all 4 chapter checks passed
+# ch45_path: all 238 checks passed
+# ch46_47_math_ml: all 761 checks passed (chapter 46: 428, chapter 47: 333)
+# ch48_49_dl_llm: all 550 checks passed (chapters 48, 49)
+# ch50_52_prompting_agents: all 128 checks passed (chapters 50, 52)
+# ch51_54_rag_eval: all 247 checks passed (chapters 51, 54)
+# ch53_55_finetune_production: all 189 checks passed (chapters 53, 55)
+# ch56_57_safety_career: all 108 checks passed (chapters 56, 57)
+# ch58_mcp: all 41 checks passed
+# ch59_glossary: all 2424 checks passed
+# ch60_data_prep: all 107 checks passed
+# ch61_frameworks: all 40 checks passed
+# all 15 chapter checks passed
 ```
+
+The MCP example project in `examples/mcp/` has its own test, `python examples/mcp/test_tickets_server.py` (needs `pip install "mcp>=2,<3"`, see its README).
 
 `make math-check` runs both scripts. Stdlib only; each tolerance matches the rounding shown in the text.
 

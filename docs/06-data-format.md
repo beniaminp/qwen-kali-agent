@@ -128,7 +128,7 @@ Qwen3-8B and Qwen3-14B use the classic Qwen template (both tokenizer configs are
 
 ```text
 <|im_start|>assistant
- thinking
+<think>
 
 </think>
 
@@ -168,7 +168,7 @@ Enumerate the open TCP services on 10.10.10.5.<|im_end|>
 80/tcp open http
 </tool_response><|im_end|>
 <|im_start|>assistant
- thinking
+<think>
 
 </think>
 
@@ -260,14 +260,14 @@ Do **not** train with a different system prompt for every row unless the variati
 
 Qwen3 supports a reasoning block. The template behaviour:
 
-- If an assistant message has `reasoning_content`, it is rendered inside ` thinking ...  response`.
-- If `content` contains `</think>`, the template splits it, but if the content *starts* with ` thinking`, you get a double-open (`<think>\n thinking...`). This is a real, verified pitfall.
+- If an assistant message has `reasoning_content`, it is rendered inside `<think>…</think>` before the response.
+- If `content` contains `</think>`, the template splits it, but if the content *starts* with `<think>`, you get a double-open (`<think>\n thinking...`). This is a real, verified pitfall.
 - The final assistant message always gets a think block, even when `reasoning_content` is empty.
-- If you pass `enable_thinking: false` to `apply_chat_template` at serving time, the prompt ends with a **closed empty think block**. A model trained with the default template (which expects to generate ` thinking`) may then emit a second think block. Train and serve with the same setting.
+- If you pass `enable_thinking: false` to `apply_chat_template` at serving time, the prompt ends with a **closed empty think block**. A model trained with the default template (which expects to generate `<think>`) may then emit a second think block. Train and serve with the same setting.
 
 **Practical policy for this handbook:**
 
-1. Keep thinking **enabled** during training and serving. The final assistant will emit ` thinking\n\n</think>\n\n` before content; that is a few tokens of overhead, not a failure.
+1. Keep thinking **enabled** during training and serving. The final assistant will emit `<think>\n\n</think>\n\n` before content; that is a few tokens of overhead, not a failure.
 2. If you need a no-think adapter, patch the tokenizer's chat template to force the no-think branch *before training* and use the same template at serving. Do not simply pass `enable_thinking:false` at serving against a think-trained adapter.
 3. Store reasoning traces in `reasoning_content`, never inline.
 4. For tool-call-only assistant turns, you may omit reasoning. The template will not add a think block to intermediate turns.
@@ -337,7 +337,7 @@ Run `scripts/validate_dataset.py` on every split. It checks:
 - required arguments are present;
 - every `tool` message follows an assistant tool call and has non-empty content;
 - no duplicate tool call IDs within an example;
-- no ` thinking` inside `content`;
+- no `<think>` inside `content`;
 - no empty assistant message;
 - no obviously destructive command patterns (`rm -rf /`, `mkfs`, fork bomb, `dd of=/dev/`) without a lab marker;
 - no secrets matching common token patterns.
@@ -395,7 +395,7 @@ For source-specific mappings (xLAM, ToolACE, Hermes, APIGen-MT, terminus-2, Kali
 | Qwen2.5-Coder arguments are a quoted string | Stored as a string instead of an object | Re-render with `--arguments-format dict`. |
 | Model calls a tool that does not exist | Hallucinated names in training data | Enforce name membership; add negative examples. |
 | XML template produces empty parameters | Passed a JSON string where Qwen3.5 expects a mapping | Parse arguments to a dict before rendering. |
-| Double ` thinking` | Inline ` thinking` in `content` | Use `reasoning_content`. |
+| Double `<think>` | Inline `<think>` in `content` | Use `reasoning_content`. |
 | Loss is `nan` | Prompt ≥ `max_seq_length` with `--mask-prompt` | Measure lengths; drop/split long rows. |
 | Model ignores the final answer style | Trajectory stored as one line; only last turn trained | Prefix-expand; or train without masking (not recommended). |
 | Train/serve mismatch | Different chat template or tool schema | Freeze the tokenizer revision; reuse the exact system prompt and `tools`. |

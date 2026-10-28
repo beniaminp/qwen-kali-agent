@@ -1,6 +1,8 @@
 #!/usr/bin/env python3
 """Check the arithmetic in every "On paper" example card outside chapter 43.
 
+Chapters 32–42 and the AI Engineer menu (45–61) each have a module.
+
 Each chapter's cards are asserted by one module in scripts/paper_examples/
 (stdlib only; tolerances match the rounding shown in the text). Chapter 43 has
 its own checker, scripts/check_math_examples.py. Run both after editing a card:
@@ -19,6 +21,17 @@ MODULES = [
     "ch33_37_creation.py",
     "ch38_derivations.py",
     "ch39_42_distillation.py",
+    "ch45_path.py",
+    "ch46_47_math_ml.py",
+    "ch48_49_dl_llm.py",
+    "ch50_52_prompting_agents.py",
+    "ch51_54_rag_eval.py",
+    "ch53_55_finetune_production.py",
+    "ch56_57_safety_career.py",
+    "ch58_mcp.py",
+    "ch59_glossary.py",
+    "ch60_data_prep.py",
+    "ch61_frameworks.py",
 ]
 
 

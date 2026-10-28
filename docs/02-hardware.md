@@ -17,7 +17,7 @@ If you only read one section, read [§3](#3-the-memory-budget) and [§6](#6-what
 | Component | M1 Pro (binned 10-core CPU / 16-core GPU) |
 |---|---|
 | CPU | 10 cores (8 performance + 2 efficiency) |
-| GPU | 16 cores, ~5.2 TFLOPS FP32, ~10.4 TFLOPS FP16 |
+| GPU | 16 cores, ~5.2 TFLOPS FP32; FP16/BF16 at the same peak rate (no double-rate half precision) |
 | Neural Engine | 16 cores (not used by MLX training) |
 | Memory | 32 GB unified, ~200 GB/s bandwidth |
 | Media engine | ProRes/ProRes RAW hardware (irrelevant here) |
@@ -144,16 +144,16 @@ Do not add KV cache to the training budget. It matters when serving:
 KV bytes/token = 2 (K,V) × layers × kv_heads × head_dim × bytes
 ```
 
-Qwen3-14B: `2 × 40 × 8 × 128 × 2 = 163,840 bytes/token ≈ 160 KB/token`.
+Qwen3-14B: `2 × 40 × 8 × 128 × 2 = 163,840 bytes/token = 160 KiB/token`.
 
 | Context | KV cache (fp16) | With 4-bit KV |
 |---:|---:|---:|
-| 4K | 0.65 GB | ~0.17 GB |
-| 8K | 1.31 GB | ~0.33 GB |
-| 16K | 2.62 GB | ~0.66 GB |
-| 32K | 5.24 GB | ~1.31 GB |
+| 4K | 0.67 GB | ~0.17 GB |
+| 8K | 1.34 GB | ~0.34 GB |
+| 16K | 2.68 GB | ~0.67 GB |
+| 32K | 5.37 GB | ~1.34 GB |
 
-At 32 GB, a 14B 4-bit model (~8.3 GB) + 32K fp16 KV (~5.2 GB) + runtime (~2 GB) ≈ 15.5 GB. That fits. A 27B 4-bit (~15.6 GB) + 32K (~5.2 GB) ≈ 23 GB — at the edge, especially with a VM running.
+At 32 GB, a 14B 4-bit model (~8.3 GB) + 32K fp16 KV (~5.4 GB) + runtime (~2 GB) ≈ 15.7 GB. That fits. A 27B 4-bit (~15.6 GB) + 32K (~5.4 GB) + runtime ≈ 23 GB — at the edge, especially with a VM running.
 
 ---
 
@@ -161,13 +161,13 @@ At 32 GB, a 14B 4-bit model (~8.3 GB) + 32K fp16 KV (~5.2 GB) + runtime (~2 GB) 
 
 Training FLOPs are roughly `6 × N × tokens` (forward + backward), where `N` is the number of **active** parameters. Throughput is `effective_TFLOPS / (6N)`.
 
-M1 Pro peak FP16 is ~10.4 TFLOPS. Real transformer training with 4-bit dequantization, Python overhead and memory stalls achieves maybe 25–45% of peak. For Qwen3-14B (`N=14.8B`, `6N ≈ 88.8 GFLOP/token`):
+M1 Pro peak is ~5.2 TFLOPS, and FP16/BF16 run at the same peak rate as FP32: Apple's GPUs have no double-rate half precision ([metal-benchmarks](https://github.com/philipturner/metal-benchmarks) measures ~5.3 TFLOPS for both). Real transformer training with 4-bit dequantization, Python overhead and memory stalls achieves maybe 25–45% of peak, about 1.3–2.3 TFLOPS. For Qwen3-14B (`N=14.8B`, `6N ≈ 88.8 GFLOP/token`):
 
-- At 2 TFLOPS effective: **22.5 tok/s**.
-- At 3 TFLOPS: **33.8 tok/s**.
-- At 4 TFLOPS: **45 tok/s**.
+- At 1.3 TFLOPS effective: **14.6 tok/s**.
+- At 2 TFLOPS: **22.5 tok/s**.
+- At 2.3 TFLOPS: **25.9 tok/s**.
 
-Published anchors are consistent with the low end: an M1 Max 32 GB trains Qwen3-8B 4-bit at **92–98 tok/s** at 2K with a small number of adapted layers, and the M1 Pro has roughly half the GPU and bandwidth. Budget **20–30 tok/s for 14B** and **40–55 tok/s for 8B** **(EST)**. If you see 60+ tok/s on a 14B, verify that you are actually training the layers you think you are.
+LoRA skips the weight gradients of the frozen base, so the real cost is closer to `4N` per token and these figures are conservative by up to 1.5×. Published anchors are consistent with this range: an M1 Max 32 GB trains Qwen3-8B 4-bit at **92–98 tok/s** at 2K with a small number of adapted layers, and the M1 Pro has roughly half the GPU and bandwidth. Budget **20–30 tok/s for 14B** and **40–55 tok/s for 8B** **(EST)**. If you see 60+ tok/s on a 14B, verify that you are actually training the layers you think you are.
 
 | Run | Tokens | 14B @ 25 tok/s | 8B @ 45 tok/s |
 |---|---:|---:|---:|

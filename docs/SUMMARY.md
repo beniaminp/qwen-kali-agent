@@ -67,6 +67,10 @@ A GitBook-style table of contents, mirrored by the site navigation.
 
 - [Qwen3 for all three tracks](26-one-model-for-all.md)
 
+### More 32 GB models
+
+- [Five other families](44-more-models-32gb.md)
+
 ## Model internals
 
 - [Mathematics](32-mathematics.md)
@@ -77,6 +81,38 @@ A GitBook-style table of contents, mirrored by the site navigation.
 - [How Gemma 4 was built](34-gemma4-creation.md)
 - [From zero](35-from-zero.md)
 - [Reproducing 12B–14B](36-reproducing-12b-14b.md)
+
+## AI Engineer
+
+- [From software engineer to AI engineer](45-ai-engineer-path.md)
+
+### Foundations
+
+- [The math you actually need](46-ai-math.md)
+- [Machine learning fundamentals](47-ai-classical-ml.md)
+- [Deep learning and neural networks](48-ai-deep-learning.md)
+- [How LLMs work, for engineers](49-ai-llm-internals.md)
+
+### Building
+
+- [Prompting and LLM APIs](50-ai-prompting-apis.md)
+- [Data preparation for AI systems](60-ai-data-preparation.md)
+- [Embeddings, vector search and RAG](51-ai-rag.md)
+- [Agents and tool use](52-ai-agents.md)
+- [MCP: the Model Context Protocol](58-ai-mcp.md)
+- [Agent frameworks: what to use, when and why](61-ai-agent-frameworks.md)
+- [Fine-tuning and model adaptation](53-ai-fine-tuning.md)
+
+### Shipping
+
+- [Evaluation: evals are your test suite](54-ai-evaluation.md)
+- [Production: serving, cost and LLMOps](55-ai-production.md)
+- [Safety, security and responsible AI](56-ai-safety.md)
+
+### Career
+
+- [Roadmap, projects and interviews](57-ai-career.md)
+- [Glossary](59-ai-glossary.md)
 
 ## Reference
 

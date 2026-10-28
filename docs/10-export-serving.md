@@ -290,6 +290,8 @@ print(r.choices[0].message.tool_calls)
 
 The response should contain a `tool_calls` array with `function.name` and a JSON string `function.arguments`. If it returns prose instead, the template or parser is wrong; go back to [`06-data-format.md`](06-data-format.md) and run the smoke test.
 
+`temperature=0.0` suits the handbook's fused adapters, which are trained to emit an empty think block before the call ([06 §6](06-data-format.md#6-thinking-and-reasoning_content)). Against the **base** Qwen3 with thinking on, the model card advises against greedy decoding (it can repeat endlessly; use temperature 0.6 and top_p 0.95), or turn thinking off for the request with `extra_body={"chat_template_kwargs": {"enable_thinking": False}}`, and budget `max_tokens` for any thinking it does.
+
 ### Verifying tool-call fidelity
 
 ```bash

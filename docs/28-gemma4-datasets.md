@@ -20,7 +20,7 @@ This chapter is the Gemma-specific shopping list. The full catalogs are:
 | Tool arguments | Qwen3: JSON **string**; Qwen2.5-Coder: object | **Object/mapping** |
 | Tool call syntax | `<tool_call>{"name":...}</tool_call>` | `<|tool_call>call:name{key:<|"|>value<|"|>}<tool_call|>` |
 | Tool result | `role: tool`, id ignored by Qwen3 template | `role: tool`, id resolved to name |
-| Thinking | ` thinking…` | `<|channel>thought…<channel|>` |
+| Thinking | `<think>…</think>` | `<|channel>thought…<channel|>` |
 | Thinking history | final assistant may include think block | **drop previous thoughts**, except tool-call turns |
 | Vision | no (text model) | **yes**, but text `mlx_lm` strips vision weights |
 | Context | 32K (Qwen3) / 128K (Coder) | **256K** |

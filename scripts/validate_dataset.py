@@ -117,8 +117,8 @@ def main() -> int:
                     errors.append(f"{where}: message {i} content is not a string/null")
                 if role == "assistant" and not content and not m.get("tool_calls"):
                     errors.append(f"{where}: empty assistant message at {i}")
-                if role == "assistant" and isinstance(content, str) and " thinking" in content:
-                    errors.append(f"{where}: assistant content contains  thinking (use reasoning_content)")
+                if role == "assistant" and isinstance(content, str) and "<think>" in content:
+                    errors.append(f"{where}: assistant content contains <think> (use reasoning_content)")
 
                 calls = m.get("tool_calls") or []
                 if role == "assistant" and calls:

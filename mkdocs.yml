@@ -76,6 +76,7 @@ markdown_extensions:
   - pymdownx.snippets
   - pymdownx.tasklist:
       custom_checkbox: true
+      clickable_checkbox: true
   - pymdownx.caret
   - pymdownx.tilde
   - pymdownx.mark
@@ -154,6 +155,28 @@ nav:
       - How Gemma 4 was built: 34-gemma4-creation.md
       - From zero: 35-from-zero.md
       - Reproducing 12B–14B: 36-reproducing-12b-14b.md
+  - AI Engineer:
+      - The path: 45-ai-engineer-path.md
+      - Foundations:
+          - Math you need: 46-ai-math.md
+          - Machine learning: 47-ai-classical-ml.md
+          - Deep learning: 48-ai-deep-learning.md
+          - How LLMs work: 49-ai-llm-internals.md
+      - Building:
+          - Prompting and APIs: 50-ai-prompting-apis.md
+          - Data preparation: 60-ai-data-preparation.md
+          - RAG: 51-ai-rag.md
+          - Agents: 52-ai-agents.md
+          - MCP: 58-ai-mcp.md
+          - Agent frameworks: 61-ai-agent-frameworks.md
+          - Fine-tuning: 53-ai-fine-tuning.md
+      - Shipping:
+          - Evaluation: 54-ai-evaluation.md
+          - Production: 55-ai-production.md
+          - Safety and security: 56-ai-safety.md
+      - Career:
+          - Roadmap and interviews: 57-ai-career.md
+          - Glossary: 59-ai-glossary.md
   - Reference:
       - Summary: SUMMARY.md
       - References: 14-references.md

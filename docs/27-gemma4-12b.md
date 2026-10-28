@@ -44,7 +44,7 @@ The architecture is a hybrid: most layers use a 1,024-token sliding window, with
 | Native context | **256K** | 32K (131K YaRN) | 128K |
 | Vision | **Yes** | No | No |
 | Tool calling | Native, custom syntax | `<tool_call>` JSON | `<tool_call>` JSON |
-| Thinking | Channel-based | ` thinking` | None |
+| Thinking | Channel-based | `<think>` | None |
 | License | Apache-2.0 | Apache-2.0 | Apache-2.0 |
 | Local 4-bit QLoRA | **Yes, 24/48** | Yes, 24/40 | Yes, 24/48 |
 | Best role | React/vision, A/B Java | Kali/agent | Java/React code specialist |
