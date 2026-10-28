@@ -41,6 +41,11 @@ def norm_row(row: dict, arguments_format: str = "string") -> dict | None:
         m = dict(m)
         if not isinstance(m.get("content"), (str, type(None))):
             m["content"] = json.dumps(m["content"], ensure_ascii=False)
+        # Qwen/Gemma chat templates do `'...' in content`, which throws on a
+        # null content (standard for an assistant tool-call turn). Normalize to
+        # an empty string so the rendered trace still carries the tool_calls.
+        if m.get("content") is None:
+            m["content"] = ""
         calls = m.get("tool_calls")
         if calls:
             new_calls = []

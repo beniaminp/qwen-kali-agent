@@ -1,7 +1,7 @@
 # Runtime (Apple Silicon). mlx-lm is macOS-only.
 mlx-lm[train]==0.32.2; sys_platform == "darwin"
 transformers>=5.7
-huggingface-hub[cli]
+huggingface-hub
 datasets
 openai
 pyyaml

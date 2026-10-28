@@ -233,7 +233,12 @@ def main() -> int:
 
     torch.manual_seed(args.seed)
     if args.device == "auto":
-        device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
+        if torch.cuda.is_available():
+            device = torch.device("cuda")
+        elif torch.backends.mps.is_available():
+            device = torch.device("mps")
+        else:
+            device = torch.device("cpu")
     else:
         device = torch.device(args.device)
     use_bf16 = args.dtype == "bf16" and device.type == "cuda"
