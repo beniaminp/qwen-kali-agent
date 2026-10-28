@@ -143,6 +143,8 @@ nav:
           - Evaluation: 42-distill-eval.md
       - One model for all:
           - Qwen3 for all three tracks: 26-one-model-for-all.md
+      - More 32 GB models:
+          - Five other families: 44-more-models-32gb.md
   - Internals:
       - Mathematics: 32-mathematics.md
       - Architecture anatomy: 37-architecture.md
