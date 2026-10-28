@@ -12,7 +12,7 @@ Run the arithmetic yourself:
 python scripts/check_math_examples.py
 ```
 
-It asserts 64 values from this chapter, including the Wilson interval, the hybrid and shared KV caches, and Gemma 4 12B, E4B and E2B parameter counts reproduced to the parameter from their published checkpoints.
+It asserts 67 values from this chapter, including the Wilson interval, the hybrid and shared KV caches, and Gemma 4 12B, E4B and E2B parameter counts reproduced to the parameter from their published checkpoints.
 
 ---
 
@@ -353,6 +353,16 @@ O_h=\operatorname{softmax}\left(\frac{Q_hK^\top}{\sqrt{d_h}}\right)V.
 \]
 
 Only \(K\) and \(V\) are shared. The saving is in the cache and the K/V projections, not in the query computation.
+
+!!! example "On paper"
+
+    Two query heads share one KV head holding two tokens, with values \(v_1=(1,0)\) and \(v_2=(0,1)\). Head 1's scaled scores against the shared keys are \((1,0)\); head 2's are \((0,1)\). With \(e\approx2.718\):
+
+    \[
+    \frac{e}{e+1}=\frac{2.718}{3.718}=0.731
+    \]
+
+    so head 1 attends \((0.731,\,0.269)\) and outputs \((0.731,\,0.269)\), while head 2 attends \((0.269,\,0.731)\) and outputs \((0.269,\,0.731)\). Averaging the two queries first would give scores \((0.5,0.5)\), weights \((0.5,0.5)\) and one blurred output \((0.5,0.5)\) for both heads. Sharing K and V keeps each head's own focus.
 
 ---
 
@@ -1030,6 +1040,16 @@ Rounding has zero derivative almost everywhere, so QAT uses a straight-through e
 
 The forward pass sees the quantized weight; the backward pass pretends quantization is the identity. The model learns weights that remain good after rounding.
 
+!!! example "On paper"
+
+    A latent weight \(w=0.30\) with scale \(s=0.25\) is stored as \(q=\operatorname{round}(0.30/0.25)=\operatorname{round}(1.2)=1\), so the forward pass uses \(\hat w=0.25\). Suppose the loss gradient there is \(\partial\mathcal{L}/\partial\hat w=0.4\). The true derivative of rounding is 0, so plain backprop would never move \(w\). The straight-through estimator passes the 0.4 through unchanged; with learning rate 0.5:
+
+    \[
+    w\leftarrow0.30-0.5\cdot0.4=0.10
+    \]
+
+    Now \(\operatorname{round}(0.10/0.25)=\operatorname{round}(0.4)=0\): the next forward pass uses \(\hat w=0\). The latent weight moved smoothly, and the stored weight jumped to the neighbouring grid point once it crossed the rounding boundary at 0.125.
+
 ### KV quantization
 
 The KV cache formula is linear in \(b\). Changing bf16 (\(b=2\)) to int8 (\(b=1\)) halves the cache:
@@ -1287,6 +1307,16 @@ Sequence KD is the special case where you do not use teacher logits. You sample 
 \]
 
 That is ordinary SFT on teacher traces. It transfers behaviour, not the full distribution. On a 32 GB Mac, this is the path MLX-LM supports.
+
+!!! example "On paper"
+
+    The teacher wrote the three-token trace `return`, `self`, `.` and the student gives those tokens probabilities 0.5, 0.25 and 0.8. With \(\ln0.5=-0.693\), \(\ln0.25=-1.386\) and \(\ln0.8=-0.223\):
+
+    \[
+    \mathcal{L}_{\text{seq}}=0.693+1.386+0.223=2.303
+    \]
+
+    That is \(-\ln(0.5\cdot0.25\cdot0.8)=-\ln0.1\): the loss is minus the log-probability of the whole trace, 0.768 per token. No teacher logits are needed — only the text the teacher wrote.
 
 ---
 

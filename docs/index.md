@@ -170,7 +170,7 @@ hide:
   <a class="gb-mini" href="43-math-examples/">
     <span class="gb-mini__icon">✓</span>
     <strong>Worked examples</strong>
-    <span>Every formula on a toy model, checked by a 64-value script.</span>
+    <span>Every formula on a toy model, checked by a 67-value script.</span>
   </a>
 </div>
 

@@ -561,10 +561,10 @@ Pure-stdlib assertions for the worked examples in [43 — Worked examples](43-ma
 
 ```bash
 python scripts/check_math_examples.py
-# all 64 checks passed
+# all 67 checks passed
 ```
 
-It checks 64 values: softmax/CE, the Jacobian, RMSNorm, attention, GQA, KV cache (the Gemma 12B hybrid and the E4B/E2B shared caches), RoPE, SwiGLU, MoE, GDN, speculative decoding, parameter counts, FLOPs, quantization, AdamW, LoRA, KD, pass@k, ECE and the Wilson interval. The Gemma 4 12B, E4B and E2B parameter counts are reproduced exactly from their safetensors headers. No model or network is loaded.
+It checks 67 values: softmax/CE, the Jacobian, RMSNorm, attention, GQA, KV cache (the Gemma 12B hybrid and the E4B/E2B shared caches), RoPE, SwiGLU, MoE, GDN, speculative decoding, parameter counts, FLOPs, quantization, AdamW, LoRA, KD, pass@k, ECE and the Wilson interval. The Gemma 4 12B, E4B and E2B parameter counts are reproduced exactly from their safetensors headers. No model or network is loaded.
 
 ---
 

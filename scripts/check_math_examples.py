@@ -303,6 +303,18 @@ def main() -> int:
     assert gemma4_kv(35, "LLLLG", 0, 1, 256, 1, 512, 512, T32) == 484_442_112
     checks += 6
 
+    # 25. "On paper" cards: GQA does not average queries (§6), the QAT
+    # straight-through estimator (§16) and sequence KD (§19).
+    head = math.e / (math.e + 1)
+    assert close(head, 0.731, 5e-4) and close(1 - head, 0.269, 5e-4)
+    s_q, w_lat = 0.25, 0.30
+    assert round(w_lat / s_q) == 1 and close(round(w_lat / s_q) * s_q, 0.25)
+    w_new = w_lat - 0.5 * 0.4
+    assert close(w_new, 0.10) and round(w_new / s_q) == 0 and close(0.5 * s_q, 0.125)
+    seq = -(math.log(0.5) + math.log(0.25) + math.log(0.8))
+    assert close(seq, 2.303, 5e-4) and close(seq, -math.log(0.1)) and close(seq / 3, 0.768, 5e-4)
+    checks += 3
+
     print(f"all {checks} checks passed")
     return 0
 

@@ -1576,3 +1576,10 @@ body:has(.gb-hero) .md-content__button {
 .md-typeset .gb-keys td:first-child code {
   word-break: normal;
 }
+
+/* Display math never clips: an equation wider than its column (phones,
+   example cards) scrolls inside its own block instead of being cut off. */
+.md-typeset div.arithmatex {
+  overflow-x: auto;
+  overflow-y: hidden;
+}
