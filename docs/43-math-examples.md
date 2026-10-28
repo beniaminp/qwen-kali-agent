@@ -12,7 +12,7 @@ Run the arithmetic yourself:
 python scripts/check_math_examples.py
 ```
 
-It asserts 67 values from this chapter, including the Wilson interval, the hybrid and shared KV caches, and Gemma 4 12B, E4B and E2B parameter counts reproduced to the parameter from their published checkpoints.
+It asserts 69 values from this chapter, including the Wilson interval, the hybrid and shared KV caches, and Gemma 4 12B, E4B and E2B parameter counts reproduced to the parameter from their published checkpoints. The shorter “On paper” cards after every formula in chapters 32–42 are checked by `python scripts/check_paper_examples.py`.
 
 ---
 
@@ -40,7 +40,7 @@ These are the seven places this chapter's arithmetic contradicts a plausible-loo
 3. **SwiGLU backward.** The gate's gradient is not just the scalar derivative \(g'(a)\). The correct form multiplies the upstream gradient \(W_d^\top\bar y\), the up-projection \(b\), and \(g'(a)\) elementwise (§9).
 4. **Q4_0 scale.** The clean symmetric grid uses \(\max/(2^{k-1}-1)\), but real GGML Q4_0 uses a code range \(-8\ldots7\) and a scale of \(\max/8\). Close, but not identical (§16).
 5. **Attention FLOPs.** The attention term scales with the query width \(H d_h\), not the hidden size \(d\). They are equal for Qwen3-14B but not for Gemma's global layers, where \(H d_h = 8192\) and \(d = 3840\) (§15).
-6. **H100 peak.** 989 TFLOP/s is the *sparse* peak; dense BF16 is 494.5 TFLOP/s — half of it. Use the dense number for planning: at 40% MFU the 36T-token Qwen3-14B run is ~4.48M GPU-hours, ~18.7 days and ~$11.2M at $2.50/GPU-hour. Using 989 as if it were dense halves every one of those and underquotes the budget by 2× (§15).
+6. **H100 peak.** NVIDIA lists the H100 SXM at 1,979 TFLOP/s BF16 *with sparsity*; the dense BF16 peak is half of that, about **989 TFLOP/s**. The 494.5 TFLOP/s figure that also circulates is the dense **TF32** peak. At 40% of the dense BF16 peak, the 36T-token Qwen3-14B run is ~2.24M GPU-hours, ~9.3 days and ~$5.6M at $2.50/GPU-hour. Planning with 494.5 doubles all three; planning with 1,979 as if it were dense halves them (§15).
 7. **Smaller model, smaller cache.** Gemma 4 E4B computes with a third of the 12B's parameters (3.97B vs 11.91B), yet at 128K its KV cache is **2.17 GB against the 12B's 1.41 GB**: it keeps two KV heads with separate K and V in its global layers, while the 12B keeps one K=V head. The global-layer shape, not the parameter count, sets the cache (§7).
 
 If you only remember one thing: a formula is a **shape and a count**. Check the shapes first, then the numbers.
@@ -682,10 +682,12 @@ The delta rule:
 
 \[
 S_t=\alpha_tS_{t-1}
-+\beta_t\big(v_t-\alpha_tS_{t-1}^\top k_t\big)k_t^\top,
++\beta_t\big(v_t-\alpha_tS_{t-1}k_t\big)k_t^\top,
 \qquad
-o_t=S_t^\top q_t.
+o_t=S_t\,q_t,
 \]
+
+with the state \(S_t\in\mathbb{R}^{d_v\times d_k}\) mapping keys to values.
 
 Use the scalar case \(d_k=d_v=1\) so \(S\) is a number. Let \(\alpha=1\), \(\beta=0.5\), \(S_0=0\).
 
@@ -940,15 +942,15 @@ At 400 TFLOP/s, about 3.7 minutes. Real throughput is lower because of memory, a
 =3.19\times10^{24}\ \text{FLOPs}.
 \]
 
-At 10,000 GPUs × 40% MFU × 494.5 TFLOP/s **dense** BF16:
+At 10,000 GPUs × 40% MFU × 989 TFLOP/s **dense** BF16 (NVIDIA's 1,979 TFLOP/s figure is with sparsity):
 
 \[
 \text{GPU-hours}
-=\frac{3.19\times10^{24}}{494.5\times10^{12}\cdot0.4\cdot3600}
-\approx4.48\times10^6.
+=\frac{3.19\times10^{24}}{989\times10^{12}\cdot0.4\cdot3600}
+\approx2.24\times10^6.
 \]
 
-That is 448 hours per GPU, or about **18.7 days**. At \$2.50/GPU-hour: **\$11.2M**. If you use the 989 TFLOP/s sparse peak instead, use about 20% MFU; 40% of the sparse peak would be ~80% of the dense peak and is not a realistic planning number. That is the order of magnitude; real runs add failures, data and evaluation.
+That is 224 hours per GPU, or about **9.3 days**. At \$2.50/GPU-hour: **\$5.6M**. Two look-alike numbers move this by 2×: 494.5 TFLOP/s is the dense **TF32** peak (using it doubles the estimate), and 1,979 is the sparse BF16 peak (using it as if it were dense halves it). That is the order of magnitude; real runs add failures, data and evaluation.
 
 ### Attention term
 

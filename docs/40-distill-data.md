@@ -413,7 +413,7 @@ teacher: deepseek-flash
 teacher_date: 2026-10-25
 student: gemma-4-12b-it
 prompts: 3200
-traces: 5100
+traces: 5120
 tokens: 7.4M
 categories: {kali: 0.62, refusal: 0.12, reasoning: 0.10, general: 0.16}
 filters: [schema, scope, dedup, secret, length]

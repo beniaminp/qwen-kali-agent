@@ -120,8 +120,9 @@ def main() -> int:
                     help="Training tokens (default 36T, Qwen3 scale)")
     ap.add_argument("--seq", type=int, default=32768)
     ap.add_argument("--gpus", type=int, default=1024)
-    ap.add_argument("--peak-tflops", type=float, default=495.0,
-                    help="Per-GPU peak dense BF16 TFLOP/s (default H100 SXM ~495; 989 is sparse)")
+    ap.add_argument("--peak-tflops", type=float, default=989.0,
+                    help="Per-GPU dense BF16 peak TFLOP/s (default H100 SXM ~989; NVIDIA's "
+                         "1,979 is with sparsity, 494.5 is dense TF32)")
     ap.add_argument("--mfu", type=float, default=0.40, help="Model FLOPs utilization 0-1")
     ap.add_argument("--cost-per-gpu-hour", type=float, default=2.5)
     ap.add_argument("--json", action="store_true")

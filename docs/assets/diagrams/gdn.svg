@@ -22,7 +22,7 @@
 
   <rect class="state" x="60" y="120" width="150" height="80"/>
   <text class="txt" x="82" y="150">state S(t−1)</text>
-  <text class="mono" x="82" y="172">d_k × d_v per head</text>
+  <text class="mono" x="82" y="172">d_v × d_k per head</text>
   <text class="small" x="82" y="190">independent of T</text>
 
   <path class="arrow" d="M210 160 H270"/>

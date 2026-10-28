@@ -60,6 +60,22 @@ Fill-in-the-middle trains the model to complete a span given a prefix and suffix
 \log p_\theta(x_t\mid \text{prefix},\text{suffix},x_{<t}).
 \]
 
+!!! example "On paper"
+
+    A tiny Python infill: the prefix is `def sq(x):`, the suffix is `print(sq(3))`, and the middle `return x*x` is three tokens that the model predicts with probabilities \(\tfrac12\), \(\tfrac12\) and \(\tfrac14\). Use \(\ln2\approx0.693\).
+
+    \[
+    \begin{aligned}
+    \mathcal{L}_{\text{FIM}}
+    &=-\big(\ln\tfrac12+\ln\tfrac12+\ln\tfrac14\big)\\
+    &=4\ln2\approx2.77
+    \end{aligned}
+    \]
+
+    The prefix and suffix tokens are context only and add nothing to the sum; a perfect infill (all three probabilities 1) would score 0.
+
+    Longer version: [43 §1](43-math-examples.md).
+
 This is why code models are good at editing inside a file, not just continuing at the end.
 
 ### 3.3 Architecture
@@ -173,6 +189,26 @@ r_i(\theta)\hat A_i,\;
 \right].
 \]
 
+!!! example "On paper"
+
+    One maths query, \(G=4\) sampled answers. The verifier scores them \(R=(1,0,1,0)\), so \(\operatorname{mean}(R)=0.5\) and, with the population standard deviation, \(\operatorname{std}(R)=0.5\). Take \(\epsilon=0.2\), \(\beta=0.04\) and a KL estimate of 0.25.
+
+    | \(i\) | \(R_i\) | \(\hat A_i\) | \(r_i(\theta)\) | \(\operatorname{clip}(r_i)\) | \(\min(\ldots)\) |
+    |---|---:|---:|---:|---:|---:|
+    | 1 | 1 | +1 | 1.5 | 1.2 | 1.2 |
+    | 2 | 0 | −1 | 0.5 | 0.8 | −0.8 |
+    | 3 | 1 | +1 | 1.0 | 1.0 | 1.0 |
+    | 4 | 0 | −1 | 1.0 | 1.0 | −1.0 |
+
+    \[
+    \begin{aligned}
+    \tfrac14(1.2-0.8+1.0-1.0)&=0.1\\
+    \mathcal{J}_{\text{GRPO}}&=0.1-0.04\cdot0.25=0.09
+    \end{aligned}
+    \]
+
+    Answer 1 is already 50% more likely than under \(\pi_{\text{old}}\) and answer 2 has halved. In both rows the min picks the clipped value, which is a constant, so this step pushes neither of them further; answers 3 and 4 get the full update.
+
 The group baseline replaces a learned value function. The KL term keeps the policy near the reference. Qwen3 reports large-batch, many-rollout, off-policy training and entropy control as important for stability.
 
 #### Stage 3 — Thinking mode fusion
@@ -209,6 +245,22 @@ p_{\text{student}}(\cdot\mid x)
 \]
 
 often on **on-policy** student samples. The report says distillation is more efficient than RL for small models and uses about **1/10 of the GPU hours** of the four-stage recipe. The student learns both thinking and non-thinking behaviour from the teacher.
+
+!!! example "On paper"
+
+    Three candidate next tokens. The teacher predicts \(p_{\text{teacher}}=(\tfrac12,\tfrac14,\tfrac14)\) and the student \(p_{\text{student}}=(\tfrac14,\tfrac12,\tfrac14)\). Use \(\ln2\approx0.693\).
+
+    \[
+    \begin{aligned}
+    \operatorname{KL}
+    &=\tfrac12\ln2+\tfrac14\ln\tfrac12+\tfrac14\ln1\\
+    &=\tfrac14\ln2\approx0.173
+    \end{aligned}
+    \]
+
+    Swapping the student's first two probabilities would match the teacher and make the loss 0. Unlike a one-hot label, the target also tells the student how much weight the teacher puts on the alternatives.
+
+    Longer version: [43 §19](43-math-examples.md).
 
 ### 4.5 What is not public
 
@@ -254,8 +306,27 @@ The GDN recurrence (see [32 — Mathematics](32-mathematics.md) §10):
 \[
 S_t = \alpha_t S_{t-1}(I-\beta_t k_t k_t^\top) + \beta_t v_t k_t^\top,
 \qquad
-o_t=S_t^\top q_t.
+o_t=S_t\,q_t,
 \]
+
+with \(S_t\in\mathbb{R}^{d_v\times d_k}\).
+
+!!! example "On paper"
+
+    Take \(d_k=d_v=2\) and a state that already stores two associations, key \(e_1\) to \(4e_1\) and key \(e_2\) to \(2e_2\): \(S_{t-1}=\operatorname{diag}(4,2)\). Write the new pair \(k_t=e_1=(1,0)\), \(v_t=(6,0)\) with \(\alpha_t=0.5\) and \(\beta_t=0.5\).
+
+    \[
+    \begin{aligned}
+    I-\beta_tk_tk_t^\top&=\operatorname{diag}(0.5,\,1)\\
+    \alpha_tS_{t-1}(I-\beta_tk_tk_t^\top)&=\operatorname{diag}(1,\,1)\\
+    \beta_tv_tk_t^\top&=\operatorname{diag}(3,\,0)\\
+    S_t&=\operatorname{diag}(4,\,1)
+    \end{aligned}
+    \]
+
+    Reading with \(q_t=e_1\) gives \(o_t=(4,0)\): the \(e_1\) slot decayed from 4 to 2, then moved halfway to the new value 6. The \(e_2\) slot was not written, so it only decayed, from 2 to 1.
+
+    Longer version: [43 §11](43-math-examples.md).
 
 The 3:1 stack gives cheap long-context memory while keeping periodic full attention for retrieval. Qwen3.6 shares the architecture. Qwen3.8 is a newer generation with stronger coding/agentic results; it is not a 32 GB local training target.
 

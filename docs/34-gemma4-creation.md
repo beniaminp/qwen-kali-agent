@@ -16,7 +16,7 @@ Gemma 4 is Google DeepMind’s open-weight, natively multimodal family. The publ
 | **Gemma 4 E4B** | 8B with embeddings | 4.5B effective | text, image, audio | 150M ViT + 305M audio |
 | **Gemma 4 12B** | **11.95B** | dense | text, image, audio | **none** (encoder-free) |
 | **Gemma 4 26B-A4B** | 25.2B | 3.8B active | text, image | 550M ViT |
-| **Gemma 4 31B** | 30.7B | dense | text, image | 550M ViT |
+| **Gemma 4 31B** | 30.7B (31.3B with the ViT) | dense | text, image | 550M ViT |
 
 All are Apache-2.0. The 12B is the model used in this handbook because it trains in 32 GB at 4-bit and has native vision/audio input without separate encoders.
 
@@ -49,6 +49,21 @@ y &= \operatorname{RMSNorm}_{\text{post}}(v) \quad\text{(Gemma-style post-norm)}
 
 The exact placement of post-norm is implementation detail; the point is that Gemma uses both normalisations, unlike Qwen3’s pure pre-norm.
 
+!!! example "On paper"
+
+    One token with \(d=2\), \(x=(1,1)\), all norm gains 1 and \(\epsilon\approx0\). Since \(\operatorname{rms}(x)=1\), \(\operatorname{RMSNorm}_1(x)=x\). Suppose attention returns \((3,-1)\) and the MLP returns \((2,6)\).
+
+    \[
+    \begin{aligned}
+    u&=(1,1)+(3,-1)=(4,0)\\
+    v&=(4,0)+(2,6)=(6,6)\\
+    \operatorname{rms}(v)&=\sqrt{(36+36)/2}=6\\
+    y&=(6,6)/6=(1,1)
+    \end{aligned}
+    \]
+
+    The two residual adds grew the stream from RMS 1 to RMS 6; the post-norm hands the next block a vector of RMS 1 again. A pure pre-norm block (Qwen3) would pass \((6,6)\) on.
+
 ---
 
 ## 3. Hybrid attention and p-RoPE
@@ -63,6 +78,18 @@ Local attention:
 \[
 A_{ij}=0 \quad\text{if } j<i-W+1.
 \]
+
+!!! example "On paper"
+
+    Toy window \(W=4\), query position \(i=6\), positions counted from 1. Keys after \(i\) are already hidden by the causal mask; the window also zeroes every key with
+
+    \[
+    j<i-W+1=6-4+1=3.
+    \]
+
+    So the row for \(i=6\) keeps \(j=3,4,5,6\) (four keys, itself included) and zeroes \(j=1,2\). With the real \(W=1024\), token \(i=5{,}000\) sees \(j=3{,}977\) to \(5{,}000\), exactly 1,024 keys. Token 1 is out of reach of every local layer; only the global layers can still read it.
+
+    Longer version: [43 §12](43-math-examples.md).
 
 Global attention is standard causal attention. Global layers use:
 
@@ -80,6 +107,21 @@ Standard attention stores both \(K\) and \(V\) in the cache. If \(K=V\):
 
 instead of \(2LGd_hTb\) for those layers. Combined with p-RoPE and the local/global split, Gemma reports up to a **37.5% reduction** in global KV cache.
 
+!!! example "On paper"
+
+    The 4-layer experiment from §12 (3 local + 1 global): its \(L=1\) global layer has \(G=2\) KV heads of \(d_h=64\), and you cache \(T=4{,}096\) tokens in bf16 (\(b=2\) bytes).
+
+    \[
+    \begin{aligned}
+    LGd_hTb&=1\cdot2\cdot64\cdot4{,}096\cdot2\\
+    &=1{,}048{,}576\text{ bytes}=1\text{ MiB}
+    \end{aligned}
+    \]
+
+    Without K=V the same layer stores \(2LGd_hTb=2\) MiB. Reusing one projection halves the global-layer cache exactly; the local layers are unaffected.
+
+    Longer version: [43 §7](43-math-examples.md).
+
 ### 3.2 p-RoPE
 
 For head dimension \(d_h\) and fraction \(p\):
@@ -90,19 +132,34 @@ For head dimension \(d_h\) and fraction \(p\):
 
 where \(R_\theta\) is the standard RoPE rotation. Only the first \(p d_h\) dimensions carry position; the rest are position-invariant. The global layers already integrate information over the full sequence, so rotating every dimension is unnecessary and can hurt long-context stability.
 
+!!! example "On paper"
+
+    A toy head with \(d_h=8\) and \(p=0.25\): only \(pd_h=2\) dimensions rotate. Take \(q=(1,0,2,2,2,2,2,2)\) at position \(m=1\); the first pair turns by \(m\theta=1\) radian (\(\cos1\approx0.540\), \(\sin1\approx0.841\)).
+
+    \[
+    \begin{aligned}
+    R_\theta(1,0)&=(\cos1,\ \sin1)\approx(0.540,\ 0.841)\\
+    \tilde q&\approx(0.540,\,0.841,\,2,2,2,2,2,2)
+    \end{aligned}
+    \]
+
+    The six untouched entries contribute the same amount to \(q\cdot k\) at any distance. In a Gemma 4 global head (\(d_h=512\)), \(0.25\cdot512=128\) dimensions rotate and 384 are position-free.
+
+    Longer version: [43 §8](43-math-examples.md).
+
 ### 3.3 Cache math
 
-For 12B: \(L=48\), \(G=8\), local \(d_h=256\), window 1024, global \(d_h=512\). Roughly:
+For 12B: \(L=48\) (40 local + 8 global); local layers have \(G=8\), \(d_h=256\) and a 1,024-token window; global layers have \(G=1\) (`num_global_key_value_heads`) and \(d_h=512\). In bf16:
 
 \[
 \text{local cache} \approx 40 \cdot 2 \cdot 8 \cdot 256 \cdot 1024 \cdot 2 \approx 0.34\text{ GB},
 \]
 
 \[
-\text{global cache} \approx 8 \cdot 8 \cdot 512 \cdot T \cdot 2
+\text{global cache} \approx 8 \cdot 1 \cdot 512 \cdot T \cdot 2
 \]
 
-at bf16, before K=V. At \(T=32{,}768\), the global part dominates. K=V and int8 KV are what make 256K serving practical.
+— one tensor per layer, because K=V. That is 268 MB at \(T=32{,}768\) (537 MB if K and V were stored separately) and 2.15 GB at 256K. At 32K the local term is still the larger one; the global term overtakes it at \(T=40{,}960\) and dominates long context, which is why K=V and int8 KV are what make 256K serving practical.
 
 ---
 
@@ -120,11 +177,25 @@ z_{\text{patch}} = W_{\text{patch}}\,x_{\text{patch}} + b,
 W_{\text{patch}}\in\mathbb{R}^{d\times(48\cdot48\cdot3)}.
 \]
 
-The projection has ~35M parameters. Spatial information is added as **2D coordinate positional embeddings** directly to patch representations, followed by LayerNorm:
+The patch embedder has ~35M parameters (a 26.5M projection plus the position table; the checkpoint holds 35.2M). Spatial information is added as **2D coordinate positional embeddings** directly to patch representations, followed by LayerNorm:
 
 \[
 \tilde z = \operatorname{LayerNorm}(z + e_{\text{2D}}).
 \]
+
+!!! example "On paper"
+
+    One 48×48 RGB patch flattens to \(48\cdot48\cdot3=6{,}912\) numbers, and the 12B’s width is \(d=3{,}840\). The checkpoint’s 2D position table \(e_{\text{2D}}\) has shape \(1{,}120\times2\times3{,}840\).
+
+    \[
+    \begin{aligned}
+    W_{\text{patch}}&:\ 3{,}840\cdot6{,}912=26{,}542{,}080\\
+    e_{\text{2D}}&:\ 1{,}120\cdot2\cdot3{,}840=8{,}601{,}600\\
+    \text{sum}&\approx35.1\text{M}
+    \end{aligned}
+    \]
+
+    So the ~35M is the whole patch embedder: about three quarters is the matmul and one quarter the position table. The bias and LayerNorms add only 0.03M more.
 
 ### 4.2 Audio
 
@@ -142,6 +213,16 @@ z_{\text{audio}} = W_{\text{audio}}\,x_{\text{audio}} + b.
 
 Audio is temporal, so no extra positional encoding is added. The 305M conformer encoder used by E2B/E4B is discarded entirely in 12B.
 
+!!! example "On paper"
+
+    One second of 16 kHz audio is 16,000 samples, cut into 640-sample (40 ms) chunks:
+
+    \[
+    16{,}000/640=25\ \text{tokens per second}.
+    \]
+
+    A 30-second voice note therefore costs \(30\cdot25=750\) tokens of context. The projection \(W_{\text{audio}}\) is \(3{,}840\times640=2{,}457{,}600\approx2.46\)M weights, under 1% of the 305M conformer it replaces.
+
 ### 4.3 Why it matters
 
 - fewer parameters and less memory fragmentation;
@@ -158,7 +239,7 @@ For a text-only MLX LoRA, the vision/audio weights are stripped; the language mo
 | Model | Vision | Audio |
 |---|---|---|
 | E2B/E4B | 150M ViT, patch 16, variable aspect ratio, axial 2D-RoPE, 2D absolute pos | 305M USM-based conformer, 40ms Mel chunks |
-| 12B | none (35M matmul) | none (640-d projection) |
+| 12B | none (35M patch embedder) | none (640-d projection) |
 | 26B-A4B / 31B | 550M ViT | no audio |
 
 The vision encoders support variable resolution with a token budget of 70, 140, 280, 560 or 1120 tokens. Higher budgets preserve detail for OCR/document parsing; lower budgets are faster for classification/video frames.
@@ -208,6 +289,21 @@ Standard next-token prediction:
 
 For multimodal sequences, image/audio tokens are interleaved with text tokens and the same objective applies; the model learns to predict the next text token conditioned on the modality tokens. The encoders (when present) are frozen, so the gradient flows through the projection and the decoder.
 
+!!! example "On paper"
+
+    A 4-token caption after an image. The image tokens are context, so \(T=4\) counts only the caption, whose true tokens get probabilities \(\tfrac12,\tfrac18,\tfrac12,\tfrac18\). Use \(\ln2\approx0.693\).
+
+    \[
+    \begin{aligned}
+    \mathcal{L}&=\tfrac14\big(\ln2+3\ln2+\ln2+3\ln2\big)\\
+    &=2\ln2\approx1.386
+    \end{aligned}
+    \]
+
+    The perplexity is \(e^{\mathcal{L}}=4\): on average the model is as unsure as a fair pick among four tokens.
+
+    Longer version: [43 §1](43-math-examples.md).
+
 ### 7.3 Infrastructure
 
 Gemma 4 is trained on **TPU v5p and TPU v6e**:
@@ -235,7 +331,7 @@ Memory for 12B:
 | Format | Weights | KV at 32K |
 |---|---:|---:|
 | bf16 | 24.0 GB | — |
-| Q4_0 | 7.65 GB | 0.28 GB (int8) |
+| Q4_0 | 7.65 GB | 0.28 GiB (int8; 302 MB) |
 
 QAT matters because post-training quantization of a 12B model can degrade reasoning; training with simulated quantization preserves quality.
 

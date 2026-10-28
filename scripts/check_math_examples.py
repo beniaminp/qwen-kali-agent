@@ -315,6 +315,13 @@ def main() -> int:
     assert close(seq, 2.303, 5e-4) and close(seq, -math.log(0.1)) and close(seq / 3, 0.768, 5e-4)
     checks += 3
 
+    # 26. Full-pretraining budget (43 §15): dense BF16 H100 peak is ~989
+    # TFLOP/s; NVIDIA's 1,979 is with sparsity and 494.5 is dense TF32.
+    gpu_hours = 6 * 14.77e9 * 36e12 / (989e12 * 0.4 * 3600)
+    assert close(gpu_hours / 1e6, 2.24, 0.005)
+    assert close(gpu_hours / 10_000 / 24, 9.3, 0.05) and close(gpu_hours * 2.5 / 1e6, 5.6, 0.01)
+    checks += 2
+
     print(f"all {checks} checks passed")
     return 0
 

@@ -25,6 +25,23 @@ Y &= U + \operatorname{MLP}(\operatorname{Norm}_2(U)).
 \end{aligned}
 \]
 
+!!! example "On paper"
+
+    One token (\(B=T=1\)) with \(d=2\): \(X=(2,2)\), RMSNorm with gain 1 and \(\epsilon\approx0\). Suppose attention returns \((5,-1)\) and the MLP returns \((-1,1)\).
+
+    \[
+    \begin{aligned}
+    \operatorname{Norm}_1(X)&=(2,2)/2=(1,1)\\
+    U&=(2,2)+(5,-1)=(7,1)\\
+    \operatorname{Norm}_2(U)&=(7,1)/5=(1.4,\,0.2)\\
+    Y&=(7,1)+(-1,1)=(6,2)
+    \end{aligned}
+    \]
+
+    The MLP reads \((1.4,0.2)\), a vector of RMS 1, even though \(U\) itself has RMS \(\sqrt{(49+1)/2}=5\). The sub-layers only add to the stream, and \(Y\) keeps the \(1\times1\times2\) shape of \(X\).
+
+    Longer version: [43 §4](43-math-examples.md).
+
 The residual stream is the only path that connects the first embedding to the last logits. Attention and MLP are *reads* from and *writes* to that stream. This is why:
 
 - every block has the same input/output shape \(B\times T\times d\);
@@ -115,13 +132,11 @@ before checkpointing, where \(c_{\text{attn}}\) and \(c_{\text{mlp}}\) depend on
 
 in bf16; attention scores add \(BHT^2\) per layer, which is much larger if materialised. Gradient checkpointing trades compute for memory by recomputing activations; it does not change the weights or the KV cache.
 
-The practical memory order is:
+Which term dominates depends on the regime:
 
-\[
-\text{weights} < \text{optimizer states} < \text{activations} < \text{attention scores}.
-\]
-
-For LoRA, the base weights are quantized and frozen, the optimizer state is tiny (adapter only), but activations still scale with \(LBTd\). That is why sequence length is the first knob to reduce.
+- **Full fine-tuning with AdamW:** the optimizer state. fp32 master weights plus two moments are 12 bytes per parameter — 177 GB for Qwen3-14B, against 29.5 GB of bf16 weights.
+- **LoRA/QLoRA:** the base weights are quantized and frozen (~8.3 GB at 4-bit) and the optimizer state is tiny (adapter only), so activations, which scale with \(LBTd\), decide whether a run fits. That is why sequence length is the first knob to reduce.
+- **Long context without a fused kernel:** the \(BHT^2\) attention scores. For Qwen3-14B they are 336 MB per layer at 2K but 86 GB per layer at 32K in bf16, which is why FlashAttention never materialises them.
 
 ---
 
@@ -433,6 +448,21 @@ SwiGLU vs GeGLU:
 
 Both have three matrices. The difference is the nonlinearity; empirical results are close, and the choice is usually inherited from the pretraining family. Do not swap activation in a fine-tune; it changes the architecture.
 
+!!! example "On paper"
+
+    One hidden unit (\(d_{\text{ff}}=1\)) with gate \(W_gx=1\), up value \(W_ux=2\) and \(W_d=1\). Use \(\sigma(1)\approx0.7311\) (\(e\approx2.718\)) and the normal CDF \(\Phi(1)\approx0.8413\), so \(\operatorname{SiLU}(1)=\sigma(1)\) and \(\operatorname{GELU}(1)=\Phi(1)\).
+
+    \[
+    \begin{aligned}
+    \operatorname{SwiGLU}&=0.7311\cdot2\approx1.462\\
+    \operatorname{GeGLU}&=0.8413\cdot2\approx1.683
+    \end{aligned}
+    \]
+
+    With a negative gate \(W_gx=-1\), \(\operatorname{SiLU}(-1)=-0.2689\) and \(\operatorname{GELU}(-1)=-0.1587\), giving \(-0.538\) and \(-0.317\). GELU lets more of a positive gate through and less of a negative one; Gemma’s tanh approximation of GELU agrees to three decimals.
+
+    Longer version: [43 §9](43-math-examples.md).
+
 ### 6.5 Normalization
 
 - **Pre-norm** (Qwen3): stable deep training, residual path is identity.
@@ -454,6 +484,29 @@ N_{\text{active}}\approx N_{\text{attn}}+N_{\text{router}}+\frac{k}{E}N_{\text{e
 \]
 
 Qwen3-30B-A3B stores 30.5B and activates 3.3B per token. The cost is routing, load balancing, all-to-all communication and memory for all experts. For a single 32 GB machine, a 30B MoE at 4-bit is ~17 GB and inference-only; training is not a realistic local path.
+
+!!! example "On paper"
+
+    Qwen3-30B-A3B: 48 layers, \(d=2{,}048\), 32 query and 4 KV heads of \(d_h=128\) (so \(Hd_h=4{,}096\ne d\)), \(E=128\) experts of width 768, \(k=8\), untied \(V=151{,}936\).
+
+    | Term | Per layer | × 48 layers |
+    |---|---:|---:|
+    | \(N_{\text{attn}}\): \(2\cdot2{,}048\cdot4{,}096+2\cdot2{,}048\cdot4\cdot128\) | 18.87M | 0.906B |
+    | \(N_{\text{router}}\): \(2{,}048\cdot128\) | 0.26M | 0.013B |
+    | \(N_{\text{experts}}\): \(128\cdot3\cdot2{,}048\cdot768\) | 603.98M | 28.99B |
+    | \(N_{\text{embed}}\): \(2Vd\), untied | — | 0.622B |
+
+    \[
+    \begin{aligned}
+    \tfrac{k}{E}N_{\text{experts}}&=\tfrac{8}{128}\cdot28.99\text{B}=1.812\text{B}\\
+    N_{\text{active}}&\approx0.906+0.013+1.812+0.622\\
+    &\approx3.35\text{B}
+    \end{aligned}
+    \]
+
+    Stored, all four rows add up to \(\approx30.5\)B; per token only 3.35B are used. Those are the 30.5B and 3.3B above.
+
+    Longer version: [43 §10](43-math-examples.md).
 
 ---
 

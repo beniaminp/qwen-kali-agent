@@ -51,6 +51,25 @@ where \(\mathcal{C}\) is the completion span. The gradient is
 =p_{S,t}-e_{y_t}.
 \]
 
+!!! example "On paper"
+
+    An E4B training row renders to 3 prompt tokens and 2 completion tokens, so \(|\mathcal{C}|=2\). At the two completion positions the student's softmax gives the correct token 0.5 and 0.25 (\(\ln2\approx0.693\)).
+
+    \[
+    \begin{aligned}
+    \mathcal{L}_{\text{CE}}&=-\tfrac12(\ln0.5+\ln0.25)\\
+    &=\tfrac12(0.693+1.386)\approx1.04
+    \end{aligned}
+    \]
+
+    At the second position the softmax over three candidates is \(p_{S,t}=(0.5,\;0.25,\;0.25)\) and the correct token is the second:
+
+    \[
+    p_{S,t}-e_{y_t}=(0.5,\;-0.75,\;0.25)
+    \]
+
+    The three prompt tokens cost nothing. A gradient step raises the correct logit and lowers the other two; the entries sum to 0.
+
 This is the same loss as ordinary SFT. Sequence KD is therefore **SFT on teacher-generated completions**, with all of SFT’s strengths and weaknesses.
 
 ### 2.2 Logit KD
@@ -80,6 +99,32 @@ The total loss is
 
 with \(\alpha\in[0,1]\).
 
+!!! example "On paper"
+
+    The 12B teacher and the E4B student score two candidate tokens with \(z_T=(2\ln3,\;0)\approx(2.197,\;0)\) and \(z_S=(0,\;0)\); take \(T_{\text{temp}}=2\), \(\alpha=0.6\) (as in the §6.3 command) and token 1 as the hard label. Halving \(z_T\) gives weights \((3,1)\), so \(p_T^{T}=(0.75,\;0.25)\) and \(p_S^{T}=(0.5,\;0.5)\). Use \(\ln1.5\approx0.4055\) and \(\ln2\approx0.6931\).
+
+    \[
+    \begin{aligned}
+    \operatorname{KL}&=0.75\ln1.5+0.25\ln0.5\\
+    &\approx0.3041-0.1733=0.1308
+    \end{aligned}
+    \]
+
+    \[
+    \mathcal{L}_{\text{KD}}=2^2\cdot0.1308\approx0.523
+    \]
+
+    At temperature 1 the student is still \((0.5,\;0.5)\), so \(\mathcal{L}_{\text{CE}}=\ln2\approx0.693\):
+
+    \[
+    \begin{aligned}
+    \mathcal{L}&=0.4\cdot0.693+0.6\cdot0.523\\
+    &\approx0.277+0.314=0.591
+    \end{aligned}
+    \]
+
+    The teacher term supplies 0.314 of 0.591, about 53%. Without the \(T_{\text{temp}}^2\) factor it would be \(0.6\cdot0.131\approx0.078\), only about a fifth of the loss.
+
 Why \(T_{\text{temp}}^2\): the gradient of the KL with respect to \(z_S\) scales as \(1/T_{\text{temp}}^2\), so multiplying by \(T_{\text{temp}}^2\) keeps the KD gradient comparable to CE when you change the temperature. Without it, higher temperatures silently reduce the KD learning rate.
 
 ### 2.3 Top-k KD
@@ -97,6 +142,23 @@ q_i=\frac{\exp(z_{T,i}/T_{\text{temp}})}
 \mathcal{L}_{\text{top-k}}
 =-\sum_{i\in\mathcal{T}}q_i\log p_{S,i}^{T}.
 \]
+
+!!! example "On paper"
+
+    The 12B teacher's weights \(\exp(z_{T,i}/T_{\text{temp}})\) over four candidate tokens are \((5,3,1,1)\), and the student's tempered probabilities are \(p_S^{T}=(0.5,\;0.25,\;0.125,\;0.125)\). With \(k=2\), \(\mathcal{T}\) is tokens 1 and 2:
+
+    \[
+    q=\left(\tfrac58,\;\tfrac38\right)=(0.625,\;0.375)
+    \]
+
+    \[
+    \begin{aligned}
+    \mathcal{L}_{\text{top-k}}&=-(0.625\ln0.5+0.375\ln0.25)\\
+    &=1.375\ln2\approx0.953
+    \end{aligned}
+    \]
+
+    Tokens 3 and 4 hold a quarter of the student's mass yet never enter the sum: that is the approximation described in the last note below.
 
 Notes:
 
@@ -117,6 +179,19 @@ If you set \(\alpha=0\) and replace the hard label \(y_t\) with a teacher-sample
 \]
 
 That is sequence KD. It uses only hard labels and no teacher logits. It is what `mlx_lm.lora` can do today.
+
+!!! example "On paper"
+
+    The teacher samples a three-token completion \(\tilde y\), and the E4B student gives its tokens \(\tfrac12,\tfrac14,\tfrac18\) (\(\ln2\approx0.693\)).
+
+    \[
+    \begin{aligned}
+    \mathcal{L}_{\text{seq}}&=-\left(\ln\tfrac12+\ln\tfrac14+\ln\tfrac18\right)\\
+    &=(1+2+3)\ln2\approx4.159
+    \end{aligned}
+    \]
+
+    Divided by \(|\mathcal{C}|=3\) this is \(2\ln2\approx1.386\), exactly the averaged \(\mathcal{L}_{\text{CE}}\) of §2.1 on a row whose assistant turn is the teacher's text.
 
 ### 2.5 On-policy KD
 
@@ -140,6 +215,25 @@ For a white-box pair with hidden states \(h_T^l,h_S^l\):
 \]
 
 You need a projection \(W_l\), aligned layers, and both models in memory. This is a research direction, not the first run.
+
+!!! example "On paper"
+
+    Take a teacher hidden size of 4, a student hidden size of 2, two matched layers \(l\in\{a,b\}\), and one projection that averages neighbouring teacher coordinates:
+
+    \[
+    W_l=\tfrac12\begin{pmatrix}1&1&0&0\\0&0&1&1\end{pmatrix}
+    \]
+
+    With \(h_T^a=(2,4,1,3)\), \(h_S^a=(3,0)\), \(h_T^b=(0,2,2,2)\) and \(h_S^b=(2,2)\), the projections are \(W_lh_T^a=(3,2)\) and \(W_lh_T^b=(1,2)\):
+
+    \[
+    \begin{aligned}
+    \mathcal{L}_{\text{feat}}&=\|(0,\;-2)\|_2^2+\|(1,\;0)\|_2^2\\
+    &=4+1=5
+    \end{aligned}
+    \]
+
+    Every coordinate of every matched layer is a separate target, which is why both models' hidden states must be in memory at once.
 
 ---
 
@@ -183,11 +277,25 @@ The labels are
 \ell_t=
 \begin{cases}
 -100, & t\le P,\\
-y_t, & t>P.
+y_{t-P}, & t>P.
 \end{cases}
 \]
 
 `-100` is PyTorch/MLX’s ignore index; those positions do not contribute to the loss. This is exactly `mask_prompt: true` in MLX.
+
+!!! example "On paper"
+
+    Take the token counts of the example row in [chapter 40 §1](40-distill-data.md): a prompt of \(P=412\) tokens and a response of \(R=638\), so 1,050 positions in all.
+
+    \[
+    \ell_1=\dots=\ell_{412}=-100
+    \]
+
+    \[
+    \frac{R}{P+R}=\frac{638}{1{,}050}\approx0.608
+    \]
+
+    Only 60.8% of the positions enter the loss, and the average in \(\mathcal{L}_{\text{CE}}\) divides by \(|\mathcal{C}|=638\), not by 1,050.
 
 ### Step 3 — forward
 
@@ -236,11 +344,47 @@ v_t=\beta_2v_{t-1}+(1-\beta_2)g_t^2,
 \right).
 \]
 
+!!! example "On paper"
+
+    First step (\(t=1\), \(m_0=v_0=0\)) for one adapter weight \(\theta_0=0.1\) with gradient \(g_1=0.2\), \(\beta_1=0.9\), \(\beta_2=0.999\), and the 12B values of §8.1, \(\eta_t=8\cdot10^{-5}\) and \(\lambda=0.01\) (warmup ignored):
+
+    \[
+    \begin{aligned}
+    m_1&=0.1\cdot0.2=0.02\\
+    v_1&=0.001\cdot0.04=0.00004
+    \end{aligned}
+    \]
+
+    With the usual bias correction \(\hat m_1=m_1/(1-\beta_1)=0.2\) and \(\hat v_1=v_1/(1-\beta_2)=0.04\), the ratio is \(0.2/\sqrt{0.04}=1\) (\(\epsilon\) is negligible):
+
+    \[
+    \begin{aligned}
+    \theta_1&=0.1-8\cdot10^{-5}(1+0.01\cdot0.1)\\
+    &=0.1-0.00008008\approx0.0999199
+    \end{aligned}
+    \]
+
+    On the first step the ratio is \(\pm1\) whatever the size of \(g\), so every adapter weight moves by about \(\eta_t\); weight decay adds only 0.1% to that.
+
 Gradient accumulation sums \(G\) micro-batches before one optimizer step. The effective batch is
 
 \[
 B_{\text{eff}}=B_{\text{micro}}\times G.
 \]
+
+!!! example "On paper"
+
+    `configs/gemma4-12b-distill.yaml` sets `batch_size: 1` and `grad_accumulation_steps: 8`; the E4B config sets 2 and 4.
+
+    \[
+    B_{\text{eff}}=1\times8=8
+    \]
+
+    \[
+    B_{\text{eff}}=2\times4=8
+    \]
+
+    Both take one optimizer step per 8 rows, up to \(8\times2{,}048=16{,}384\) tokens; the E4B simply holds two rows in memory at a time.
 
 ### Step 7 — checkpoint
 
@@ -260,6 +404,20 @@ A\in\mathbb{R}^{r\times k}.
 \]
 
 Only \(A,B\) train. The rank \(r\) controls capacity; \(\alpha/r\) controls the update scale.
+
+!!! example "On paper"
+
+    Take a \(2\times2\) weight \(W=I\), rank \(r=1\) and \(\alpha=2\), so \(\alpha/r=2\) as in the rank-16, alpha-32 recipe below, with \(B=(1,\;2)^\top\) and \(A=(0.5,\;-1)\):
+
+    \[
+    BA=\begin{pmatrix}0.5&-1\\1&-2\end{pmatrix}
+    \]
+
+    \[
+    W'=I+2\,BA=\begin{pmatrix}2&-2\\2&-3\end{pmatrix}
+    \]
+
+    Two numbers in \(B\) and two in \(A\) changed all four entries of \(W\). For a \(3{,}840\times3{,}840\) matrix (the 12B's hidden width) at \(r=16\), \(A\) and \(B\) hold \(16\cdot7{,}680=122{,}880\) numbers instead of 14,745,600, about 0.83%.
 
 In MLX-LM, the config field is `scale`, and the effective update is
 
@@ -394,6 +552,17 @@ It does **not** load a teacher. The “teacher” is already baked into the assi
 ### 5.7 What the loss means
 
 - Starts around \(\ln V\) if the model is random; for a pretrained Gemma, much lower.
+
+    !!! example "On paper"
+
+        Gemma's vocabulary is \(V=262{,}144=2^{18}\), and \(\ln2\approx0.6931\):
+
+        \[
+        \ln V=18\ln2\approx12.48
+        \]
+
+        A loss near 12.5 means uniform guessing over all 262,144 tokens; a pretrained Gemma starts far below it.
+
 - Drops as the adapter learns the teacher’s style.
 - A rising validation loss means overfitting or a bad split.
 - `nan` means zero-length completion, truncation, bad mask or LR too high.
@@ -585,6 +754,20 @@ Use measured tokens/sec, not theory.
 \[
 \text{wall time}=\frac{\text{tokens}}{\text{tokens/sec}}.
 \]
+
+!!! example "On paper"
+
+    The 300-iteration 12B run of [chapter 40 §4.2](40-distill-data.md) sees \(300\times8\times2{,}048=4{,}915{,}200\) tokens. At 25 tokens/sec, the middle of the 12B row below:
+
+    \[
+    \frac{4{,}915{,}200}{25}=196{,}608\ \text{s}
+    \]
+
+    \[
+    \frac{196{,}608}{3{,}600}\approx54.6\ \text{h}
+    \]
+
+    With a 15% allowance for loading, validation and checkpoints, \(54.6\times1.15\approx62.8\) h, about 2.6 days: the “2–3 days” of §11.3.
 
 Rough M1 Pro anchors from [02 — Hardware](02-hardware.md):
 

@@ -28,6 +28,25 @@ p_T(y\mid x)=\operatorname{softmax}\left(\frac{z_T(x)}{T_{\text{temp}}}\right),
 
 where \(z_T\) are the teacher logits and \(T_{\text{temp}}\) is a **temperature** (not the teacher model). The student produces \(p_S(y\mid x)\).
 
+!!! example "On paper"
+
+    The Gemma 4 12B teacher scores three candidate next tokens (`nmap`, `masscan`, `curl`) with logits \(z_T=(2\ln6,\;2\ln2,\;0)\approx(3.58,\;1.39,\;0)\) at \(T_{\text{temp}}=2\).
+
+    \[
+    \frac{z_T}{T_{\text{temp}}}=(\ln6,\;\ln2,\;0)
+    \]
+
+    The exponentials are \(6,2,1\), which sum to 9:
+
+    \[
+    \begin{aligned}
+    p_T&=\left(\tfrac69,\;\tfrac29,\;\tfrac19\right)\\
+    &\approx(0.667,\;0.222,\;0.111)
+    \end{aligned}
+    \]
+
+    The teacher prefers `nmap`, but its soft label also says `masscan` is twice as plausible as `curl`, which a hard label would throw away.
+
 ### 2.1 Logit distillation
 
 The classic Hinton objective is
@@ -41,6 +60,32 @@ The classic Hinton objective is
 \]
 
 where \(\mathcal{L}_{\text{CE}}\) is the normal next-token cross-entropy on hard labels and \(\alpha\in[0,1]\) controls how much of the signal comes from the teacher.
+
+!!! example "On paper"
+
+    At one position the 12B teacher has logits \(z_T=(2\ln2,\;0,\;0)\), the E4B student \(z_S=(0,\;2\ln2,\;0)\), the hard label is token 1, \(T_{\text{temp}}=2\) and \(\alpha=0.5\). Halving the logits gives weights \((2,1,1)\) and \((1,2,1)\), so \(p_T^{T_{\text{temp}}}=(\tfrac12,\tfrac14,\tfrac14)\) and \(p_S^{T_{\text{temp}}}=(\tfrac14,\tfrac12,\tfrac14)\).
+
+    \[
+    \begin{aligned}
+    \operatorname{KL}&=\tfrac12\ln2+\tfrac14\ln\tfrac12+\tfrac14\ln1\\
+    &=\tfrac14\ln2\approx0.1733
+    \end{aligned}
+    \]
+
+    At temperature 1 the student's weights are \((1,4,1)\), so it gives the correct token only \(\tfrac16\):
+
+    \[
+    \mathcal{L}_{\text{CE}}=-\ln\tfrac16=\ln6\approx1.792
+    \]
+
+    \[
+    \begin{aligned}
+    \mathcal{L}&=0.5\cdot1.792+0.5\cdot2^2\cdot0.1733\\
+    &\approx0.896+0.347\approx1.24
+    \end{aligned}
+    \]
+
+    The hard label supplies most of the loss here; the \(T_{\text{temp}}^2=4\) factor lifts the small KL (0.173) to a comparable 0.347.
 
 Why it works:
 
@@ -58,6 +103,33 @@ The gradient with respect to the student logits is
 
 where \(e_y\) is the one-hot target. The first term pushes the student toward the teacher’s **ranking**; the second pushes it toward the correct token. This is the entire mechanism. Everything else is engineering: memory, tokenization, data, temperature and evaluation.
 
+!!! example "On paper"
+
+    Keep the numbers above: \(\alpha T_{\text{temp}}=0.5\cdot2=1\), \(1-\alpha=0.5\), and at temperature 1 the student is \(p_S=(\tfrac16,\tfrac23,\tfrac16)\) with \(e_y=(1,0,0)\).
+
+    \[
+    \begin{aligned}
+    \text{KD part}&=1\cdot\left(\tfrac14-\tfrac12,\;\tfrac12-\tfrac14,\;0\right)\\
+    &=\left(-\tfrac14,\;\tfrac14,\;0\right)
+    \end{aligned}
+    \]
+
+    \[
+    \begin{aligned}
+    \text{CE part}&=0.5\left(\tfrac16-1,\;\tfrac23,\;\tfrac16\right)\\
+    &=\left(-\tfrac5{12},\;\tfrac13,\;\tfrac1{12}\right)
+    \end{aligned}
+    \]
+
+    \[
+    \begin{aligned}
+    \frac{\partial\mathcal{L}}{\partial z_S}&=\left(-\tfrac23,\;\tfrac7{12},\;\tfrac1{12}\right)\\
+    &\approx(-0.667,\;0.583,\;0.083)
+    \end{aligned}
+    \]
+
+    A gradient step subtracts this vector: it raises the logit of token 1, which both the teacher and the label favour, and lowers token 2. The entries sum to 0.
+
 ### 2.2 Why temperature matters
 
 At \(T_{\text{temp}}=1\), the teacher’s distribution is often extremely peaked; most of the “dark knowledge” is in the tail and is numerically tiny. Raising the temperature softens the distribution:
@@ -67,6 +139,18 @@ p_i(T_{\text{temp}})=\frac{\exp(z_i/T_{\text{temp}})}{\sum_j \exp(z_j/T_{\text{t
 \]
 
 At \(T_{\text{temp}}=2\), differences between logits are halved; at \(T_{\text{temp}}=4\), quartered. The \(T_{\text{temp}}^2\) factor compensates for the gradient magnitude, which shrinks as \(1/T_{\text{temp}}^2\).
+
+!!! example "On paper"
+
+    Keep the logits from §2 (`nmap`, `masscan`, `curl`). The weights \(e^{z_i/T_{\text{temp}}}\) were \((6,2,1)\) at \(T_{\text{temp}}=2\); at \(T_{\text{temp}}=1\) they are squared, and at \(T_{\text{temp}}=4\) square-rooted (\(\sqrt6\approx2.449\), \(\sqrt2\approx1.414\)).
+
+    | \(T_{\text{temp}}\) | weights | sum | \(p_T\) |
+    |---:|---|---:|---|
+    | 1 | 36, 4, 1 | 41 | 0.878, 0.098, 0.024 |
+    | 2 | 6, 2, 1 | 9 | 0.667, 0.222, 0.111 |
+    | 4 | 2.449, 1.414, 1 | 4.863 | 0.504, 0.291, 0.206 |
+
+    Going from \(T_{\text{temp}}=1\) to 4 lifts `curl` from 2.4% to 20.6%, more than eightfold: the tail the student learns from becomes visible.
 
 Typical settings:
 
@@ -90,6 +174,19 @@ If you cannot access teacher logits — because the teacher is behind an API, or
 \qquad
 y\sim p_T(\cdot\mid x).
 \]
+
+!!! example "On paper"
+
+    Gemma 4 31B writes a four-token reply \(y\), and the 12B student gives those tokens probabilities \(\tfrac12,\tfrac14,\tfrac12,\tfrac12\) (\(\ln2\approx0.693\)).
+
+    \[
+    \begin{aligned}
+    \mathcal{L}_{\text{seq}}&=-\left(\ln\tfrac12+\ln\tfrac14+\ln\tfrac12+\ln\tfrac12\right)\\
+    &=(1+2+1+1)\ln2\approx3.466
+    \end{aligned}
+    \]
+
+    Only the four sampled tokens are scored; whatever probability the teacher put on other tokens never reaches the student.
 
 The teacher generates the response \(y\); the student is trained on it with ordinary SFT. This is also called **behavior cloning** or **data distillation**. It transfers:
 
@@ -126,6 +223,19 @@ The objective is
 
 where \(\hat y_{<t}\) are student-generated prefixes and \(y_t\) is the teacher’s preferred token or correction. This is DAgger-style imitation. It is more expensive because it needs teacher inference during training, but it fixes exposure bias and is especially useful for agentic tool use.
 
+!!! example "On paper"
+
+    The E4B student rolls out three tokens \(\hat y\); the 12B teacher accepts tokens 1 and 3 and replaces token 2. Given its own prefixes, the student gives the teacher's tokens probabilities \(\tfrac12,\tfrac1{16},\tfrac12\).
+
+    \[
+    \begin{aligned}
+    \mathcal{L}_{\text{on-policy}}&=\ln2+\ln16+\ln2\\
+    &=6\ln2\approx4.159
+    \end{aligned}
+    \]
+
+    The corrected position alone contributes \(\ln16\approx2.773\), two thirds of the loss, so training concentrates on the state where the student went wrong.
+
 ### 2.5 Feature distillation
 
 Instead of matching output distributions, match hidden states:
@@ -137,6 +247,25 @@ Instead of matching output distributions, match hidden states:
 \]
 
 where \(W_l\) projects the teacher’s hidden size to the student’s. This requires white-box access to both models, aligned layers, and a projection; it is rarely the first thing to try for a decoder-only LLM. It can help when the student is much smaller and logit KD is too weak.
+
+!!! example "On paper"
+
+    Shrink the teacher's hidden size to 3 and the student's to 2, match two layers \(l\in\{a,b\}\), and use one projection for both:
+
+    \[
+    W_l=\begin{pmatrix}1&0&1\\0&1&0\end{pmatrix}
+    \]
+
+    With \(h_T^a=(1,2,1)\), \(h_S^a=(1,2)\), \(h_T^b=(0,1,3)\) and \(h_S^b=(2,3)\), the projections are \(W_lh_T^a=(2,2)\) and \(W_lh_T^b=(3,1)\):
+
+    \[
+    \begin{aligned}
+    \mathcal{L}_{\text{feat}}&=\|(-1,\;0)\|_2^2+\|(-1,\;2)\|_2^2\\
+    &=1+(1+4)=6
+    \end{aligned}
+    \]
+
+    Layer \(b\) contributes five sixths of the loss, so its student hidden state is pulled hardest toward the projected teacher state.
 
 ### 2.6 Self-distillation
 
@@ -279,7 +408,7 @@ in fp16, per model, before softmax. Top-k 64 reduces the **stored** teacher sign
 2048\cdot64\cdot(2+4)\ \text{bytes}\approx0.79\ \text{MB}
 \]
 
-if you store indices and probabilities, or keeps the on-device gather small. This is why the reference trainer defaults to `--top-k 64`.
+if you store an fp16 probability (2 bytes) and an int32 token id (4 bytes; a 262,144-token vocabulary does not fit in 16 bits) per entry, or keeps the on-device gather small. This is why the reference trainer defaults to `--top-k 64`.
 
 ### 5.2 The 32 GB verdict
 

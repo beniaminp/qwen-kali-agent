@@ -27,6 +27,18 @@ C \approx 6ND,
 
 where \(N\) is parameters and \(D\) is training tokens. The factor 6 is forward (2) plus backward (4) FLOPs per parameter per token.
 
+!!! example "On paper"
+
+    Step 1 of the learning path in §8: a 10M-parameter model on 1B tokens.
+
+    \[
+    C\approx6\cdot10^{7}\cdot10^{9}=6\times10^{16}\ \text{FLOPs}
+    \]
+
+    At the M1 Pro’s 1.5 TFLOP/s effective (the table below), that is \(6\times10^{16}/(1.5\times10^{12})=40{,}000\) s, about 11 hours: an overnight run. The first table row works the same way: \(6\cdot125\text{M}\cdot20\text{B}=1.5\times10^{19}\) FLOPs, 250 times more.
+
+    Longer version: [43 §15](43-math-examples.md).
+
 ### 1.1 Worked examples
 
 | Model | Tokens | FLOPs | One M1 Pro (1.5 TFLOP/s effective) | 8×A100 (35% MFU) | Cost at $2/GPU-h |
@@ -34,8 +46,8 @@ where \(N\) is parameters and \(D\) is training tokens. The factor 6 is forward 
 | 125M | 20B | \(1.5\times10^{19}\) | ~116 days | ~0.2 days | ~$76 |
 | 336M | 20B | \(4.0\times10^{19}\) | ~309 days | ~0.5 days | ~$205 |
 | 1.2B | 20B | \(1.5\times10^{20}\) | ~1,124 days | ~1.9 days | ~$741 |
-| 1.2B | 100B | \(7.3\times10^{20}\) | ~15 years | ~9.3 days | ~$3,700 |
-| 14B | 36T | \(3.2\times10^{24}\) | ~67,000 years | ~18.7 days on 10,000 H100s (40% MFU) | ~$9.0M |
+| 1.2B | 100B | \(7.3\times10^{20}\) | ~15 years | ~9.6 days | ~$3,700 |
+| 14B | 36T | \(3.2\times10^{24}\) | ~67,000 years | ~9.3 days on 10,000 H100s (40% MFU) | ~$4.5M |
 
 The last row is Qwen3-14B’s disclosed token count and uses 10,000 H100s, not 8×A100s. It is not a laptop project. Even the 1.2B/20B run needs a serious GPU and a clean data pipeline.
 
@@ -75,22 +87,47 @@ Why this shape: it is simple, well-supported, and close enough to Qwen to port l
 | small-300m | 24 | 1,024 | 16 | 4 | 2,816 | ~336M | 20–40B | one or two GPUs |
 | small-1b | 24 | 2,048 | 16 | 4 | 5,632 | ~1.2B | 20–100B | 8×A100-class |
 
+The parameter column assumes a tied **64,000-token** vocabulary. With 32,000 tokens the same stacks are ~100M, ~303M and ~1.15B — at this size the vocabulary choice moves the total by up to 20%.
+
 Parameter formula:
 
 \[
-P \approx L\left(d^2 + 2dG d_h + 3d d_{\text{ff}}\right) + Vd
+P \approx L\left(2d^2 + 2dG d_h + 3d d_{\text{ff}}\right) + Vd
 \]
 
 for tied embeddings and \(H d_h=d\).
 
+!!! example "On paper"
+
+    The `tiny-100m` row: \(L=12\), \(d=768\), \(G=4\), \(d_h=64\), \(d_{\text{ff}}=2{,}048\), tied, with a 64,000-token vocabulary. Per layer:
+
+    | Projection | Count |
+    |---|---:|
+    | Q and O, \(d\times d\) each | \(2\cdot768^2=1{,}179{,}648\) |
+    | K and V | \(2\cdot768\cdot4\cdot64=393{,}216\) |
+    | MLP | \(3\cdot768\cdot2{,}048=4{,}718{,}592\) |
+    | **one layer** | **6,291,456** |
+
+    \[
+    \begin{aligned}
+    12\cdot6{,}291{,}456&=75{,}497{,}472\\
+    Vd=64{,}000\cdot768&=49{,}152{,}000\\
+    P&\approx124.6\text{M}
+    \end{aligned}
+    \]
+
+    That is the table’s ~125M. With a 32,000-token vocabulary the same stack is ≈100M: at this size the embedding is 39% of the model.
+
+    Longer version: [43 §14](43-math-examples.md).
+
 Use:
 
 ```bash
-python scripts/estimate_pretraining.py --preset small-1b --tokens 20e9 \
+python scripts/estimate_pretraining.py --preset small-1b --vocab 64000 --tokens 20e9 \
   --gpus 8 --peak-tflops 312 --mfu 0.35 --cost-per-gpu-hour 2
 ```
 
-Replace the defaults with your GPU’s peak and a measured MFU.
+This prints 1.21B parameters, 1.9 days and $741 — the §1.1 row. The `small-1b` and `tiny-100m` presets default to a 32,000-token vocabulary; without `--vocab 64000` the same command prints 1.15B and $701. Replace the defaults with your GPU’s peak and a measured MFU.
 
 ---
 
@@ -261,6 +298,24 @@ L(N,D) = E + \frac{A}{N^\alpha} + \frac{B}{D^\beta}.
 
 If the curve is flat, more tokens will not save you; fix the data or the architecture.
 
+!!! example "On paper"
+
+    Suppose your small runs fit \(E=1.7\), \(A=5{,}000\), \(B=50{,}000\) and \(\alpha=\beta=0.5\). These are made-up round constants so the square roots come out exact; Chinchilla’s fit has \(\alpha\approx0.34\), \(\beta\approx0.28\). Start at 100M parameters and 2.5B tokens:
+
+    \[
+    L=1.7+\frac{5{,}000}{10^{4}}+\frac{50{,}000}{5\times10^{4}}=3.2
+    \]
+
+    Now spend 4× the compute (\(6ND\)) two ways:
+
+    | Run | \(A/\sqrt N\) | \(B/\sqrt D\) | \(L\) |
+    |---|---:|---:|---:|
+    | 100M, 2.5B tokens | 0.5 | 1.0 | 3.20 |
+    | 400M, 2.5B tokens | 0.25 | 1.0 | 2.95 |
+    | 100M, 10B tokens | 0.5 | 0.5 | 2.70 |
+
+    Here the data term is the larger one, so 4× the tokens beats 4× the parameters. No run gets below \(E=1.7\), the irreducible loss.
+
 ---
 
 ## 7. Post-train the small model
@@ -280,6 +335,16 @@ Losses:
 -\sum_{t\in\text{completion}}\log p_\theta(x_t\mid x_{<t}),
 \]
 
+!!! example "On paper"
+
+    Prompt `What is 2+2?`, completion `4<eos>`. The prompt tokens are masked; the model gives the two completion tokens probabilities \(\tfrac14\) and \(\tfrac12\). Use \(\ln2\approx0.693\).
+
+    \[
+    \mathcal{L}_{\text{SFT}}=-\big(\ln\tfrac14+\ln\tfrac12\big)=3\ln2\approx2.08
+    \]
+
+    However badly the model predicts the user’s words, they add nothing: the gradient only teaches the answer.
+
 \[
 \mathcal{L}_{\text{DPO}} =
 -\log\sigma\left(
@@ -287,6 +352,20 @@ Losses:
 -\beta\log\frac{\pi_\theta(y_l\mid x)}{\pi_{\text{ref}}(y_l\mid x)}
 \right).
 \]
+
+!!! example "On paper"
+
+    Take \(\beta=0.5\) and use \(\sigma(\ln a)=a/(1+a)\). At the start \(\pi_\theta=\pi_{\text{ref}}\), both log-ratios are 0 and \(\mathcal{L}_{\text{DPO}}=-\ln\sigma(0)=\ln2\approx0.693\). After some steps the policy makes the chosen answer twice as likely as the reference does, and the rejected one half as likely:
+
+    \[
+    \begin{aligned}
+    z&=0.5\big(\ln2-\ln\tfrac12\big)=\ln2\\
+    \sigma(\ln2)&=\tfrac{2}{1+2}=\tfrac23\\
+    \mathcal{L}_{\text{DPO}}&=-\ln\tfrac23=\ln1.5\approx0.405
+    \end{aligned}
+    \]
+
+    The loss falls only as the gap between chosen and rejected grows, and both sides are measured relative to the frozen reference.
 
 GRPO is in [33 — How Qwen was built](33-qwen-creation.md) §4.4.
 

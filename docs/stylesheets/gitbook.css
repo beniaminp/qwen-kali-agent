@@ -1583,3 +1583,20 @@ body:has(.gb-hero) .md-content__button {
   overflow-x: auto;
   overflow-y: hidden;
 }
+
+/* Inline formulas wider than their paragraph (marked by mathjax.js) scroll
+   in place instead of widening the page on phones. */
+.md-typeset span.arithmatex.gb-math-scroll {
+  display: inline-block;
+  position: relative;
+  max-width: 100%;
+  overflow-x: auto;
+  overflow-y: hidden;
+  vertical-align: middle;
+}
+
+/* MathJax's hidden screen-reader copy of each formula is clipped to 1px but
+   can still extend the page's scroll width; keep its box inside the column. */
+.md-typeset mjx-assistive-mml {
+  max-width: 100% !important;
+}

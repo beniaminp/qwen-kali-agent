@@ -71,16 +71,36 @@ The public Qwen3 report quotes 151,669 and Qwen2.5-Coder 151,646; the Hugging Fa
 Byte-pair encoding starts from bytes and repeatedly merges the most frequent adjacent pair:
 
 \[
-(a,b)^\* = \arg\max_{(a,b)} \operatorname{count}(a,b),
+(a,b)^{*} = \arg\max_{(a,b)} \operatorname{count}(a,b),
 \qquad
 \text{merge }(a,b)\rightarrow c.
 \]
+
+!!! example "On paper"
+
+    Take the 7-byte string `ababcab`. Its adjacent pairs are ab, ba, ab, bc, ca, ab, so \(\operatorname{count}(\text{a},\text{b})=3\) beats every other pair (1 each), and the first merge is \(\text{ab}\rightarrow\text{Z}\):
+
+    \[
+    \text{a b a b c a b}\ \longrightarrow\ \text{Z Z c Z}
+    \]
+
+    One merge turns 7 tokens into 4 and grows the vocabulary from 256 to \(256+1=257\). The next round counts the new pairs (ZZ, Zc, cZ) and repeats.
 
 After \(M\) merges, the vocabulary is \(256+M\) (plus special tokens). The compression ratio is
 
 \[
 \rho = \frac{\text{bytes}}{\text{tokens}}.
 \]
+
+!!! example "On paper"
+
+    The same 7 bytes were 7 tokens before the merge and are 4 tokens after it:
+
+    \[
+    \rho = \frac{7\ \text{bytes}}{4\ \text{tokens}} = 1.75
+    \]
+
+    Before the merge \(\rho=7/7=1\). At \(\rho=4\), a 2,000-byte Python file would cost 500 tokens of compute instead of 2,000.
 
 A higher \(\rho\) means cheaper training and inference per character, but a larger embedding matrix \(V d\) and a larger output softmax.
 
@@ -102,6 +122,16 @@ p(x_{t+1}=j\mid x_{\le t}) =
 \frac{\exp(z_j)}{\sum_{k=1}^{V}\exp(z_k)}.
 \]
 
+!!! example "On paper"
+
+    After `return`, suppose a toy vocabulary of \(V=4\) tokens (`self`, `None`, `x`, `0`) gets logits \(z=(2,0,0,0)\). With \(e^2\approx7.389\) and \(e^0=1\):
+
+    \[
+    p(\mathtt{self}) = \frac{7.389}{7.389+1+1+1} \approx 0.711
+    \]
+
+    Each of the other three tokens gets \(1/10.389\approx0.096\). The denominator needed all \(V\) exponentials: 4 here, 151,936 for Qwen3-14B at every position.
+
 > **Worked example:** [43 §1–3](43-math-examples.md) computes the softmax, the CE and the gradient for \(z=(2,1,0,-1)\).
 
 That is why a 262k vocabulary is expensive at inference even when the model is only 12B.
@@ -120,12 +150,35 @@ A decoder-only model factorises the joint probability of a sequence:
 p_\theta(x_1,\dots,x_T) = \prod_{t=1}^{T} p_\theta(x_t\mid x_{<t}).
 \]
 
+!!! example "On paper"
+
+    Score the three tokens `return`, `self`, `.` and suppose the model gives \(p(\mathtt{return})=0.5\), \(p(\mathtt{self}\mid\mathtt{return})=0.8\) and \(p(\mathtt{.}\mid\mathtt{return},\mathtt{self})=0.25\):
+
+    \[
+    p_\theta(x_1,x_2,x_3) = 0.5\cdot0.8\cdot0.25 = 0.1
+    \]
+
+    Every factor is at most 1, so each extra token can only keep or shrink the sequence probability; that is why training works with logs.
+
 The pretraining loss is the mean negative log-likelihood:
 
 \[
 \mathcal{L}_{\text{NLL}}(\theta)
 = -\frac{1}{T}\sum_{t=1}^{T}\log p_\theta(x_t\mid x_{<t}).
 \]
+
+!!! example "On paper"
+
+    The same three tokens, with natural logs (\(\ln10\approx2.303\)):
+
+    \[
+    \begin{aligned}
+    \mathcal{L}_{\text{NLL}} &= -\tfrac13(\ln0.5+\ln0.8+\ln0.25)\\
+    &= -\tfrac13\ln0.1 = \tfrac{2.303}{3} \approx 0.768
+    \end{aligned}
+    \]
+
+    The per-token terms are 0.693, 0.223 and 1.386, so the hard third token dominates. Perplexity is \(e^{0.768}\approx2.15\): on average the model is as unsure as a uniform pick among about two tokens.
 
 If the model outputs logits \(z_t\in\mathbb{R}^{V}\), then
 
@@ -138,6 +191,19 @@ and the per-token loss is the cross-entropy
 \[
 \ell_t = -z_{t,x_t} + \log\sum_{j=1}^{V}\exp(z_{t,j}).
 \]
+
+!!! example "On paper"
+
+    Back to the softmax example in §2.2: \(z=(2,0,0,0)\), the target is `self` (logit 2), and \(\ln10.389\approx2.341\):
+
+    \[
+    \begin{aligned}
+    \ell_t &= -2 + \ln(e^2+1+1+1)\\
+    &= -2 + 2.341 = 0.341
+    \end{aligned}
+    \]
+
+    That is \(-\ln0.711\), the same probability as before. Had the target been `None` (logit 0), the loss would be \(0+2.341=2.341\).
 
 Perplexity is \(\exp(\mathcal{L}_{\text{NLL}})\). It is comparable only across models with the same tokenizer; a 262k SentencePiece model and a 151k BPE model can have very different per-token losses for the same text quality.
 
@@ -153,6 +219,19 @@ For SFT, the prompt tokens are often masked:
 
 where \(\mathcal{C}\) is the completion span. This is exactly what `mask_prompt: true` does in MLX-LM: only the final assistant turn contributes. It does not make a multi-turn example train every turn; split trajectories if you need that.
 
+!!! example "On paper"
+
+    A 5-token example: 3 prompt tokens, then a 2-token answer whose tokens get probabilities 0.5 and 0.25. Only the answer is in \(\mathcal{C}\), so \(|\mathcal{C}|=2\):
+
+    \[
+    \begin{aligned}
+    \mathcal{L}_{\text{SFT}} &= -\tfrac12(\ln0.5+\ln0.25)\\
+    &= \tfrac32\ln2 \approx 1.04
+    \end{aligned}
+    \]
+
+    The prompt tokens never enter, however badly the model predicts them. Dividing the same sum by all 5 tokens would shrink the answer's loss to \(2.079/5\approx0.42\).
+
 ---
 
 ## 4. The transformer block
@@ -165,6 +244,19 @@ u &= x + \operatorname{Attn}(\operatorname{Norm}_1(x)),\\
 y &= u + \operatorname{MLP}(\operatorname{Norm}_2(u)).
 \end{aligned}
 \]
+
+!!! example "On paper"
+
+    Take \(d=2\) and \(x=(2,-1)\). Suppose the attention branch returns \((0.5,\,0.5)\) and the MLP branch returns \((-1,\,1)\):
+
+    \[
+    \begin{aligned}
+    u &= (2,-1)+(0.5,\,0.5) = (2.5,\,-0.5)\\
+    y &= (2.5,-0.5)+(-1,\,1) = (1.5,\,0.5)
+    \end{aligned}
+    \]
+
+    Each branch only adds a correction to the stream. If both returned zeros, \(y=x\), which is why a deep pre-norm stack starts close to the identity.
 
 Qwen3 and Qwen2.5 use **pre-norm** with RMSNorm. Gemma 4 uses **pre-norm and post-norm** with RMSNorm and QK-norm. Pre-norm keeps the residual path close to identity, which stabilises deep training; post-norm can improve final representation quality at the cost of stability.
 
@@ -187,12 +279,41 @@ LayerNorm is
 \sigma^2=\frac{1}{d}\sum_i (x_i-\mu)^2.
 \]
 
+!!! example "On paper"
+
+    A 4-wide residual vector \(x=(1,3,3,9)\), with \(\gamma=(1,1,1,1)\) and \(\epsilon=0\):
+
+    \[
+    \begin{aligned}
+    \mu &= \tfrac14(1+3+3+9) = 4\\
+    \sigma^2 &= \tfrac14(9+1+1+25) = 9\\
+    \operatorname{LN}(x) &= \tfrac13(-3,-1,-1,5)\\
+    &= (-1,\,-0.333,\,-0.333,\,1.667)
+    \end{aligned}
+    \]
+
+    The output has mean 0 and variance 1. Shifting the input to \(x+10\) or scaling it to \(2x\) gives exactly the same result.
+
 RMSNorm drops the mean subtraction:
 
 \[
 \operatorname{RMSNorm}(x) = \gamma \odot
 \frac{x}{\sqrt{\frac{1}{d}\sum_{i=1}^{d}x_i^2+\epsilon}}.
 \]
+
+!!! example "On paper"
+
+    The same \(x=(1,3,3,9)\), \(\gamma=1\), \(\epsilon=0\):
+
+    \[
+    \begin{aligned}
+    \tfrac14(1+9+9+81) &= 25\\
+    \operatorname{RMSNorm}(x) &= \tfrac15(1,3,3,9)\\
+    &= (0.2,\,0.6,\,0.6,\,1.8)
+    \end{aligned}
+    \]
+
+    Unlike LayerNorm, nothing is subtracted: every entry keeps its sign and its ratio to the others, and only the overall scale changes (the result has root-mean-square 1).
 
 It has one vector \(\gamma\in\mathbb{R}^d\) and no bias. [43 §4](43-math-examples.md) runs it on \(x=(1,2,3,4)\). Why it works: the residual stream’s scale is what matters, not its mean; removing the mean subtraction saves a reduction and a broadcast, and empirically trains stably. Qwen3, Qwen2.5 and Gemma 4 all use RMSNorm.
 
@@ -202,6 +323,20 @@ It has one vector \(\gamma\in\mathbb{R}^d\) and no bias. [43 §4](43-math-exampl
 \tilde q = \operatorname{RMSNorm}(q), \qquad
 \tilde k = \operatorname{RMSNorm}(k).
 \]
+
+!!! example "On paper"
+
+    One head, \(d_h=4\), \(\gamma=1\), \(\epsilon=0\). A large query \(q=(60,0,0,80)\) and key \(k=(30,0,0,40)\) give the logit \(q\cdot k/\sqrt4=5000/2=2500\), a one-hot softmax. Their RMS values are \(\sqrt{(3600+6400)/4}=50\) and 25:
+
+    \[
+    \begin{aligned}
+    \tilde q &= q/50 = (1.2,\,0,\,0,\,1.6)\\
+    \tilde k &= k/25 = (1.2,\,0,\,0,\,1.6)\\
+    \tilde q\cdot\tilde k/\sqrt4 &= 4/2 = 2
+    \end{aligned}
+    \]
+
+    After QK-norm each vector has length \(\sqrt{d_h}=2\), so with \(\gamma=1\) this logit can never exceed \(\sqrt{d_h}=2\), however large \(q\) and \(k\) grow.
 
 Gemma 4 also uses QKNorm. This bounds the attention logits and reduces loss spikes at large learning rates.
 
@@ -215,6 +350,21 @@ For one head with query \(q\in\mathbb{R}^{d_k}\), keys \(K\in\mathbb{R}^{T\times
 \operatorname{Attn}(q,K,V) =
 \operatorname{softmax}\left(\frac{qK^\top}{\sqrt{d_k}}\right)V.
 \]
+
+!!! example "On paper"
+
+    One query, \(d_k=4\) (so \(\sqrt{d_k}=2\)), two earlier tokens: \(q=(1,1,0,0)\), keys \(k_1=(1,1,0,0)\) and \(k_2=(0,0,1,1)\), values \(v_1=(10,0)\) and \(v_2=(0,10)\). With \(e\approx2.718\):
+
+    \[
+    \begin{aligned}
+    qK^\top/\sqrt{d_k} &= (2,\,0)/2 = (1,\,0)\\
+    \operatorname{softmax}(1,0) &= \big(\tfrac{e}{e+1},\,\tfrac{1}{e+1}\big)\\
+    &= (0.731,\,0.269)\\
+    \text{output} &= (7.31,\,2.69)
+    \end{aligned}
+    \]
+
+    The query mostly copies the value of the key it matches, but still blends in 27% of the other one.
 
 For a whole sequence, with \(Q=XW_Q\), \(K=XW_K\), \(V=XW_V\):
 
@@ -236,6 +386,20 @@ M_{ij} =
 \end{cases}
 \]
 
+!!! example "On paper"
+
+    Two tokens with scaled scores \(QK^\top/\sqrt{d_k}=\begin{pmatrix}1&5\\2&2\end{pmatrix}\) and values \(V=\begin{pmatrix}4&0\\0&4\end{pmatrix}\). The mask puts \(-\infty\) above the diagonal, and the softmax runs row by row:
+
+    \[
+    A = \operatorname{softmax}\begin{pmatrix}1&-\infty\\2&2\end{pmatrix} = \begin{pmatrix}1&0\\0.5&0.5\end{pmatrix}
+    \]
+
+    \[
+    O = AV = \begin{pmatrix}4&0\\2&2\end{pmatrix}
+    \]
+
+    Token 1 ignores token 2 even though that score (5) is the largest, because \(e^{-\infty}=0\). Token 2 sees both equally and averages their values.
+
 The \(\sqrt{d_k}\) scaling keeps the logits at unit variance if \(q,k\) have unit variance: \(\operatorname{Var}(q\cdot k)=d_k\). [43 §5](43-math-examples.md) runs one query against three keys, then the causal mask and a \(2\times2\) backward pass.
 
 ### 6.1 Multi-head attention
@@ -250,6 +414,19 @@ With \(H\) heads and head dimension \(d_h=d/H\):
 \[
 \text{head}_h = \operatorname{Attn}(XW_Q^h, XW_K^h, XW_V^h).
 \]
+
+!!! example "On paper"
+
+    Qwen3-14B splits \(d=5120\) into \(H=40\) heads, so \(d_h=5120/40=128\). On paper take \(d=2\), \(H=2\), \(d_h=1\): for one token the two heads output 3 and \(-1\), and \(W_O=\begin{pmatrix}1&1\\0&2\end{pmatrix}\):
+
+    \[
+    \begin{aligned}
+    (3,\,-1)\,W_O &= (3\cdot1-1\cdot0,\;3\cdot1-1\cdot2)\\
+    &= (3,\,1)
+    \end{aligned}
+    \]
+
+    Concat just places the head outputs side by side; \(W_O\) mixes them, so each output coordinate can draw on every head.
 
 Each head can specialise: induction, syntax, copying, long-range retrieval.
 
@@ -324,11 +501,45 @@ RoPE rotates pairs of dimensions by an angle proportional to position. For dimen
 \begin{pmatrix} q_{2i}\\ q_{2i+1}\end{pmatrix}.
 \]
 
+!!! example "On paper"
+
+    Take \(d_h=8\), base \(10{,}000\), position \(t=5\) and pair \(i=1\), i.e. \((q_2,q_3)=(1,1)\). Use \(\cos0.5\approx0.8776\) and \(\sin0.5\approx0.4794\):
+
+    \[
+    \begin{aligned}
+    \omega_1 &= 10{,}000^{-2/8} = 0.1\\
+    \theta_{5,1} &= 5\cdot0.1 = 0.5\\
+    q'_2 &= 0.8776-0.4794 = 0.3982\\
+    q'_3 &= 0.4794+0.8776 = 1.3570
+    \end{aligned}
+    \]
+
+    The pair turns by half a radian but keeps its length \(\sqrt2\approx1.414\). At the same position the other pairs turn by 5, 0.05 and 0.005 radians: the first pairs spin fast, the last ones slowly.
+
 The key property is relative:
 
 \[
-R_t^\top R_s = R_{t-s}.
+R_t^\top R_s = R_{s-t}.
 \]
+
+!!! example "On paper"
+
+    Pretend one pair turns a quarter turn per position (\(\omega=\pi/2\)), so every cos and sin is 0 or \(\pm1\); the property holds for any \(\omega\). One quarter turn maps
+
+    \[
+    R_1\begin{pmatrix}x\\y\end{pmatrix} = \begin{pmatrix}-y\\x\end{pmatrix}
+    \]
+
+    With \(q=(1,0)\) and \(k=(2,1)\):
+
+    | \(t\) | \(s\) | \(R_tq\) | \(R_sk\) | \(q_t^\top k_s\) |
+    |---:|---:|---|---|---:|
+    | 1 | 0 | \((0,1)\) | \((2,1)\) | 1 |
+    | 3 | 2 | \((0,-1)\) | \((-2,-1)\) | 1 |
+    | 2 | 0 | \((-1,0)\) | \((2,1)\) | \(-2\) |
+    | 4 | 2 | \((1,0)\) | \((-2,-1)\) | \(-2\) |
+
+    Same gap, same score, wherever the pair sits: a gap of 1 always gives 1 and a gap of 2 always gives \(-2\).
 
 So the dot product \(q_t^\top k_s\) depends on \(t-s\), not absolute position. RoPE has no learned position table, extrapolates better than absolute embeddings, and is the default in Qwen3, Qwen2.5, Qwen3.5 and Gemma 4 local layers. [43 §8](43-math-examples.md) rotates two actual vectors.
 
@@ -340,6 +551,19 @@ The base controls the wavelength:
 \omega_i = \text{base}^{-2i/d_h}.
 \]
 
+!!! example "On paper"
+
+    Qwen3 has \(d_h=128\). Take the middle pair \(i=32\), where \(2i/d_h=1/2\):
+
+    \[
+    \begin{aligned}
+    \text{base }10^4:\ \omega_{32} &= (10^4)^{-1/2} = 0.01\\
+    \text{base }10^6:\ \omega_{32} &= (10^6)^{-1/2} = 0.001
+    \end{aligned}
+    \]
+
+    One full turn takes \(2\pi/\omega\) positions: about 628 tokens with base \(10^4\) and 6,283 with base \(10^6\). After ABF the same pair needs ten times as many tokens to wrap around.
+
 A larger base (e.g. \(10^6\)) gives longer wavelengths and better long-context extrapolation. Qwen3 raises the base from \(10^4\) to \(10^6\) using **ABF** (adjusted base frequency) in the long-context stage, then applies **YaRN** and **Dual Chunk Attention** to reach 4× the trained length (32K → 128K).
 
 ### 7.2 p-RoPE
@@ -349,6 +573,16 @@ Gemma 4 uses **p-RoPE** on global attention layers: only a fraction \(p\) of the
 \[
 \tilde q = \big[R_{\theta}(q_{1:pd_h}),\; q_{pd_h+1:d_h}\big].
 \]
+
+!!! example "On paper"
+
+    Gemma 4 global layers have \(d_h=512\) and \(p=0.25\):
+
+    \[
+    p\,d_h = 0.25\cdot512 = 128
+    \]
+
+    Dimensions 1–128 (64 pairs) are rotated and the other 384 pass through untouched. On a toy \(d_h=8\) query \(q=(1,0,3,1,4,1,5,9)\) with a quarter-turn rotation, only the first \(0.25\cdot8=2\) entries move: \(\tilde q=(0,1,3,1,4,1,5,9)\).
 
 The motivation is that global layers already see the whole sequence; rotating every dimension is expensive and can hurt long-context stability. The report sets \(p=0.25\) on global layers, with RoPE base \(10^6\) global and \(10^4\) local.
 
@@ -362,6 +596,20 @@ A standard two-layer MLP is
 \operatorname{MLP}(x) = W_2\,\sigma(W_1x).
 \]
 
+!!! example "On paper"
+
+    Take \(\sigma\) as the logistic sigmoid (the chapter's default), \(x=(1,-1)\), \(W_1=\begin{pmatrix}1&-1\\1&1\end{pmatrix}\), \(W_2=(1\ \ 1)\), and \(\sigma(2)=1/(1+e^{-2})\approx1/1.135\approx0.881\):
+
+    \[
+    \begin{aligned}
+    W_1x &= (2,\,0)\\
+    \sigma(W_1x) &= (0.881,\,0.5)\\
+    W_2\,\sigma(W_1x) &= 0.881+0.5 = 1.381
+    \end{aligned}
+    \]
+
+    The nonlinearity is what makes this more than one matrix: without \(\sigma\) the two layers would collapse into the single row \(W_2W_1=(2,\,0)\).
+
 A gated linear unit uses two projections and a elementwise product:
 
 \[
@@ -369,6 +617,20 @@ A gated linear unit uses two projections and a elementwise product:
 \qquad
 \operatorname{MLP}(x)=W_d\,\operatorname{GLU}(x).
 \]
+
+!!! example "On paper"
+
+    Keep the gate pre-activation \(W_gx=(2,0)\) (the \(W_1x\) above), let the up projection give \(W_ux=(1,3)\), and take \(W_d=(1\ \ 1)\):
+
+    \[
+    \begin{aligned}
+    \operatorname{GLU}(x) &= (0.881\cdot1,\;0.5\cdot3)\\
+    &= (0.881,\,1.5)\\
+    W_d\operatorname{GLU}(x) &= 2.381
+    \end{aligned}
+    \]
+
+    The gate decides how much of each up-projected channel passes: 88% of the first and 50% of the second.
 
 **SwiGLU** uses SiLU (swish):
 
@@ -378,11 +640,37 @@ A gated linear unit uses two projections and a elementwise product:
 \operatorname{SiLU}(z)=z\,\sigma(z).
 \]
 
+!!! example "On paper"
+
+    Same \(W_gx=(2,0)\), \(W_ux=(1,3)\) and \(W_d=(1\ \ 1)\), now with \(\operatorname{SiLU}(2)=2\cdot0.881=1.762\) and \(\operatorname{SiLU}(0)=0\):
+
+    \[
+    \begin{aligned}
+    \operatorname{SiLU}(W_gx)\odot W_ux &= (1.762\cdot1,\;0\cdot3)\\
+    \operatorname{SwiGLU}(x) &= 1.762+0 = 1.762
+    \end{aligned}
+    \]
+
+    A gate pre-activation of 0 now closes its channel completely (the sigmoid gate let half through), and a negative one lets a little through with the sign flipped: \(\operatorname{SiLU}(-1)=-1\cdot0.269=-0.269\).
+
 **GeGLU** uses GELU instead:
 
 \[
 \operatorname{GeGLU}(x) = W_d\big(\operatorname{GELU}(W_g x)\odot W_u x\big).
 \]
+
+!!! example "On paper"
+
+    Same numbers, with \(\operatorname{GELU}(z)=z\,\Phi(z)\), where \(\Phi\) is the standard normal CDF and \(\Phi(2)\approx0.977\):
+
+    \[
+    \begin{aligned}
+    \operatorname{GELU}(2) &= 2\cdot0.977 \approx 1.95\\
+    \operatorname{GeGLU}(x) &= 1.95\cdot1+0\cdot3 = 1.95
+    \end{aligned}
+    \]
+
+    GELU and SiLU have the same shape (0 at 0, close to \(z\) for large \(z\)); at \(z=2\) GELU passes 1.95 against SiLU's 1.76. The tanh approximation of GELU that Gemma's config uses also gives 1.95 here.
 
 Qwen3/Qwen2.5 use SwiGLU. Gemma 4 uses GeGLU. A SwiGLU layer has three matrices, so its parameter count is
 
@@ -410,6 +698,25 @@ g(x) = \operatorname{softmax}(W_r x),
 y = \sum_{i\in\mathcal{T}(x)} \frac{g_i(x)}{\sum_{j\in\mathcal{T}(x)}g_j(x)}\,E_i(x).
 \]
 
+!!! example "On paper"
+
+    Four experts, \(k=2\), router logits \(W_rx=(1,1,0,-1)\), with \(e\approx2.718\) and \(e^{-1}\approx0.368\):
+
+    \[
+    \begin{aligned}
+    g(x) &= \tfrac{1}{6.804}(2.718,\,2.718,\,1,\,0.368)\\
+    &= (0.399,\,0.399,\,0.147,\,0.054)
+    \end{aligned}
+    \]
+
+    The top 2 are experts 1 and 2. Their logits tie, so renormalising gives each \(g_1/(g_1+g_2)=0.5\). If \(E_1(x)=(2,0)\) and \(E_2(x)=(0,4)\):
+
+    \[
+    y = 0.5\,(2,0)+0.5\,(0,4) = (1,\,2)
+    \]
+
+    Experts 3 and 4 never run for this token: they cost no FLOPs and get no gradient from it.
+
 Only \(k\) experts run per token. Total parameters scale with \(E\), but active parameters scale with \(k\).
 
 Qwen3-30B-A3B: 128 experts, 8 active, no shared experts, 30.5B total / 3.3B active. Qwen3-235B-A22B: 94 layers, 64/4 heads, 128/8 experts, 235B/22B. Qwen3.5 uses 512 experts with 17B active out of 397B (4.28%).
@@ -427,6 +734,19 @@ f_i=\frac{1}{T}\sum_{t=1}^{T}\mathbf{1}[i\in\mathcal{T}(x_t)],
 P_i=\frac{1}{T}\sum_{t=1}^{T}g_i(x_t).
 \]
 
+!!! example "On paper"
+
+    Two experts, \(k=1\), a batch of \(T=4\) tokens: 3 go to expert 1 and 1 to expert 2, so \(f=(0.75,\,0.25)\); the router's mean probabilities are \(P=(0.7,\,0.3)\):
+
+    \[
+    \begin{aligned}
+    \textstyle\sum_i f_iP_i &= 0.75\cdot0.7+0.25\cdot0.3 = 0.6\\
+    \mathcal{L}_{\text{bal}} &= \alpha\cdot2\cdot0.6 = 1.2\,\alpha
+    \end{aligned}
+    \]
+
+    A perfectly balanced router (\(f=P=(0.5,\,0.5)\)) scores \(\alpha\cdot2\cdot0.5=\alpha\); with \(\alpha=0.01\) this lopsided batch pays 0.012 instead of 0.010.
+
 Qwen3 uses a **global-batch** load-balancing loss to encourage specialisation across the batch rather than forcing every sequence to be uniform. MoE training also needs capacity control, token dropping policy (or no dropping), expert parallelism, and careful all-to-all communication.
 
 ### 9.2 Active parameter count
@@ -437,35 +757,72 @@ For a dense model, inference FLOPs per token are \(2N\). For an MoE, use the **a
 N_{\text{active}} \approx N_{\text{attention}} + N_{\text{router}} + \frac{k}{E}N_{\text{experts}} + N_{\text{embed}}.
 \]
 
+!!! example "On paper"
+
+    Qwen3-30B-A3B, rounded from its config (48 layers, \(d=2048\), 128 experts of width 768, \(k=8\), untied 151,936-token vocabulary): attention \(\approx0.9\)B, routers \(\approx0.01\)B, experts \(\approx29\)B, embedding + head \(\approx0.6\)B.
+
+    \[
+    \begin{aligned}
+    N_{\text{active}} &\approx 0.9+0.01+\tfrac{8}{128}\cdot29+0.6\\
+    &\approx 3.3\text{B}
+    \end{aligned}
+    \]
+
+    The stored total is \(0.9+0.01+29+0.6\approx30.5\)B. Each token uses one-sixteenth of the experts, about 11% of all weights.
+
 That is why Qwen3-30B-A3B generates at roughly 3B speed while storing 30B weights. [43 §10](43-math-examples.md) routes one token to the top 2 of four experts and computes the load-balancing loss.
 
 ---
 
 ## 10. Linear attention and Gated DeltaNet
 
-Standard attention costs \(O(T^2)\) time and \(O(T)\) cache per layer. Linear attention replaces the softmax with a recurrent state \(S_t\in\mathbb{R}^{d_k\times d_v}\):
+Standard attention costs \(O(T^2)\) time and \(O(T)\) cache per layer. Linear attention replaces the softmax with a recurrent state \(S_t\in\mathbb{R}^{d_v\times d_k}\) (the convention of the Gated DeltaNet paper: the state maps a key to a value):
 
 \[
-S_t = S_{t-1} + k_t v_t^\top,
+S_t = S_{t-1} + v_t k_t^\top,
 \qquad
-o_t = S_t^\top q_t.
+o_t = S_t\, q_t.
 \]
+
+!!! example "On paper"
+
+    Take \(d_k=d_v=2\) and \(S_0=0\). Store two facts with orthogonal keys: \(k_1=(1,0)\), \(v_1=(3,5)\), then \(k_2=(0,1)\), \(v_2=(2,4)\):
+
+    \[
+    S_2 = v_1k_1^\top+v_2k_2^\top = \begin{pmatrix}3&2\\5&4\end{pmatrix}
+    \]
+
+    \[
+    S_2\, k_1 = (3,\,5) = v_1
+    \]
+
+    Querying with \(q=k_1\) returns \(v_1\) exactly. Now store \(k_3=(1,0)\), \(v_3=(1,1)\): the first column becomes \((4,6)\), and the same query returns \(v_1+v_3\). The old and new values are summed, not replaced.
 
 The state is fixed-size, so inference is \(O(1)\) per token and training can be chunk-parallel. But additive memory overwrites nothing, so retrieval degrades.
 
 **DeltaNet** adds the delta rule: before writing, correct the state’s prediction error:
 
 \[
-S_t = S_{t-1} + \beta_t\big(v_t - S_{t-1}^\top k_t\big)k_t^\top,
+S_t = S_{t-1} + \beta_t\big(v_t - S_{t-1} k_t\big)k_t^\top,
 \qquad
-o_t = S_t^\top q_t.
+o_t = S_t\, q_t.
 \]
 
 This is one online gradient step on the associative memory loss. [43 §11](43-math-examples.md) runs two scalar updates and checks the gradient.
 
 \[
-\mathcal{L}(S)=\|S^\top k_t - v_t\|_2^2.
+\mathcal{L}(S)=\|S k_t - v_t\|_2^2.
 \]
+
+!!! example "On paper"
+
+    Scalar case (\(d_k=d_v=1\)): the memory holds \(S_{t-1}=3\) for the key \(k_t=1\), the new value for that key is \(v_t=1\), and \(\beta_t=0.5\):
+
+    \[
+    S_t = 3+0.5\,(1-3\cdot1)\cdot1 = 2
+    \]
+
+    The loss \(\|S k_t-v_t\|^2\) falls from \((3-1)^2=4\) to \((2-1)^2=1\). With \(\beta_t=1\) the state becomes exactly 1, a clean overwrite; plain linear attention would add instead, giving \(3+1\cdot1=4\).
 
 **Gated DeltaNet** adds a data-dependent decay \(\alpha_t\in(0,1)\) and a write rate \(\beta_t\in(0,1)\):
 
@@ -474,21 +831,37 @@ S_t = \alpha_t S_{t-1}\big(I-\beta_t k_t k_t^\top\big) + \beta_t v_t k_t^\top,
 \]
 
 \[
-o_t = S_t^\top q_t.
+o_t = S_t\, q_t.
 \]
 
 Equivalently:
 
 \[
 S_t = \alpha_t S_{t-1}
-+ \beta_t\big(v_t-\alpha_t S_{t-1}^\top k_t\big)k_t^\top.
++ \beta_t\big(v_t-\alpha_t S_{t-1} k_t\big)k_t^\top.
 \]
+
+!!! example "On paper"
+
+    The same scalar memory with forgetting: \(S_{t-1}=3\), \(k_t=1\), \(v_t=1\), \(\alpha_t=0.5\), \(\beta_t=0.5\). The first form gives
+
+    \[
+    S_t = 0.5\cdot3\cdot(1-0.5)+0.5\cdot1 = 1.25
+    \]
+
+    and the equivalent form gives the same number:
+
+    \[
+    S_t = 1.5+0.5\,(1-1.5) = 1.25
+    \]
+
+    With \(q_t=1\), \(o_t=1.25\). DeltaNet gave 2: the decay first halved the stale value 3 to 1.5, and only then was the correction written.
 
 \(\alpha_t\) forgets stale associations; \(\beta_t\) controls how strongly the new key/value overwrites. In the real layer, \(k_t\) is L2-normalised and \(\beta_t\in(0,1)\); without normalisation the update can become unstable. Qwen3.5 uses GDN for most layers and standard gated attention every fourth layer (3:1). The chunkwise parallel form uses the WY representation of the product of rank-one Householder-like updates, so training is not strictly sequential.
 
 ![Gated DeltaNet state update](assets/diagrams/gdn.svg)
 
-[38 — Derivations and proofs](38-derivations.md) shows that the delta rule is one online gradient step on \(\|S^\top k_t-v_t\|^2\), and derives the WY chunkwise form.
+[38 — Derivations and proofs](38-derivations.md) shows that the delta rule is one online gradient step on \(\|S k_t-v_t\|^2\), and derives the WY chunkwise form.
 
 **Why hybrid?** GDN gives cheap long-context memory; full attention every few layers recovers precise retrieval. Qwen3.5: 3 GDN : 1 gated attention. Gemma 4: 5 local sliding-window : 1 global attention (4:1 for E2B). Both are compromises between \(O(T^2)\) quality and \(O(T)\) cost.
 
@@ -501,6 +874,16 @@ A local layer attends only to the last \(W\) tokens:
 \[
 A_{ij} = 0 \quad\text{if } j<i-W+1.
 \]
+
+!!! example "On paper"
+
+    Gemma 4 12B, \(W=1024\), query at position \(i=2000\):
+
+    \[
+    i-W+1 = 2000-1024+1 = 977
+    \]
+
+    So \(A_{2000,j}=0\) for \(j<977\), and the causal mask removes \(j>2000\). The token sees \(j=977,\dots,2000\), which is \(2000-977+1=1024\) positions, however long the document is.
 
 Gemma 4 12B uses \(W=1024\), with a 5:1 local:global ratio (E2B/E4B use \(W=512\), and E2B a 4:1 ratio). Local layers cost \(O(TW)\) instead of \(O(T^2)\) and their KV cache is bounded by \(W\). Global layers keep full attention every sixth layer for long-range retrieval.
 
@@ -515,6 +898,21 @@ The cache for a hybrid stack is
 
 and with K=V in global layers the second term loses the V factor. This is the math behind Gemma 4’s 256K context on a 12B model. The edge models add a third rule: KV-shared layers cache nothing, so only the first \(L-S\) layers appear in the sum ([37 §4.3](37-architecture.md)).
 
+!!! example "On paper"
+
+    Gemma 4 12B at \(T=8{,}192\), bf16 (\(b=2\)): 40 local layers with \(G=8\), \(d_h=256\), \(W=1024\), and 8 global layers with \(G=1\), \(d_h=512\) and K=V (no factor 2). Every factor except the 40 is a power of two:
+
+    \[
+    \begin{aligned}
+    \text{local} &= 40\cdot2\cdot8\cdot256\cdot1024\cdot2\\
+    &= 40\cdot2^{23} \approx 335.5\ \text{MB}\\
+    \text{global} &= 8\cdot1\cdot512\cdot8192\cdot2\\
+    &= 2^{26} \approx 67.1\ \text{MB}
+    \end{aligned}
+    \]
+
+    The total is about 402.7 MB, and the global layers are exactly a sixth of it. At 32K they grow to 268.4 MB (the 604 MB in §6.3), while the local term never moves.
+
 ---
 
 ## 12. Multi-token prediction (MTP)
@@ -526,6 +924,20 @@ An MTP head predicts \(n\) future tokens from the same hidden state:
 -\sum_{j=1}^{n}\log p_\theta(x_{t+j}\mid x_{\le t}).
 \]
 
+!!! example "On paper"
+
+    Three heads (\(n=3\)) at the position after `return` give the true next three tokens probabilities 0.5, 0.25 and 0.125: the further ahead, the harder. With \(\ln2\approx0.6931\):
+
+    \[
+    \begin{aligned}
+    \mathcal{L}_{\text{MTP}} &= -(\ln0.5+\ln0.25+\ln0.125)\\
+    &= \ln2+2\ln2+3\ln2\\
+    &= 6\ln2 \approx 4.159
+    \end{aligned}
+    \]
+
+    The third head alone contributes half of the loss (\(3\ln2\) of \(6\ln2\)).
+
 Gemma 4 trains a small **autoregressive drafter** that takes the main model’s last-layer activations and token embeddings, and cross-attends to the main model’s KV cache. The drafter is used for speculative decoding: draft \(n\) tokens, verify them with the main model in one forward pass, accept the longest correct prefix. The expected speedup depends on the acceptance rate:
 
 \[
@@ -533,6 +945,19 @@ Gemma 4 trains a small **autoregressive drafter** that takes the main model’s 
 \]
 
 where \(\alpha\) is the per-token acceptance probability. Gemma 4’s 12B drafter has ~400M parameters; the 31B/26B drafter uses a 4-layer transformer with model dimension 1024.
+
+!!! example "On paper"
+
+    The drafter proposes \(n=3\) tokens, each accepted with probability \(\alpha=0.5\), and each drafted token costs \(1/12\) of a main-model pass, so the draft cost is \(3/12=0.25\):
+
+    \[
+    \begin{aligned}
+    \text{speedup} &\approx \frac{1+0.5+0.25+0.125}{1+0.25}\\
+    &= \frac{1.875}{1.25} = 1.5
+    \end{aligned}
+    \]
+
+    The series stops at \(\alpha^3\) because only three tokens were drafted. A better drafter with \(\alpha=0.9\) at the same cost gives \((1+0.9+0.81+0.729)/1.25\approx2.75\).
 
 ---
 
@@ -547,6 +972,20 @@ P_{\text{attn per layer}} =
 +\underbrace{H\,d_h\,d}_{O}.
 \]
 
+!!! example "On paper"
+
+    Qwen3-14B: \(d=5120=5\cdot2^{10}\), \(Hd_h=40\cdot128=5120\) and \(Gd_h=8\cdot128=1024=2^{10}\):
+
+    \[
+    \begin{aligned}
+    Q,\,O:\ 5120\cdot5120 &= 25\cdot2^{20}\ \text{each}\\
+    K,\,V:\ 2\cdot5120\cdot1024 &= 10\cdot2^{20}\\
+    P_{\text{attn}} = (25+10+25)\cdot2^{20} &\approx 62.9\text{M}
+    \end{aligned}
+    \]
+
+    With \(2^{20}=1{,}048{,}576\) that is the 62.9M quoted below. K and V are only a sixth of it, because each has a fifth of the width of Q (\(G=8\) against \(H=40\)).
+
 Do **not** assume \(H d_h=d\). It holds for Qwen3-14B, but not for Gemma 4 12B: local layers have \(H d_h=16\cdot256=4096\) while \(d=3840\), and global layers have \(H d_h=16\cdot512=8192\). The same asymmetry appears in the MLP input and output, so use the actual dimensions.
 
 \[
@@ -555,6 +994,20 @@ P_{\text{MLP per layer}} = 3 d d_{\text{ff}},
 P_{\text{total}} \approx L(P_{\text{attn}}+P_{\text{MLP}})
 + (1+\mathbf{1}[\text{untied}])Vd.
 \]
+
+!!! example "On paper"
+
+    A toy decoder you can count completely: \(d=8\), \(H=4\), \(G=2\), \(d_h=2\), \(d_{\text{ff}}=16\), \(L=2\), \(V=10\), tied. Its attention is \(8\cdot4\cdot2+2\cdot8\cdot2\cdot2+4\cdot2\cdot8=64+64+64=192\) per layer.
+
+    \[
+    \begin{aligned}
+    P_{\text{MLP}} &= 3\cdot8\cdot16 = 384\\
+    P_{\text{total}} &\approx 2\,(192+384)+1\cdot10\cdot8\\
+    &= 1152+80 = 1232
+    \end{aligned}
+    \]
+
+    Untied, the indicator adds a second \(Vd=80\), for 1,312. The \(\approx\) covers the small norm vectors the formula leaves out.
 
 [43 §14](43-math-examples.md) counts a 328-parameter toy model by hand, then reconciles the Qwen and Gemma numbers.
 
@@ -602,6 +1055,16 @@ For a dense model with \(N\) parameters and \(D\) tokens, the standard estimate 
 C_{\text{train}} \approx 6ND.
 \]
 
+!!! example "On paper"
+
+    A 1B-parameter model trained on 20B tokens (the Chinchilla-style 20 tokens per parameter):
+
+    \[
+    C_{\text{train}} \approx 6\cdot10^{9}\cdot20\cdot10^{9} = 1.2\times10^{20}
+    \]
+
+    Of that, the forward passes are \(2ND=4\times10^{19}\) FLOPs and the backward passes \(4ND=8\times10^{19}\).
+
 Why 6: forward is \(2ND\) (one multiply-add per weight per token), backward is \(4ND\) (two matmuls: input gradient and weight gradient). Attention score/value FLOPs add roughly
 
 \[
@@ -609,6 +1072,19 @@ Why 6: forward is \(2ND\) (one multiply-add per weight per token), backward is \
 \]
 
 for training (forward + backward), where \(H d_h\) is the total query width. This equals \(12LT^2d\) only when \(H d_h=d\), which is true for Qwen3-14B but not for Gemma’s global layers. It is negligible at 2K and significant at 32K. The exact constant depends on the implementation; measure tokens/sec rather than trusting a formula. See [38 — Derivations and proofs](38-derivations.md) §13 and [43 — Worked examples](43-math-examples.md) §15.
+
+!!! example "On paper"
+
+    Qwen3-14B (\(L=40\), \(Hd_h=5120=5\cdot2^{10}\)) on one sequence of \(T=2048=2^{11}\) tokens:
+
+    \[
+    \begin{aligned}
+    12\cdot40\cdot2048^2\cdot5120 &= 2400\cdot2^{32}\\
+    &\approx 1.03\times10^{13}
+    \end{aligned}
+    \]
+
+    The \(6ND\) term for the same 2,048 tokens is \(6\cdot14.77\times10^9\cdot2048\approx1.81\times10^{14}\), so attention adds about 6%. At \(T=32{,}768\) attention grows \(16^2=256\) times but \(6ND\) only 16 times: \(2.64\times10^{15}\) against \(2.90\times10^{15}\), so it adds about 91%.
 
 ### 14.2 Inference compute
 
@@ -619,6 +1095,16 @@ C_{\text{infer}} \approx 2N
 \]
 
 for dense models, plus attention and KV-cache reads. For MoE, replace \(N\) with \(N_{\text{active}}\).
+
+!!! example "On paper"
+
+    Qwen3-14B, \(N\approx14.77\)B:
+
+    \[
+    C_{\text{infer}} \approx 2\cdot14.77\times10^9 \approx 2.95\times10^{10}
+    \]
+
+    About 30 GFLOP per generated token, so a 500-token answer costs about \(1.5\times10^{13}\) FLOPs. Qwen3-30B-A3B, with \(N_{\text{active}}\approx3.3\)B, needs \(2\cdot3.3\times10^9=6.6\times10^9\) per token.
 
 ### 14.3 KV cache
 
@@ -640,7 +1126,7 @@ At 32K, Qwen3-14B bf16 is ~5.37 GB. Gemma 4 12B is hybrid, not full attention: 4
 \text{cost} = \text{GPU-hours}\times\text{price}.
 \]
 
-MFU (model FLOPs utilisation) is typically 30–50% for large training, lower at long context. Example: Qwen3-14B on 36T tokens at 40% MFU on 10,000 H100-class GPUs (494.5 TFLOP/s dense BF16) is ~4.48M GPU-hours, ~18.7 days, ~$11.2M at $2.50/GPU-hour — before failures and data. If you quote the 989 TFLOP/s sparse peak, use roughly 20% MFU to get the same effective throughput.
+MFU (model FLOPs utilisation) is typically 30–50% for large training, lower at long context. Example: Qwen3-14B on 36T tokens at 40% MFU on 10,000 H100-class GPUs (989 TFLOP/s dense BF16; NVIDIA's 1,979 figure is with sparsity) is ~2.24M GPU-hours, ~9.3 days, ~$5.6M at $2.50/GPU-hour — before failures and data. Do not plan with 494.5 TFLOP/s: that is the dense TF32 peak, and it doubles the estimate.
 
 ---
 
@@ -656,11 +1142,34 @@ q = \operatorname{clamp}\left(\operatorname{round}\left(\frac{x}{s}\right)+z,\;q
 \hat x = s(q-z).
 \]
 
+!!! example "On paper"
+
+    4-bit codes \(q_{\min}=0\), \(q_{\max}=15\), scale \(s=0.1\), zero point \(z=8\). Quantize \(x=0.33\):
+
+    \[
+    \begin{aligned}
+    q &= \operatorname{clamp}(\operatorname{round}(3.3)+8,\,0,\,15) = 11\\
+    \hat x &= 0.1\,(11-8) = 0.3
+    \end{aligned}
+    \]
+
+    The error is 0.03, within half a step (\(s/2=0.05\)). A value outside the grid is clipped instead: \(x=1.0\) gives \(10+8=18\), clamped to 15, so \(\hat x=0.7\) and the error is 0.3.
+
 For symmetric weights, \(z=0\). A **blockwise** format (Q4_0, GGUF) uses one scale per block of \(B\) weights:
 
 \[
 s_b = \frac{\max_{i\in b}|w_i|}{2^{k-1}-1}.
 \]
+
+!!! example "On paper"
+
+    One block of \(B=4\) weights, \(w=(0.7,\,-0.33,\,0.12,\,-0.06)\), at \(k=4\) bits, so the grid is \(-7\dots7\) (\(2^{3}-1=7\)):
+
+    \[
+    s_b = \frac{0.7}{7} = 0.1
+    \]
+
+    Then \(q=\operatorname{round}(w/s_b)=(7,-3,1,-1)\) and \(\hat w=(0.7,-0.3,0.1,-0.1)\), with errors 0, 0.03, 0.02 and 0.04, all at most \(s_b/2=0.05\). A block of smaller weights gets a smaller \(s_b\) and proportionally smaller errors.
 
 This is the clean symmetric grid \(-(2^{k-1}-1)\ldots(2^{k-1}-1)\). Real Q4_0 uses the code range \(-8\ldots7\) and a scale of \(\max/8\), so its positive maximum is represented by 7 rather than 8. The error bound below is therefore a good approximation, not the exact GGML quantizer behaviour; see [43 — Worked examples](43-math-examples.md) §16.
 
@@ -670,7 +1179,20 @@ Quantization-aware training (QAT) inserts the quantize/dequantize function in th
 \frac{\partial \hat x}{\partial x}\approx 1.
 \]
 
-Gemma 4 uses QAT for mobile int2/int4 weights with int8 activations and for Q4_0; the report’s 12B memory goes from 24.0 GB bf16 to 7.65 GB Q4_0, and int8 KV at 32K adds 0.28 GB. That is how a 12B model fits a laptop. [43 §16](43-math-examples.md) quantizes five weights and shows the blockwise error reduction.
+!!! example "On paper"
+
+    During QAT a weight \(x=0.33\) is used as \(\hat x=0.3\) (scale 0.1). Rounding is flat, so its true derivative is 0 and \(x\) would never move. With the STE, an upstream gradient \(\partial\mathcal{L}/\partial\hat x=2\) and \(\eta=0.01\):
+
+    \[
+    \begin{aligned}
+    \partial\mathcal{L}/\partial x &\approx 2\cdot1 = 2\\
+    x &\leftarrow 0.33-0.01\cdot2 = 0.31
+    \end{aligned}
+    \]
+
+    The forward pass still sees 0.3, but after a few more such steps \(x\) drops below 0.25 and the quantized weight jumps to 0.2.
+
+Gemma 4 uses QAT for mobile int2/int4 weights with int8 activations and for Q4_0; the report’s 12B memory goes from 24.0 GB bf16 to 7.65 GB Q4_0, and int8 KV at 32K adds 0.28 GiB (302 MB, half of the 604 MB bf16 cache). That is how a 12B model fits a laptop. [43 §16](43-math-examples.md) quantizes five weights and shows the blockwise error reduction.
 
 ---
 
@@ -692,6 +1214,21 @@ v_t = \beta_2 v_{t-1} + (1-\beta_2)g_t^2,
 \right).
 \]
 
+!!! example "On paper"
+
+    One parameter at the first step (\(t=1\)): \(\theta_0=2\), \(g_1=-0.2\), \(\eta=0.01\), \(\lambda=0.1\), \(\beta_1=0.9\), \(\beta_2=0.95\), \(\epsilon\approx0\), \(m_0=v_0=0\):
+
+    \[
+    \begin{aligned}
+    m_1 &= 0.1\cdot(-0.2) = -0.02\\
+    v_1 &= 0.05\cdot0.04 = 0.002\\
+    \frac{m_1/0.1}{\sqrt{v_1/0.05}} &= \frac{-0.2}{0.2} = -1\\
+    \theta_1 &= 2-0.01\,(-1+0.1\cdot2) = 2.008
+    \end{aligned}
+    \]
+
+    The bias-corrected first step has size \(\eta=0.01\) against the gradient, whatever the size of \(g\); weight decay takes \(0.01\cdot0.1\cdot2=0.002\) of it back.
+
 Typical large-model values: \(\beta_1=0.9\), \(\beta_2=0.95\), \(\epsilon=10^{-8}\), weight decay 0.1, gradient clip 1.0, bf16 parameters/activations with fp32 master weights and optimizer state.
 
 The learning rate schedule is usually warmup + cosine:
@@ -705,6 +1242,25 @@ The learning rate schedule is usually warmup + cosine:
 \end{cases}
 \]
 
+!!! example "On paper"
+
+    \(\eta_{\max}=10^{-4}\), \(\eta_{\min}=10^{-5}\), \(T_w=100\), \(T=1000\). During warmup, at \(t=50\):
+
+    \[
+    \eta_{50} = 10^{-4}\cdot\tfrac{50}{100} = 5\times10^{-5}
+    \]
+
+    At \(t=400\), \((t-T_w)/(T-T_w)=300/900=1/3\) and \(\cos(\pi/3)=0.5\):
+
+    \[
+    \begin{aligned}
+    \eta_{400} &= 10^{-5}+\tfrac12(9\times10^{-5})(1+0.5)\\
+    &= 10^{-5}+6.75\times10^{-5} = 7.75\times10^{-5}
+    \end{aligned}
+    \]
+
+    A third of the way through the cosine, the LR is still 75% of the way from \(\eta_{\min}\) to \(\eta_{\max}\).
+
 Qwen3 develops scaling laws for learning rate and batch size across its three pretraining stages; you should not copy a 14B LR to a 100M model. [43 §17](43-math-examples.md) runs two AdamW steps and one cosine-schedule point.
 
 ### 16.1 Initialisation
@@ -716,6 +1272,16 @@ W\sim\mathcal{N}(0,0.02^2),
 \]
 
 with residual output projections scaled by \(1/\sqrt{2L}\) in deeper models. Qwen/Gemma use standard normal init plus QK-norm and pre-norm for stability; exact init is not fully public.
+
+!!! example "On paper"
+
+    0.02 is a standard deviation, so about 95% of the initial weights lie within \(\pm2\cdot0.02=\pm0.04\). For the residual output projections of a 40-layer model (Qwen3-14B depth), with \(\sqrt{80}\approx8.944\):
+
+    \[
+    \frac{0.02}{\sqrt{2\cdot40}} = \frac{0.02}{8.944} \approx 0.0022
+    \]
+
+    There are \(2L=80\) residual writes (one attention and one MLP per layer); at variance \(0.02^2/80\) each, together they add roughly the variance of one unscaled write.
 
 ### 16.2 Stability tools
 

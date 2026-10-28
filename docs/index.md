@@ -170,13 +170,23 @@ hide:
   <a class="gb-mini" href="43-math-examples/">
     <span class="gb-mini__icon">✓</span>
     <strong>Worked examples</strong>
-    <span>Every formula on a toy model, checked by a 67-value script.</span>
+    <span>Every formula on a toy model, checked by a 69-value script.</span>
   </a>
 </div>
 
 ## What is new
 
 <div class="gb-new">
+  <div class="gb-new__item">
+    <span class="gb-new__date">28 Oct 2026</span>
+    <strong><a href="32-mathematics/">Every formula, on paper</a></strong>
+    <p>129 short examples you can redo with a pencil, one after every formula in chapters 32–42, each number checked by <code>make math-check</code>.</p>
+  </div>
+  <div class="gb-new__item">
+    <span class="gb-new__date">28 Oct 2026</span>
+    <strong><a href="43-math-examples/#15-flops-and-wall-time">H100 budget corrected</a></strong>
+    <p>Dense BF16 is ~989 TFLOP/s (1,979 is the sparse figure): Qwen3-14B on 36T tokens is ~2.24M GPU-hours, ~9.3 days and ~$5.6M, not double that.</p>
+  </div>
   <div class="gb-new__item">
     <span class="gb-new__date">27 Oct 2026</span>
     <strong><a href="37-architecture/#4-the-edge-models-gemma-4-e2b-and-e4b">Gemma 4 E2B and E4B, explained</a></strong>
@@ -191,16 +201,6 @@ hide:
     <span class="gb-new__date">27 Oct 2026</span>
     <strong><a href="37-architecture/">Gemma 12B count corrected</a></strong>
     <p>Global layers are K=V with no <code>v_proj</code>, and their tensor is <code>[1, 1, T, 512]</code>: the text decoder is 11.91B, the checkpoint 11.96B.</p>
-  </div>
-  <div class="gb-new__item">
-    <span class="gb-new__date">25 Oct 2026</span>
-    <strong><a href="27-gemma4-12b/">Gemma 4 12B track</a></strong>
-    <p>A parallel model family with its own configs, datasets, validation, synthetic pipeline and comparison protocol.</p>
-  </div>
-  <div class="gb-new__item">
-    <span class="gb-new__date">25 Oct 2026</span>
-    <strong><a href="17-finetune-2026-update/">Corrected LoRA recipe</a></strong>
-    <p>All-layer adapters, the MLX <code>scale</code> trap, one-epoch training and new sweep tools.</p>
   </div>
   <div class="gb-new__item">
     <span class="gb-new__date">25 Oct 2026</span>

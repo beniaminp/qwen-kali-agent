@@ -56,6 +56,70 @@ If you only compare distilled vs base, you cannot tell whether the gain came fro
 
 Agreement and KL are **diagnostics**, not goals. A student can agree with the teacher’s top token and still fail the task; a student can disagree and be correct.
 
+!!! example "On paper"
+
+    **Agreement.** At \(N=8\) positions of a golden-set reply, the E4B student's top token matches the 12B teacher's at positions 1, 2, 4, 5, 7 and 8.
+
+    \[
+    \tfrac18(1+1+0+1+1+0+1+1)=0.75
+    \]
+
+    The student follows the teacher's first choice three times in four; whether those choices solve the task is a separate check.
+
+!!! example "On paper"
+
+    **Top-k overlap.** With \(k=4\) and \(N=2\) positions, the two top-4 lists share 3 tokens at the first position and 2 at the second.
+
+    \[
+    \tfrac12\left(\tfrac34+\tfrac24\right)=0.625
+    \]
+
+    On average 62.5% of the teacher's four best candidates are also among the student's four best.
+
+!!! example "On paper"
+
+    **KL.** At \(N=2\) positions the student matches the teacher exactly at the first (KL 0); at the second \(p_T=(0.5,\;0.5)\) and \(p_S=(0.25,\;0.75)\), so the ratios \(p_T/p_S\) are 2 and \(\tfrac23\). Use \(\ln2\approx0.693\) and \(\ln\tfrac23=-\ln1.5\approx-0.405\).
+
+    \[
+    \begin{aligned}
+    \operatorname{KL}(p_T\|p_S)&=0.5\ln2+0.5\ln\tfrac23\\
+    &\approx0.3465-0.2025=0.144
+    \end{aligned}
+    \]
+
+    \[
+    \tfrac12(0+0.144)=0.072
+    \]
+
+    The mean gap is 0.072 nats per position; identical distributions would give 0.
+
+!!! example "On paper"
+
+    **Perplexity.** The E4B student scores a \(T=4\)-token teacher trace with \(p_S(y_t)=\tfrac12,\tfrac12,\tfrac12,\tfrac18\) (\(\ln2\approx0.693\), \(\sqrt2\approx1.414\)).
+
+    \[
+    \begin{aligned}
+    -\tfrac14\textstyle\sum_t\log p_S(y_t)&=\tfrac14(1+1+1+3)\ln2\\
+    &=1.5\ln2\approx1.04
+    \end{aligned}
+    \]
+
+    \[
+    \exp(1.5\ln2)=2^{1.5}=2\sqrt2\approx2.83
+    \]
+
+    The student is as unsure of the teacher's tokens as a fair pick among about 2.8 options; perfect imitation would give 1.
+
+!!! example "On paper"
+
+    **Calibration.** The gap is taken per confidence bin and weighted by bin size. On 100 eval tasks, 60 answers have mean confidence 0.90 and 48 are correct (accuracy 0.80); 40 have confidence 0.60 and 26 are correct (0.65). The bin gaps are \(|0.80-0.90|=0.10\) and \(|0.65-0.60|=0.05\).
+
+    \[
+    \text{ECE}=0.6\cdot0.10+0.4\cdot0.05=0.08
+    \]
+
+    Stated confidence is off by 8 points on average: too confident in the high bin, slightly too modest in the low one.
+
 ### 2.3 Pass@k
 
 For a task with \(n\) samples and \(c\) correct:
@@ -65,7 +129,21 @@ For a task with \(n\) samples and \(c\) correct:
 =1-\frac{\binom{n-c}{k}}{\binom{n}{k}}.
 \]
 
-Use \(k=1\) for deployment, \(k=5\) or \(k=10\) for capability. Report the estimator and the number of samples; pass@k is biased with small \(n\).
+Use \(k=1\) for deployment, \(k=5\) or \(k=10\) for capability. Report the estimator and the number of samples: this estimator is unbiased for any \(n\ge k\), but with small \(n\) it is noisy, so a small change in \(c\) moves it a lot.
+
+!!! example "On paper"
+
+    The E4B student gets \(n=5\) samples on one Kali task, and \(c=2\) of them pass the verifier.
+
+    \[
+    \text{pass@}1=1-\frac{\binom31}{\binom51}=1-\frac35=0.4
+    \]
+
+    \[
+    \text{pass@}2=1-\frac{\binom32}{\binom52}=1-\frac3{10}=0.7
+    \]
+
+    Pass@1 is just the success rate \(c/n\); allowing a second try raises the chance of at least one pass to 70%.
 
 ### 2.4 Wilson interval
 
@@ -78,6 +156,32 @@ For a success rate \(p=k/n\), the 95% Wilson interval is
 \]
 
 Use it for tool validity, scope compliance and task success. A 2-point difference on 100 tasks is noise.
+
+!!! example "On paper"
+
+    The distilled student makes 98 valid tool calls out of \(n=100\), so \(\hat p=0.98\) and \(z^2=3.8416\).
+
+    \[
+    1+\frac{z^2}{n}=1.0384
+    \]
+
+    \[
+    \text{centre}=\frac{0.98+0.0192}{1.0384}\approx0.962
+    \]
+
+    \[
+    \sqrt{0.000196+0.000096}\approx0.01709
+    \]
+
+    \[
+    \text{half-width}=\frac{1.96\cdot0.01709}{1.0384}\approx0.032
+    \]
+
+    \[
+    0.962\pm0.032=(0.930,\;0.994)
+    \]
+
+    98/100 clears the 98% tool-validity gate of §7 only as a point estimate: the data are consistent with a true rate as low as 93%.
 
 ---
 
@@ -223,6 +327,27 @@ A model that is 5% better and 1% unsafe is not shippable.
 \]
 
 resampling prompts with replacement.
+
+!!! example "On paper"
+
+    Resample the 240 golden prompts of the §9 report \(B=4\) times and score the distilled student and the teacher on each resample:
+
+    | \(b\) | \(\text{score}_S^{(b)}\) | \(\text{score}_T^{(b)}\) | difference |
+    |---:|---:|---:|---:|
+    | 1 | 0.72 | 0.80 | \(-0.08\) |
+    | 2 | 0.77 | 0.82 | \(-0.05\) |
+    | 3 | 0.73 | 0.81 | \(-0.08\) |
+    | 4 | 0.74 | 0.81 | \(-0.07\) |
+
+    \[
+    \begin{aligned}
+    \Delta&=\tfrac14(-0.08-0.05-0.08-0.07)\\
+    &=\tfrac14(-0.28)=-0.07
+    \end{aligned}
+    \]
+
+    The student trails the teacher by 7 points on average. In practice, use about 1,000 resamples and read the 95% interval off the 2.5th and 97.5th percentiles of the differences.
+
 - Do not compare runs with different decoding settings.
 - Do not tune on the test set; use a validation split.
 - Keep a changelog of prompts and graders.
@@ -275,6 +400,16 @@ The bf16 KV cache is smaller than you might expect, and it does not shrink with 
 | Gemma 4 E2B | 0.21 GB | 0.81 GB |
 
 On a 16 GB device the **weights** are the constraint, so E4B or E2B is the right student. But for long context, E4B's cache outgrows the 12B's: it keeps two KV heads with separate K and V in its global layers, while the 12B keeps one K=V head. E2B is the cheap long-context option. Int8 KV halves every number. See [37 — Architecture anatomy](37-architecture.md) §2.1 and §4.3.
+
+!!! example "On paper"
+
+    Serve the distilled E4B at 128K context on a 16 GB laptop, assuming about 1 GB for the runtime and activations (measure yours):
+
+    \[
+    4.0+2.17+1.0=7.17\ \text{GB}
+    \]
+
+    The 20% headroom gate of §7 leaves \(0.8\times16=12.8\) GB, so this fits with 5.6 GB to spare; int8 KV would save about another 1.1 GB.
 
 ### 8.2 Serve and compare
 

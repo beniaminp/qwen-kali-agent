@@ -30,13 +30,36 @@ These are different models. “12B–14B” is a parameter band, not an architec
 For a dense decoder:
 
 \[
-P \approx L\left(d^2 + 2dG d_h + 3d d_{\text{ff}}\right)
+P \approx L\left(2d^2 + 2dG d_h + 3d d_{\text{ff}}\right)
 + (1+\mathbf{1}[\text{untied}])\,Vd.
 \]
 
 - Qwen3-14B: \(P\approx14.77\text{B}\).
 - Qwen2.5-Coder-14B: \(P\approx14.7\text{B}\).
-- Gemma 4 12B: \(P\approx11.8\text{B}\) by this formula; official 11.95B.
+- Gemma 4 12B: \(P\approx11.7\text{B}\) by this formula, which assumes \(Hd_h=d\) — false for Gemma (4,096 local and 8,192 global against \(d=3{,}840\)). The exact text-decoder count is 11.91B ([37 §1.3](37-architecture.md)); the model card says 11.95B.
+
+!!! example "On paper"
+
+    Qwen3-14B: \(L=40\), \(d=5{,}120\), \(G=8\), \(d_h=128\), \(d_{\text{ff}}=17{,}408\), untied, with the checkpoint’s padded \(V=151{,}936\). Per layer:
+
+    | Projection | Count |
+    |---|---:|
+    | Q and O, \(d\times d\) each | \(2\cdot5{,}120^2=52.43\)M |
+    | K and V | \(2\cdot5{,}120\cdot8\cdot128=10.49\)M |
+    | MLP | \(3\cdot5{,}120\cdot17{,}408=267.39\)M |
+    | **one layer** | **330.30M** |
+
+    \[
+    \begin{aligned}
+    40\cdot330.30\text{M}&=13.21\text{B}\\
+    2Vd=2\cdot151{,}936\cdot5{,}120&=1.56\text{B}\\
+    P&\approx14.77\text{B}
+    \end{aligned}
+    \]
+
+    The two vocabulary tables are about 10.5% of the model; the 40 MLPs hold 72%.
+
+    Longer version: [43 §14](43-math-examples.md).
 
 Use `scripts/estimate_pretraining.py` to check your own config.
 
@@ -59,17 +82,34 @@ C = 6 \times 14.77\times10^9 \times 36\times10^{12}
 \approx 3.2\times10^{24}\ \text{FLOPs}.
 \]
 
-At 40% MFU on 10,000 H100-class GPUs (494.5 TFLOP/s **dense** BF16 peak; 989 TFLOP/s is the sparse number):
+At 40% MFU on 10,000 H100-class GPUs (989 TFLOP/s **dense** BF16 peak; NVIDIA's 1,979 TFLOP/s figure is with sparsity, and 494.5 is the dense TF32 peak):
 
 \[
-\text{GPU-hours}\approx4.48\times10^6,
-\qquad
-\text{wall time}\approx18.7\ \text{days},
-\qquad
-\text{cost}\approx\$11.2\text{M}
+\begin{aligned}
+\text{GPU-hours}&\approx2.24\times10^6\\
+\text{wall time}&\approx9.3\ \text{days}\\
+\text{cost}&\approx\$5.6\text{M}
+\end{aligned}
 \]
 
 at $2.50/GPU-hour, before failures, data, evaluation and staff.
+
+!!! example "On paper"
+
+    A run you could rent: a 1B model on 20B tokens on A100s (312 TFLOP/s dense BF16 peak), 35% MFU, $2/GPU-hour.
+
+    \[
+    \begin{aligned}
+    C&=6\cdot10^{9}\cdot2\times10^{10}=1.2\times10^{20}\\
+    \text{per GPU-hour}&=312\times10^{12}\cdot0.35\cdot3600\\
+    &\approx3.93\times10^{17}\ \text{FLOPs}\\
+    \text{GPU-hours}&\approx\frac{1.2\times10^{20}}{3.93\times10^{17}}\approx305
+    \end{aligned}
+    \]
+
+    That is about $610, or 38 hours on eight GPUs. The Qwen3-14B run above needs about 27,000 times this compute.
+
+    Longer version: [43 §15](43-math-examples.md).
 
 ### 2.2 What changes the number
 
@@ -196,6 +236,19 @@ Measure **tokens/sec/GPU** on a short run, then extrapolate:
 \frac{D}{\text{tokens/sec/GPU}\times\text{GPUs}}.
 \]
 
+!!! example "On paper"
+
+    A short run of the 14B on 1,000 GPUs measures 4,000 tokens/sec/GPU, so the cluster processes \(4\times10^{6}\) tokens per second.
+
+    \[
+    \begin{aligned}
+    \frac{280\times10^{9}}{4\times10^{6}}&=70{,}000\ \text{s}\approx19.4\ \text{h}\\
+    \frac{36\times10^{12}}{4\times10^{6}}&=9\times10^{6}\ \text{s}\approx104\ \text{days}
+    \end{aligned}
+    \]
+
+    Chinchilla’s 280B tokens (§2.3) take under a day; Qwen3’s 36T take about three and a half months. A measurement 20% lower stretches either run by 25%, because time scales with 1/throughput.
+
 Do not trust vendor FLOPS alone. A 14B model at 2K context might do 3,000–8,000 tokens/sec/GPU on modern hardware depending on MFU and parallelism; at 32K it is much lower.
 
 ---
@@ -262,6 +315,18 @@ For smaller models, distill the flagship:
 \]
 
 on teacher or on-policy student samples. Qwen3 reports distillation at ~1/10 the GPU hours of the four-stage RL recipe for small models.
+
+!!! example "On paper"
+
+    Four candidate tokens. The teacher is split between the first two, \(p_{\text{teacher}}=(\tfrac12,\tfrac12,0,0)\); an untrained student is uniform, \(p_{\text{student}}=(\tfrac14,\tfrac14,\tfrac14,\tfrac14)\). Terms where the teacher’s probability is 0 contribute 0. Use \(\ln2\approx0.693\).
+
+    \[
+    \operatorname{KL}=2\cdot\tfrac12\ln\frac{1/2}{1/4}=\ln2\approx0.693
+    \]
+
+    The student lowers this only by moving the half it spends on tokens 3 and 4 onto the teacher’s two choices; at \((\tfrac12,\tfrac12,0,0)\) the loss is 0.
+
+    Longer version: [43 §19](43-math-examples.md).
 
 ### 6.5 Safety
 

@@ -29,6 +29,7 @@ All scripts live in `scripts/` and are run from the repository root with the pro
 | `generate_distill_data.py` | Teacher traces → canonical JSONL; preserves reasoning/tool calls; resume and dry-run. | `python scripts/generate_distill_data.py --prompts examples/distill/prompts.jsonl --out data/distill/raw/deepseek.jsonl` |
 | `distill_logits.py` | GPU reference for CE + top-k KL logit distillation with LoRA. | `python scripts/distill_logits.py --teacher google/gemma-4-12B-it --student google/gemma-4-E4B-it --data ... --out ... --dry-run` |
 | `check_math_examples.py` | Assert the arithmetic in the worked-examples chapter. | `python scripts/check_math_examples.py` |
+| `check_paper_examples.py` | Assert every number in the “On paper” example cards of chapters 32–42. | `python scripts/check_paper_examples.py` |
 | `export_gguf.sh` | Fuse, dequantize, convert, quantize. | `bash scripts/export_gguf.sh` |
 | `serve_mlx.sh` | Launch `mlx_lm.server` with safe defaults. | `bash scripts/serve_mlx.sh` |
 
@@ -459,7 +460,7 @@ Presets: `qwen3-14b`, `qwen25-coder-14b`, `gemma4-12b`, `tiny-100m`, `small-1b`.
 
 ```bash
 python scripts/estimate_pretraining.py --preset gemma4-12b --tokens 10e12 \
-  --gpus 1000 --peak-tflops 495 --mfu 0.4 --cost-per-gpu-hour 2.5
+  --gpus 1000 --peak-tflops 989 --mfu 0.4 --cost-per-gpu-hour 2.5
 ```
 
 Replace default peak/MFU with measured numbers. Real runs add 20–50% for failures, checkpointing, data loading and evaluation.
@@ -561,10 +562,25 @@ Pure-stdlib assertions for the worked examples in [43 — Worked examples](43-ma
 
 ```bash
 python scripts/check_math_examples.py
-# all 67 checks passed
+# all 69 checks passed
 ```
 
-It checks 67 values: softmax/CE, the Jacobian, RMSNorm, attention, GQA, KV cache (the Gemma 12B hybrid and the E4B/E2B shared caches), RoPE, SwiGLU, MoE, GDN, speculative decoding, parameter counts, FLOPs, quantization, AdamW, LoRA, KD, pass@k, ECE and the Wilson interval. The Gemma 4 12B, E4B and E2B parameter counts are reproduced exactly from their safetensors headers. No model or network is loaded.
+It checks 69 values: softmax/CE, the Jacobian, RMSNorm, attention, GQA, KV cache (the Gemma 12B hybrid and the E4B/E2B shared caches), RoPE, SwiGLU, MoE, GDN, speculative decoding, parameter counts, FLOPs, quantization, AdamW, LoRA, KD, pass@k, ECE and the Wilson interval. The Gemma 4 12B, E4B and E2B parameter counts are reproduced exactly from their safetensors headers, and the full-pretraining budget uses the dense BF16 H100 peak (~989 TFLOP/s). No model or network is loaded.
+
+### `check_paper_examples.py`
+
+Every formula in chapters 32–42 is followed by an “On paper” card: a small example you can redo with a pencil. This script asserts every number in those cards, one module per chapter group in `scripts/paper_examples/`:
+
+```bash
+python scripts/check_paper_examples.py
+# ch32_mathematics: 310 checks
+# ch33_37_creation: all 160 checks passed
+# ch38_derivations: all 407 checks passed
+# ch39_42_distillation: all 232 checks passed (chapters 39, 40, 41, 42)
+# all 4 chapter checks passed
+```
+
+`make math-check` runs both scripts. Stdlib only; each tolerance matches the rounding shown in the text.
 
 ---
 
