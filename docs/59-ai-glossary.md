@@ -53,16 +53,19 @@ This is the vocabulary of the AI Engineer menu ([45](45-ai-engineer-path.md)–[
 :   Google's agent framework (Python, with TypeScript, Go, Java and Kotlin versions) built around agents, runners, sessions and callbacks, with an evaluation harness and a deployment path to Vertex AI Agent Engine; non-Gemini models go through LiteLLM. *Example:* the chapter's two-tool order agent took 34 lines in ADK against 22 in LangGraph, because even a one-shot needs a runner and a session. → [61 §8.3](61-ai-agent-frameworks.md#83-google-agent-development-kit-adk), [61 §16](61-ai-agent-frameworks.md#16-lines-of-code-for-the-same-task)
 
 **Agent** {: #agent }
-:   A model in a loop with tools and a stop condition: at run time the model decides which tool to call, with what arguments, and when it is done. The handbook uses the word strictly (model + tools + loop + stop condition), not for every LLM feature as marketing does. *Example:* "Where is order A1001?" → `get_order` → `get_shipping_status` → final answer: two tool calls and three model calls, capped by `max_steps=6`. → [52 §1](52-ai-agents.md#1-agent-vs-workflow-vs-single-call), [52 §6](52-ai-agents.md#6-a-complete-agent-loop)
+:   A model in a loop with tools and a stop condition: at run time the model decides which tool to call, with what arguments, and when it is done. The handbook uses the word strictly (model + tools + loop + stop condition), not for every LLM feature as marketing does. *Example:* "Where is order A1001?" → `get_order` → `get_shipping_status` → final answer: two tool calls and three model calls, capped by `max_steps=6`. → [52 §1](52-ai-agents.md#1-agent-vs-workflow-vs-single-call), [52 §6](52-ai-agents.md#6-a-complete-agent-loop), [63](63-ai-agent-applications.md)
 
 **Agent framework** {: #agent-framework }
 :   A library that owns some of the machinery around a model (tool-schema generation, the loop, state, streaming, tracing, durable execution) so you write less of it, in exchange for abstractions you debug through and an upgrade treadmill: "leverage you rent, not capability you own". *Example:* the two-tool order agent is 43 lines in plain Python and 19 in Agno, about 43/19 ≈ 2.3× less wiring. → [61 §1](61-ai-agent-frameworks.md#1-what-a-framework-gives-you-and-what-it-costs), [61 §2](61-ai-agent-frameworks.md#2-do-you-need-a-framework), [61 §16](61-ai-agent-frameworks.md#16-lines-of-code-for-the-same-task)
+
+**Agent run (run id, run contract)** {: #agent-run }
+:   One execution of an agent for one request, with its own id, a state (queued, running, waiting for approval, done, failed, cancelled, timed out), a budget and a record of every step and tool call; the *run contract* is the request, record and event schemas a product exposes for it. *Example:* a run with `max_steps: 8` and a 90-second wall clock that reaches step 9 ends as `failed` with reason `budget`, not as a crash. → [62 §3](62-ai-agent-integration.md#3-the-run-contract), [62 §9](62-ai-agent-integration.md#9-reliability)
 
 **Agentic RAG** {: #agentic-rag }
 :   RAG in which retrieval is a tool the model calls in a loop: retrieve, judge whether the result is enough, re-query or switch source, and stop when it can answer. *Example:* four retrieve-and-reflect iterations cost roughly 4× the LLM calls of naive RAG, so use it only for multi-hop questions. → [51 §17.5](51-ai-rag.md#175-agentic-rag)
 
 **Agentic workflow** {: #agentic-workflow }
-:   A mostly code-driven flow that calls a model at fixed points (prompt chaining, routing, parallelization, orchestrator–workers, evaluator–optimizer); the model chooses the path only where the path cannot be known in advance. *Example:* extract → classify → draft, with a gate after the extraction that stops the chain when the JSON fails validation. → [52 §2](52-ai-agents.md#2-agentic-workflow-patterns), [45 §7.3](45-ai-engineer-path.md#73-ai-and-llms-what-the-five-keywords-look-like-as-evidence)
+:   A mostly code-driven flow that calls a model at fixed points (prompt chaining, routing, parallelization, orchestrator–workers, evaluator–optimizer); the model chooses the path only where the path cannot be known in advance. *Example:* extract → classify → draft, with a gate after the extraction that stops the chain when the JSON fails validation. → [52 §2](52-ai-agents.md#2-agentic-workflow-patterns), [45 §7.3](45-ai-engineer-path.md#73-ai-and-llms-what-the-five-keywords-look-like-as-evidence), [63 §15](63-ai-agent-applications.md#15-patterns-that-recur)
 
 **Agno** {: #agno }
 :   A performance-focused Python agent library (formerly Phidata) where one `Agent` object bundles a model, tools, memory and knowledge, with AgentOS as a FastAPI-based runtime for serving agents. *Example:* plain functions as tools and one `Agent(...)` call gave the leanest version of the chapter's order agent: 19 lines. → [61 §7.2](61-ai-agent-frameworks.md#72-agno)
@@ -85,6 +88,9 @@ This is the vocabulary of the AI Engineer menu ([45](45-ai-engineer-path.md)–[
 **API model** {: #api-model }
 :   A model you call over the network and pay for per token; you never see the weights, and the provider may update or retire it. *Example:* pin the exact model identifier in config and re-run your golden set whenever the provider announces a new version under the same name. → [49 §16](49-ai-llm-internals.md#16-open-weight-vs-api-models), [45 §3.5](45-ai-engineer-path.md#35-models-change-under-you)
 
+**Approval gate** {: #approval-gate }
+:   A point in a run where a side effect waits for a human: the run pauses in `waiting_approval`, the approver sees the proposed action with its evidence, and the run resumes or is cancelled; the gate has a deadline and an escalation path. *Example:* of 240 proposed refunds, 180 were under the $50 limit and posted automatically, 60 waited for an approver, who rejected 6: an override rate of 6/60 = 10%. → [62 §7](62-ai-agent-integration.md#7-approvals-in-a-product), [63 §2](63-ai-agent-applications.md#2-customer-support-resolution-agent), [52 §15](52-ai-agents.md#15-human-in-the-loop)
+
 **Asymmetric embedding model** {: #asymmetric-embeddings }
 :   An embedding model trained so that a short query lands near the longer passage that answers it, usually with different instruction prefixes for queries and documents. *Example:* embed documents and the live query with exactly the prefixes the model card names; a missing query prefix silently lowers recall without any error. → [51 §2.5](51-ai-rag.md#25-embedding-the-query-versus-the-document)
 
@@ -95,7 +101,7 @@ This is the vocabulary of the AI Engineer menu ([45](45-ai-engineer-path.md)–[
 :   The layer where each token builds a new vector as a weighted average of other tokens' value vectors, with weights from a softmax over query·key scores divided by \(\sqrt{d_k}\); a causal mask limits each token to earlier positions. *Example:* in "the cat sat", the query of "cat" scores (2, 0) against "the" and "cat"; divided by \(\sqrt4=2\) that is (1, 0), and the softmax gives weights 0.731 and 0.269. → [49 §4](49-ai-llm-internals.md#4-self-attention-by-hand), [32 §6](32-mathematics.md#6-scaled-dot-product-attention), [38 §2](38-derivations.md#2-attention-forward-and-backward)
 
 **Audit log** {: #audit-log }
-:   An append-only record of every tool call, decision and result, written before and after execution and stored outside the agent's sandbox so the agent cannot change it. *Example:* `{"tool": "issue_refund", "args": {"order": "A1001", "usd": 20}, "approved_by": "j.doe", "result": "ok"}` per call. → [52 §5](52-ai-agents.md#5-tool-calling-systems-the-architecture), [11 §5.2](11-kali-agent.md#52-audit-log)
+:   An append-only record of every tool call, decision and result, written before and after execution and stored outside the agent's sandbox so the agent cannot change it. *Example:* `{"tool": "issue_refund", "args": {"order": "A1001", "usd": 20}, "approved_by": "j.doe", "result": "ok"}` per call. → [52 §5](52-ai-agents.md#5-tool-calling-systems-the-architecture), [11 §5.2](11-kali-agent.md#52-audit-log), [62 §5](62-ai-agent-integration.md#5-identity-and-permissions)
 
 **Autograd** {: #autograd }
 :   Automatic differentiation: the framework records every operation of the forward pass as a computational graph, then applies the chain rule backwards to fill in each parameter's gradient. *Example:* `loss.backward()` fills `w.grad`; forgetting `optimizer.zero_grad()` adds each new gradient to the old ones, so steps keep growing. → [48 §6](48-ai-deep-learning.md#6-computational-graphs-and-autograd), [48 §6.4](48-ai-deep-learning.md#64-what-pytorch-adds-and-the-zero-grad-trap)
@@ -180,7 +186,7 @@ This is the vocabulary of the AI Engineer menu ([45](45-ai-engineer-path.md)–[
 :   A model is calibrated if, among the items it scores 0.8, about 80% are positive; it matters whenever probabilities are used as numbers (thresholds, routing, confidence shown to users). Check it with a reliability diagram; LLM logprobs are not calibrated out of the box. *Example:* of 100 answers whose logprob says 0.9, 80 are right: the score is over-confident; fit a logistic regression on held-out labels to correct it. → [47 §18.9](47-ai-classical-ml.md#189-calibration-and-the-brier-score), [49 §9.7](49-ai-llm-internals.md#97-logprobs-as-a-confidence-signal)
 
 **Canary (rollout)** {: #canary }
-:   Routing a small slice of traffic (1–5%) to a new prompt, model or adapter version, watching metrics and SLOs, and widening only if healthy. *Example:* `triage.prompt_version = "triage-v2"` for 5% of traffic, compared with v1 on the override rate before going to 100%. → [55 §18.2](55-ai-production.md#182-rollouts), [45 §2.5](45-ai-engineer-path.md#25-feature-flags-become-prompt-and-model-flags-with-canaries)
+:   Routing a small slice of traffic (1–5%) to a new prompt, model or adapter version, watching metrics and SLOs, and widening only if healthy. *Example:* `triage.prompt_version = "triage-v2"` for 5% of traffic, compared with v1 on the override rate before going to 100%. → [55 §18.2](55-ai-production.md#182-rollouts), [45 §2.5](45-ai-engineer-path.md#25-feature-flags-become-prompt-and-model-flags-with-canaries), [62 §13](62-ai-agent-integration.md#13-rollout-and-change-management)
 
 **Cascade** {: #cascade }
 :   Try a cheap model first and escalate to a larger one only when the cheap answer is unsure or fails a check; it saves money only if the escalation rule really sends the hard cases up. *Example:* small model $0.0001, large $0.0010, 30% escalated: expected cost 0.0001 + 0.3 × 0.0010 = $0.0004 per request, a 60% cut against large-only. → [55 §13](55-ai-production.md#13-routing-and-model-cascades), [45 §4.9](45-ai-engineer-path.md#49-a-cascade-cheap-model-first-escalate-when-unsure)
@@ -213,7 +219,7 @@ This is the vocabulary of the AI Engineer menu ([45](45-ai-engineer-path.md)–[
 :   Splitting documents into passages small enough to be about one thing and large enough to stand alone, each embedded and indexed separately (fixed-size with overlap, recursive by structure, semantic, parent–child); the highest-leverage decision in a RAG system. *Example:* a 12,000-token manual in 512-token chunks with a 64-token overlap (stride 448) gives ⌈11,488/448⌉ + 1 = 27 chunks. → [51 §3](51-ai-rag.md#3-chunking), [51 §3.1](51-ai-rag.md#31-fixed-size-with-overlap)
 
 **Circuit breaker** {: #circuit-breaker }
-:   After a backend fails past a threshold, stop calling it for a cool-down so you fail fast instead of piling requests onto a sick server. *Example:* five failures in 30 s open the breaker for 60 s; meanwhile requests go straight to the fallback model. → [55 §14](55-ai-production.md#14-reliability-fallbacks-timeouts-circuit-breakers-degradation)
+:   After a backend fails past a threshold, stop calling it for a cool-down so you fail fast instead of piling requests onto a sick server. *Example:* five failures in 30 s open the breaker for 60 s; meanwhile requests go straight to the fallback model. → [55 §14](55-ai-production.md#14-reliability-fallbacks-timeouts-circuit-breakers-degradation), [62 §9](62-ai-agent-integration.md#9-reliability)
 
 **Citation (RAG)** {: #citation }
 :   A marker in an answer, such as [1], that points at the numbered chunk supporting a claim and resolves to a real source through the chunk's metadata; citation accuracy is the share of markers that really support their claims. *Example:* an answer makes 4 cited claims and 3 citations check out: citation accuracy 3/4 = 0.75. → [51 §9.1](51-ai-rag.md#91-formatting-citations-and-grounding), [51 §13](51-ai-rag.md#13-end-to-end-rag-evaluation)
@@ -370,6 +376,9 @@ This is the vocabulary of the AI Engineer menu ([45](45-ai-engineer-path.md)–[
 **Dropout** {: #dropout }
 :   During training, zero each activation with probability p and scale the survivors by 1/(1 − p), so the network cannot rely on any single unit; it is off at inference. *Example:* p = 0.5, h = (2, 4, 6, 8) and mask (1, 0, 1, 0) give (4, 0, 12, 0). → [48 §13.1](48-ai-deep-learning.md#131-dropout)
 
+**Dry run** {: #dry-run }
+:   A mode of a write tool that reports what it *would* change without changing anything, so the model (and the approver) can check the plan first. *Example:* `delete_stale_records(dry_run=true)` returns the 3 record ids it would delete; the approver sees them, and only the confirmed call deletes. → [62 §6](62-ai-agent-integration.md#6-connecting-tools), [52 §4](52-ai-agents.md#4-designing-tools)
+
 **DSPy** {: #dspy }
 :   A framework for programming rather than prompting language models: you declare typed signatures and compose modules, and an optimiser tunes the prompts and few-shot examples against a metric on an eval set. *Example:* declare `"question -> answer"`, wrap it in `dspy.ReAct` with two tools, and let an optimiser such as MIPROv2 choose the instructions; the chapter's order agent took 19 lines. → [61 §10](61-ai-agent-frameworks.md#10-prompt-optimization-programming-dspy)
 
@@ -413,6 +422,9 @@ This is the vocabulary of the AI Engineer menu ([45](45-ai-engineer-path.md)–[
 
 **Error budget** {: #error-budget }
 :   (1 − SLO) × total: the failures you may spend in a window before you stop shipping features and fix reliability. *Example:* an SLO of 99.5% successful responses over 2M requests a month allows (1 − 0.995) × 2,000,000 = 10,000 failures. → [55 §18.3](55-ai-production.md#183-slos-and-error-budgets)
+
+**Escalation** {: #escalation }
+:   Handing a task from the agent to a person when a rule fires: low confidence, a failed retry, an amount over a limit, an approval that timed out. It is a designed outcome, not a failure. *Example:* a document extractor sends any invoice with a field confidence under 0.6, or 2 failed validations, to the review queue; the rest post automatically. → [63 §7](63-ai-agent-applications.md#7-document-processing-agent-invoices-and-contracts), [62 §7](62-ai-agent-integration.md#7-approvals-in-a-product)
 
 **EU AI Act** {: #eu-ai-act }
 :   The EU regulation that sorts AI systems into risk tiers (unacceptable, high-risk, limited/transparency, minimal) with obligations per tier; in force since 1 August 2024 and applying in stages, with high-risk dates moved by the 2026 Digital Omnibus on AI. *Example:* a support chatbot sits in the transparency tier: it must tell users they are talking to an AI (Article 50). → [56 §16.2](56-ai-safety.md#162-the-eu-ai-act-risk-tiers), [56 §16.3](56-ai-safety.md#163-the-ai-act-timeline-as-amended)
@@ -460,6 +472,9 @@ This is the vocabulary of the AI Engineer menu ([45](45-ai-engineer-path.md)–[
 
 **Feature engineering** {: #feature-engineering }
 :   Turning raw fields into numbers a model can use: scaling, one-hot encoding, TF-IDF for text, date parts, cyclic encodings, missing-value handling. For classical models it is often worth more than the choice of algorithm. *Example:* encode the hour h as \((\sin\frac{2\pi h}{24},\cos\frac{2\pi h}{24})\): 23:00 becomes (−0.259, 0.966) and 01:00 (0.259, 0.966), neighbours instead of 22 apart. → [47 §21](47-ai-classical-ml.md#21-feature-engineering), [47 §21.4](47-ai-classical-ml.md#214-dates-and-times)
+
+**Feature flag** {: #feature-flag }
+:   A runtime switch that turns a prompt, model or tool version on for some traffic and off for the rest without a deploy; the mechanism behind shadow runs, canaries and the kill switch. *Example:* `agent_v2` on for 5% of 2,000 tenants is a 100-tenant canary; flipping it off stops new v2 runs at once. → [62 §13](62-ai-agent-integration.md#13-rollout-and-change-management), [55 §18.2](55-ai-production.md#182-rollouts)
 
 **Few-shot prompting** {: #few-shot }
 :   Putting a handful of worked input → output examples in the prompt, usually as user/assistant pairs, so the model copies the mapping and the exact output shape; the examples also bias the label distribution. *Example:* three pairs such as "I was double-charged for June." → `billing` before the real ticket: 8 messages instead of the zero-shot 2. → [50 §5](50-ai-prompting-apis.md#5-zero-shot-vs-few-shot), [50 §5.1](50-ai-prompting-apis.md#51-how-examples-bias-the-label-distribution)
@@ -510,6 +525,9 @@ This is the vocabulary of the AI Engineer menu ([45](45-ai-engineer-path.md)–[
 
 **Golden set** {: #golden-set }
 :   A curated, versioned set of real inputs with expected outputs or graders, frozen before you look at results; it is the asset, the model is replaceable. *Example:* `golden-2026-10-28`: 500 sampled tickets labelled twice, split 200 dev / 300 test, never edited without a changelog entry. → [54 §7](54-ai-evaluation.md#7-building-a-golden-set), [45 §4.3](45-ai-engineer-path.md#43-step-1-build-a-golden-set), [09 §3](09-evaluation.md#3-the-private-golden-set)
+
+**Golden trajectory** {: #golden-trajectory }
+:   A recorded reference run for a scenario: the expected sequence of tool calls (with their arguments) and the expected final answer, used as a test case so a change to a prompt or tool is caught when the path changes. *Example:* for "where is order A1001", the golden trajectory is `get_order` then `get_shipping_status`, ending with the tracking id; a run that calls `get_order` twice fails the check even if its answer is right. → [62 §12](62-ai-agent-integration.md#12-testing-and-ci), [52 §17](52-ai-agents.md#17-evaluating-agents)
 
 **GQA (grouped-query attention)** {: #gqa }
 :   Attention that keeps all the query heads but shares each key/value head among several of them, which shrinks the KV cache for a small quality cost. *Example:* Qwen3-14B has 40 query heads and 8 KV heads: 2 × 40 × 8 × 128 × 2 = 163,840 bytes (160 KiB) of cache per token, a fifth of the 800 KiB without sharing. → [49 §5.2](49-ai-llm-internals.md#52-grouped-query-attention-gqa), [32 §6.2](32-mathematics.md#62-grouped-query-attention-gqa), [37 §2](37-architecture.md#2-gqa-shapes-and-the-cache)
@@ -571,7 +589,7 @@ This is the vocabulary of the AI Engineer menu ([45](45-ai-engineer-path.md)–[
 :   The three MCP roles: the host is the application that holds the model and the conversation; it runs one client per server; a server exposes tools, resources and prompts and never sees the model. *Example:* a desktop assistant connected to three MCP servers runs three clients. → [58 §2](58-ai-mcp.md#2-architecture-host-client-server), [58 §2.2](58-ai-mcp.md#22-where-the-llm-sits)
 
 **Human-in-the-loop** {: #human-in-the-loop }
-:   A person approves (or performs) actions with side effects before they run: read-only steps run automatically, writes are gated, and the default is deny. *Example:* the agent proposes "refund $20 on A1001"; the reviewer sees the exact tool name and arguments, not a paraphrase, and clicks approve. → [52 §15](52-ai-agents.md#15-human-in-the-loop), [11 §5.1](11-kali-agent.md#51-confirmation-policy)
+:   A person approves (or performs) actions with side effects before they run: read-only steps run automatically, writes are gated, and the default is deny. *Example:* the agent proposes "refund $20 on A1001"; the reviewer sees the exact tool name and arguments, not a paraphrase, and clicks approve. → [52 §15](52-ai-agents.md#15-human-in-the-loop), [11 §5.1](11-kali-agent.md#51-confirmation-policy), [62 §7](62-ai-agent-integration.md#7-approvals-in-a-product)
 
 **Hybrid search** {: #hybrid-search }
 :   Running lexical (BM25) and dense (embedding) retrieval together and fusing their rankings, usually with reciprocal rank fusion, because they fail on different queries. *Example:* BM25 finds the page that literally contains `ERR_503`; embeddings find "the server keeps falling over"; hybrid returns both. → [51 §7](51-ai-rag.md#7-hybrid-search-and-reciprocal-rank-fusion), [51 §6.1](51-ai-rag.md#61-why-lexical-still-matters)
@@ -585,7 +603,7 @@ This is the vocabulary of the AI Engineer menu ([45](45-ai-engineer-path.md)–[
 ## I
 
 **Idempotency** {: #idempotency }
-:   Repeating an operation has the same effect as doing it once, usually through an idempotency key or a design where a repeat is a no-op; required before you retry any side-effecting tool call. *Example:* a second `issue_refund(order="A1001", key="r-42")` returns the stored result and logs an idempotent hit instead of refunding twice. → [50 §15](50-ai-prompting-apis.md#15-timeouts-retries-backoff-and-idempotency), [52 §5](52-ai-agents.md#5-tool-calling-systems-the-architecture)
+:   Repeating an operation has the same effect as doing it once, usually through an idempotency key or a design where a repeat is a no-op; required before you retry any side-effecting tool call. *Example:* a second `issue_refund(order="A1001", key="r-42")` returns the stored result and logs an idempotent hit instead of refunding twice. → [50 §15](50-ai-prompting-apis.md#15-timeouts-retries-backoff-and-idempotency), [52 §5](52-ai-agents.md#5-tool-calling-systems-the-architecture), [62 §4](62-ai-agent-integration.md#4-state-and-sessions)
 
 **Incident response (AI feature)** {: #incident-response }
 :   The runbook for an AI failure in production: detect, triage, contain, preserve evidence, find the failed control, recover behind a canary, notify, and write a blameless postmortem with a new regression case. Containment comes before diagnosis. *Example:* the bot emailed one customer's order history to another: disable the `send_email` tool by feature flag first, then snapshot the prompts, retrieved context and tool log read-only. → [56 §18](56-ai-safety.md#18-incident-response-for-an-ai-feature), [12 §7](12-safety-legal.md#7-incident-response)
@@ -601,6 +619,9 @@ This is the vocabulary of the AI Engineer menu ([45](45-ai-engineer-path.md)–[
 
 **Instruct model** {: #instruct-model }
 :   A base model after supervised fine-tuning (and usually preference tuning) on conversations, so it follows instructions inside its chat template and stops at the end of its turn; the model card says which kind a checkpoint is. *Example:* deploy the instruct (chat) checkpoint for an assistant, and fine-tune it rather than the base when you want to keep its chat behaviour. → [49 §12.2](49-ai-llm-internals.md#122-supervised-fine-tuning-sft), [49 §17.1](49-ai-llm-internals.md#171-the-model-card)
+
+**Integration shape** {: #integration-shape }
+:   The way an agent is attached to a product: an in-process call inside a request handler, an agent service with run ids, a streaming chat UI, a queue worker started by events, a scheduled batch job, a durable workflow engine, an agent used as a tool by another agent, or a local harness. The choice follows latency, duration, approvals, volume and side effects. *Example:* a "summarise this ticket" button is an in-process call; a nightly job that triages 5,000 new tickets is a batch agent on a queue. → [62 §2](62-ai-agent-integration.md#2-integration-shapes), [63 §14](63-ai-agent-applications.md#14-the-twelve-compared)
 
 **Interleaving** {: #interleaving }
 :   An online evaluation for rankings: merge the results of two systems into one list and see which system's results users click; more sensitive than an A/B test because each user compares both directly. *Example:* search results alternate between the old and new retriever, and the new one earns 60 of 100 clicks. → [54 §11](54-ai-evaluation.md#11-online-evaluation)
@@ -637,7 +658,7 @@ This is the vocabulary of the AI Engineer menu ([45](45-ai-engineer-path.md)–[
 :   Classify a point by a majority vote among its k closest training points; there is no training step, all the cost moves to prediction time, and the features must be scaled. *Example:* the 3 nearest tickets are urgent, urgent and normal, so the new ticket is predicted urgent (2 of 3 votes). → [47 §11](47-ai-classical-ml.md#11-k-nearest-neighbours), [47 §11.2](47-ai-classical-ml.md#112-why-scaling-matters)
 
 **Kill switch** {: #kill-switch }
-:   An out-of-band way to stop an agent immediately, enforced outside the model: a wall-clock budget, a tool-call cap, a signal that kills the process and its children, and a way to tear down its environment. *Example:* the Kali agent's `SIGINT` stops the agent and kills the bridge's child processes; `docker compose down -v` removes the lab network. → [11 §5.3](11-kali-agent.md#53-kill-switch), [52 §14](52-ai-agents.md#14-budgets)
+:   An out-of-band way to stop an agent immediately, enforced outside the model: a wall-clock budget, a tool-call cap, a signal that kills the process and its children, and a way to tear down its environment. *Example:* the Kali agent's `SIGINT` stops the agent and kills the bridge's child processes; `docker compose down -v` removes the lab network. → [11 §5.3](11-kali-agent.md#53-kill-switch), [52 §14](52-ai-agents.md#14-budgets), [62 §13](62-ai-agent-integration.md#13-rollout-and-change-management)
 
 **KL divergence** {: #kl-divergence }
 :   Kullback–Leibler divergence: cross-entropy minus entropy, the extra surprise from predicting with q when outcomes follow p; zero only when q = p, and not symmetric. It appears in distillation losses, in the drift penalty of RLHF and DPO, and in drift detection. *Example:* p = (0.5, 0.5), q = (0.75, 0.25): KL(p‖q) = 0.5 ln(0.5/0.75) + 0.5 ln(0.5/0.25) ≈ 0.144 nats. → [46 §12.4](46-ai-math.md#124-kl-divergence), [39 §2.1](39-gemma-distillation.md#21-logit-distillation), [60 §16.3](60-ai-data-preparation.md#163-detecting-input-drift)
@@ -1041,6 +1062,9 @@ This is the vocabulary of the AI Engineer menu ([45](45-ai-engineer-path.md)–[
 **Query rewriting (query transformation)** {: #query-rewriting }
 :   Changing the user's words before retrieval: rewrite them into a clean search query, generate several paraphrases (multi-query), embed a hypothetical answer (HyDE), or condense a chat history into one standalone question. *Example:* "cant login app keeps crashing" becomes "login failure mobile app crash". → [51 §10](51-ai-rag.md#10-query-transformation)
 
+**Queue worker** {: #queue-worker }
+:   An integration shape where an event (a webhook, a new ticket, a failed job) puts a run request on a queue and worker processes pick runs up, so bursts are absorbed and a crashed worker's run is retried from its last checkpoint. *Example:* 3 workers at 40 s per run clear 3 × 3,600/40 = 270 runs an hour; a burst of 500 tickets just makes the queue longer, not the service slower. → [62 §2](62-ai-agent-integration.md#2-integration-shapes), [62 §4](62-ai-agent-integration.md#4-state-and-sessions)
+
 ## R
 
 **R² (coefficient of determination)** {: #r-squared }
@@ -1072,6 +1096,9 @@ This is the vocabulary of the AI Engineer menu ([45](45-ai-engineer-path.md)–[
 
 **Reciprocal rank fusion (RRF)** {: #rrf }
 :   Merging several ranked lists by giving each document \(\sum 1/(k+\text{rank})\) over the lists, usually with k = 60; it fuses by rank, so incomparable scores (cosine, BM25) need no calibration. *Example:* B ranked 2nd by BM25 and 1st by vectors scores 1/62 + 1/61 ≈ 0.03252 and beats A, ranked 1st and 3rd, at 1/61 + 1/63 ≈ 0.03227. → [51 §7](51-ai-rag.md#7-hybrid-search-and-reciprocal-rank-fusion)
+
+**Record and replay** {: #record-replay }
+:   Testing technique for code that calls a model: record the model's responses once, then replay them in tests so the suite is fast, deterministic and free; re-record when the prompt or model changes. *Example:* 120 recorded responses replay in about 4 s, against 120 × 8 s = 960 s, 16 minutes, of live calls. → [62 §12](62-ai-agent-integration.md#12-testing-and-ci), [54 §10](54-ai-evaluation.md#10-evals-in-ci-as-a-release-gate)
 
 **Red-teaming** {: #red-teaming }
 :   Attacking your own system as a repeatable process: scope, test cases stored as data (a benign canary payload plus a mechanical detector), an attack-success rate tracked per build, and every incident added as a regression case. *Example:* four canary injections all land in the naive app and none behind a tool allow-list, a link filter and a secret check; Project 12 asks for 15+ cases because 0 of 4 still allows an ASR up to 0.49. → [56 §13](56-ai-safety.md#13-red-teaming-as-a-process), [57 Project 12](57-ai-career.md#project-12-a-red-team-suite)
@@ -1193,7 +1220,7 @@ This is the vocabulary of the AI Engineer menu ([45](45-ai-engineer-path.md)–[
 :   Gradient descent where each step uses the gradient of a random mini-batch instead of the whole dataset: noisier, but far cheaper per step, and the noise often helps. *Example:* 100,000 examples at batch size 50 give 100,000/50 = 2,000 steps per epoch. → [46 §6.7](46-ai-math.md#67-stochastic-and-mini-batch-gradients), [48 §8.1](48-ai-deep-learning.md#81-sgd)
 
 **Shadow deployment** {: #shadow-deployment }
-:   Running a new model or prompt version on real traffic without showing its output to users, and comparing its answers offline; no user risk, but you pay for both versions while it runs. *Example:* for a week every support question goes to both the current and the candidate prompt; users see only the current answer, and the logs give a comparison on thousands of real questions before any canary. → [55 §18.2](55-ai-production.md#182-rollouts)
+:   Running a new model or prompt version on real traffic without showing its output to users, and comparing its answers offline; no user risk, but you pay for both versions while it runs. *Example:* for a week every support question goes to both the current and the candidate prompt; users see only the current answer, and the logs give a comparison on thousands of real questions before any canary. → [55 §18.2](55-ai-production.md#182-rollouts), [62 §13](62-ai-agent-integration.md#13-rollout-and-change-management)
 
 **Shingles** {: #shingles }
 :   The overlapping word (or character) n-grams of a text, used with Jaccard similarity and MinHash to find near-duplicates. *Example:* "reset my password now" has three word 2-shingles: "reset my", "my password" and "password now". → [60 §6.2](60-ai-data-preparation.md#62-near-duplicates-shingles-and-jaccard)
@@ -1214,7 +1241,7 @@ This is the vocabulary of the AI Engineer menu ([45](45-ai-engineer-path.md)–[
 :   A small draft model proposes k tokens and the large model checks them all in one forward pass, keeping the agreed prefix; the output has the large model's distribution, but each large-model pass yields several tokens. *Example:* with acceptance rate α = 0.8 and k = 4 drafted tokens, the expected tokens per large-model pass is \((1-0.8^5)/(1-0.8)\approx3.36\). → [55 §8](55-ai-production.md#8-speculative-decoding), [38 §10](38-derivations.md#10-speculative-decoding-speedup), [43](43-math-examples.md#speculative-speedup)
 
 **SSE (server-sent events)** {: #sse }
-:   A one-way HTTP streaming format: the server keeps the response open and sends `data: …` lines separated by blank lines; OpenAI-compatible APIs stream tokens this way and end with `data: [DONE]`. *Example:* a client measures time to first token as the arrival time of the first `data:` chunk that carries content. → [50 §12](50-ai-prompting-apis.md#12-streaming-with-sse), [58 §6.3](58-ai-mcp.md#63-the-deprecated-httpsse-transport)
+:   A one-way HTTP streaming format: the server keeps the response open and sends `data: …` lines separated by blank lines; OpenAI-compatible APIs stream tokens this way and end with `data: [DONE]`. *Example:* a client measures time to first token as the arrival time of the first `data:` chunk that carries content. → [50 §12](50-ai-prompting-apis.md#12-streaming-with-sse), [58 §6.3](58-ai-mcp.md#63-the-deprecated-httpsse-transport), [62 §8](62-ai-agent-integration.md#8-streaming-to-the-ui)
 
 **Standard error** {: #standard-error }
 :   The standard deviation of an estimate across hypothetical repeated samples; for a pass rate p on n items it is \(\sqrt{p(1-p)/n}\), so it shrinks only with the square root of n. *Example:* 80% on 100 items has a standard error of \(\sqrt{0.8\times0.2/100}=0.04\); quadrupling to 400 items only halves it, to 0.02. → [46 §13.3](46-ai-math.md#133-standard-error)
@@ -1257,8 +1284,14 @@ This is the vocabulary of the AI Engineer menu ([45](45-ai-engineer-path.md)–[
 
 ## T
 
+**Task success rate** {: #task-success-rate }
+:   The share of agent runs that reach the correct end state on a labelled task set, judged by the outcome (the ticket resolved, the test passing) rather than by the final message; reported with an interval and alongside steps and cost per run. *Example:* 180 of 200 tasks succeed: 0.90, with a 95% Wilson interval of about (0.851, 0.934). → [63 §9](63-ai-agent-applications.md#9-sales-crm-assistant), [62 §10](62-ai-agent-integration.md#10-observability), [52 §17](52-ai-agents.md#17-evaluating-agents)
+
 **Temperature** {: #temperature }
 :   Divides the logits before the softmax: below 1 it sharpens the distribution toward the top token, above 1 it flattens it, and temperature 0 means greedy decoding. *Example:* logits (2, 1, 0) at T = 0.5 become (4, 2, 0), about (0.867, 0.117, 0.016); at T = 2 they become (1, 0.5, 0), about (0.506, 0.307, 0.186). → [46 §10.2](46-ai-math.md#102-temperature), [49 §9.2](49-ai-llm-internals.md#92-temperature)
+
+**Tenant (multi-tenancy)** {: #tenant }
+:   One customer organisation sharing a product with others; an agent runs under the tenant's identity, with the tenant's tool allow-list, data filters and budget, so one tenant's run can never read or spend another's. *Example:* tenant A's $20-a-day budget stops A's runs at the limit while tenant B's keep going; the retrieval filter is `tenant_id = A` before any search. → [62 §5](62-ai-agent-integration.md#5-identity-and-permissions), [51 §11](51-ai-rag.md#11-metadata-filters-and-access-control)
 
 **Tensor** {: #tensor }
 :   An n-dimensional array of numbers with a shape; scalars, vectors and matrices are tensors of rank 0, 1 and 2, and a batch of token embeddings has rank 3. *Example:* 8 sequences of 2,048 tokens at Qwen3-14B's hidden size of 5,120 form a tensor of shape `[8, 2048, 5120]`, which holds 83,886,080 numbers. → [46 §2](46-ai-math.md#2-scalars-vectors-matrices-and-tensors), [37 §1.1](37-architecture.md#11-shape-trace-for-qwen3-14b)
@@ -1385,6 +1418,9 @@ This is the vocabulary of the AI Engineer menu ([45](45-ai-engineer-path.md)–[
 
 **Warmup** {: #warmup }
 :   Raising the learning rate from near zero to its peak over the first steps of training, so the first large gradients on fresh weights do not wreck the model; usually followed by a decay schedule. *Example:* with a peak of \(2\times10^{-4}\) and 100 linear warmup steps, step 50 uses \(1\times10^{-4}\). → [48 §9.2](48-ai-deep-learning.md#92-warmup-and-cosine-decay)
+
+**Webhook** {: #webhook }
+:   An HTTP callback another system sends when something happens; for agents it starts runs (a ticket was created) and finishes long tool calls (a label was generated) without polling. *Example:* a shipping label takes 40 s to generate; a callback resumes the waiting run once, where polling every 2 s would have made 20 requests. → [62 §6](62-ai-agent-integration.md#6-connecting-tools), [62 §2](62-ai-agent-integration.md#2-integration-shapes)
 
 **Weight decay** {: #weight-decay }
 :   A regularizer that shrinks every weight toward zero a little at each step; AdamW applies it directly to the weights, decoupled from the gradient. *Example:* with learning rate \(10^{-3}\) and decay 0.01, each step multiplies a weight by \(1-10^{-5}\), so 1.0 becomes 0.99999 before the gradient update. → [48 §13.2](48-ai-deep-learning.md#132-weight-decay), [48 §8.4](48-ai-deep-learning.md#84-adamw-decoupled-weight-decay), [43](43-math-examples.md#weight-decay)

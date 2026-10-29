@@ -121,6 +121,8 @@ Or use `make docs-serve` / `make docs`. `site/` is generated and git-ignored.
 │   ├── 59-ai-glossary.md       AI engineering terms with examples
 │   ├── 60-ai-data-preparation.md sourcing, parsing, cleaning, dedup, labels, splits, versions
 │   ├── 61-ai-agent-frameworks.md agent frameworks compared: when to use, pros and cons
+│   ├── 62-ai-agent-integration.md integration shapes, run contract, approvals, a runnable agent service
+│   ├── 63-ai-agent-applications.md twelve agent applications end to end, with evals and costs
 │   ├── appendix-a-configs.md  every config, explained
 │   ├── appendix-b-scripts.md  what each script does
 │   └── appendix-c-runbook.md  day-by-day execution plan
@@ -396,7 +398,7 @@ A separate menu for engineers moving into AI work. Every concept comes with a pl
 
 - [45 — The path](docs/45-ai-engineer-path.md): what an AI engineer does, what transfers from software engineering, what is new, the skills map and a self-assessment.
 - Foundations: [46 — Math](docs/46-ai-math.md), [47 — Machine learning](docs/47-ai-classical-ml.md), [48 — Deep learning](docs/48-ai-deep-learning.md), [49 — How LLMs work](docs/49-ai-llm-internals.md).
-- Building: [50 — Prompting and APIs](docs/50-ai-prompting-apis.md), [60 — Data preparation](docs/60-ai-data-preparation.md), [51 — RAG](docs/51-ai-rag.md), [52 — Agents](docs/52-ai-agents.md), [58 — MCP](docs/58-ai-mcp.md), [61 — Agent frameworks](docs/61-ai-agent-frameworks.md), [53 — Fine-tuning](docs/53-ai-fine-tuning.md).
+- Building: [50 — Prompting and APIs](docs/50-ai-prompting-apis.md), [60 — Data preparation](docs/60-ai-data-preparation.md), [51 — RAG](docs/51-ai-rag.md), [52 — Agents](docs/52-ai-agents.md), [58 — MCP](docs/58-ai-mcp.md), [61 — Agent frameworks](docs/61-ai-agent-frameworks.md), [62 — Integrating agents](docs/62-ai-agent-integration.md), [63 — Real-world applications](docs/63-ai-agent-applications.md), [53 — Fine-tuning](docs/53-ai-fine-tuning.md).
 - Shipping: [54 — Evaluation](docs/54-ai-evaluation.md), [55 — Production](docs/55-ai-production.md), [56 — Safety and security](docs/56-ai-safety.md).
 - Career: [57 — Roadmap, projects and interviews](docs/57-ai-career.md), [59 — Glossary](docs/59-ai-glossary.md).
 

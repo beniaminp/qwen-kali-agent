@@ -992,4 +992,4 @@ Wire a detector like this into the loop: when it fires, break the budget early, 
 
     \(S = 0.95^{20} \approx 0.3585\) — about a third. The most effective lever is usually to **shorten the chain**: halving \(n\) to 10 lifts \(S\) to \(0.95^{10}\approx 0.599\). Raising \(p\) with retries and verification (§12) is the complementary lever.
 
-Next: [53 — Fine-tuning](53-ai-fine-tuning.md) when prompting and tools are not enough; [54 — Evaluation](54-ai-evaluation.md) to measure any of this; [61 — Agent frameworks](61-ai-agent-frameworks.md) for the libraries that wrap this loop.
+Next: [62 — Integrating agents](62-ai-agent-integration.md) to ship this loop inside a product, and [63 — Agents in the real world](63-ai-agent-applications.md) for twelve applications built on it; [53 — Fine-tuning](53-ai-fine-tuning.md) when prompting and tools are not enough; [54 — Evaluation](54-ai-evaluation.md) to measure any of this; [61 — Agent frameworks](61-ai-agent-frameworks.md) for the libraries that wrap this loop.

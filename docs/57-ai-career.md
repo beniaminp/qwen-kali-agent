@@ -20,7 +20,7 @@ A suggestion, not a law: **24 weeks at roughly 10 hours a week**, about 240 hour
 | 9 | Data preparation | [60](60-ai-data-preparation.md), [04](04-data-strategy.md), [06](06-data-format.md) | **Project 2** — clean, dedup, version a messy corpus + data card |
 | 10–11 | Prompting and LLM APIs | [50](50-ai-prompting-apis.md) | **Project 3** — structured invoice extractor with validation |
 | 12–13 | Embeddings and RAG | [51](51-ai-rag.md) | **Project 4** — RAG over a docs site with an eval |
-| 14 | Agents and tool use | [52](52-ai-agents.md) | **Project 5** — tool-using agent with budgets + approvals |
+| 14 | Agents and tool use | [52](52-ai-agents.md), [62](62-ai-agent-integration.md), [63](63-ai-agent-applications.md) | **Project 5** — tool-using agent with budgets + approvals, shipped behind a run API |
 | 15 | MCP | [58](58-ai-mcp.md), [11](11-kali-agent.md) | **Project 6** — build, test and publish an MCP server |
 | 16 | Agent frameworks | [61](61-ai-agent-frameworks.md) | Port Project 5 to one framework; write the trade-off note |
 | 17–18 | Fine-tuning | [53](53-ai-fine-tuning.md), [08](08-finetuning.md), [15](15-agentic-methods.md), [17](17-finetune-2026-update.md) | **Project 7** — LoRA fine-tune on the M1 Pro, before/after eval |
@@ -46,8 +46,8 @@ Job posts list buzzwords; your job is to translate each into a skill you can pro
 |---|---|---|---|
 | RAG architecture: chunking, retrieval, reranking, citations | [51](51-ai-rag.md) | Project 4 (RAG + eval) | 5.6: when to rerank; naive vs hybrid retrieval |
 | Vector databases: exact vs ANN, memory, filters, tenancy | [51](51-ai-rag.md), [60](60-ai-data-preparation.md) | Project 4 | 5.6: choosing a vector DB; index memory math |
-| Tool-calling systems | [50](50-ai-prompting-apis.md), [52](52-ai-agents.md), [58](58-ai-mcp.md) | Projects 5, 6 | 5.7: tool schema design; MCP (5.8) |
-| Autonomous agents | [52](52-ai-agents.md), [61](61-ai-agent-frameworks.md) | Project 5 | 5.7: workflow vs autonomous; reliability compounding |
+| Tool-calling systems | [50](50-ai-prompting-apis.md), [52](52-ai-agents.md), [58](58-ai-mcp.md), [62](62-ai-agent-integration.md) | Projects 5, 6 | 5.7: tool schema design; MCP (5.8) |
+| Autonomous agents | [52](52-ai-agents.md), [61](61-ai-agent-frameworks.md), [62](62-ai-agent-integration.md), [63](63-ai-agent-applications.md) | Project 5 | 5.7: workflow vs autonomous; reliability compounding |
 
 ### 2.2 "AI & LLMs"
 

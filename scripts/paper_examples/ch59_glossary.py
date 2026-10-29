@@ -1066,6 +1066,20 @@ close(sqrt(2 / 512), 0.0625, 1e-12)   # He, fan_in 512
 eq(131_072 // 32_768, 4)              # YaRN extension
 eq((9 - 5) / 2, 2)                    # z-score
 
+# ------------------------------- entries added with chapters 62 and 63
+eq(8 + 1, 9)                                   # Agent run: step 9 exceeds max_steps 8
+eq(240 - 180, 60)                              # Approval gate
+close(6 / 60, 0.10, 1e-12)
+close(0.05 * 2000, 100, 1e-9)                  # Feature flag
+eq(3 * 3600 // 40, 270)                        # Queue worker
+eq(120 * 8, 960)                               # Record and replay
+close(960 / 60, 16, 1e-12)
+lo, hi = wilson(180, 200)                      # Task success rate
+close(180 / 200, 0.90, 1e-12)
+close(lo, 0.851, 5e-4)
+close(hi, 0.934, 5e-4)
+eq(40 // 2, 20)                                # Webhook
+
 # --------------------------------------------- helpers used by other entries
 # Unicode normalization and HTML escaping behave as the handbook describes
 eq(unicodedata.normalize("NFKC", "１２３"), "123")

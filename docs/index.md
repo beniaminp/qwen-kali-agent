@@ -33,7 +33,7 @@ hide:
   <div class="gb-stats">
     <div class="gb-stat"><strong>3</strong><span>specializations</span></div>
     <div class="gb-stat"><strong>2</strong><span>model families</span></div>
-    <div class="gb-stat"><strong>62</strong><span>chapters</span></div>
+    <div class="gb-stat"><strong>64</strong><span>chapters</span></div>
     <div class="gb-stat"><strong>32 GB</strong><span>target hardware</span></div>
   </div>
 </div>
@@ -178,9 +178,14 @@ hide:
 
 <div class="gb-new">
   <div class="gb-new__item">
+    <span class="gb-new__date">29 Oct 2026</span>
+    <strong><a href="62-ai-agent-integration/">Agents, integrated and applied</a></strong>
+    <p>Eight ways to wire an agent into a product, the run contract and a runnable agent service, then <a href="63-ai-agent-applications/">twelve real applications</a> end to end: support, coding in CI, data analysis, incident response, documents, research, sales, e-commerce, helpdesk, pipelines and QA.</p>
+  </div>
+  <div class="gb-new__item">
     <span class="gb-new__date">28 Oct 2026</span>
     <strong><a href="45-ai-engineer-path/">New menu: AI Engineer</a></strong>
-    <p>What it takes to move from software engineering to AI engineering: 17 chapters from vectors and gradients to data preparation, RAG, agents, MCP, agent frameworks, evals, serving and interviews, with on-paper examples and tested code.</p>
+    <p>What it takes to move from software engineering to AI engineering: 19 chapters from vectors and gradients to data preparation, RAG, agents, MCP, agent frameworks, agent integration and real applications, evals, serving and interviews, with on-paper examples and tested code.</p>
   </div>
   <div class="gb-new__item">
     <span class="gb-new__date">28 Oct 2026</span>
@@ -201,11 +206,6 @@ hide:
     <span class="gb-new__date">27 Oct 2026</span>
     <strong><a href="43-math-examples/">Worked examples, grounded</a></strong>
     <p>Every formula now starts from a real situation — a next token, a weight row, an eval batch — with a corrected Wilson interval and 64 checked values.</p>
-  </div>
-  <div class="gb-new__item">
-    <span class="gb-new__date">27 Oct 2026</span>
-    <strong><a href="37-architecture/">Gemma 12B count corrected</a></strong>
-    <p>Global layers are K=V with no <code>v_proj</code>, and their tensor is <code>[1, 1, T, 512]</code>: the text decoder is 11.91B, the checkpoint 11.96B.</p>
   </div>
 </div>
 
