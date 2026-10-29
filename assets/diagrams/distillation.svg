@@ -1,0 +1,106 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 900 470" role="img" aria-labelledby="title desc">
+  <title id="title">Three distillation directions</title>
+  <desc id="desc">A stronger teacher can distil into Gemma 4 12B, Gemma 4 12B can distil into E4B or E2B, and Gemma 4 12B can act as a data teacher for any student. Logit distillation needs the same tokenizer; sequence distillation works across tokenizers.</desc>
+  <style>
+    .bg { fill: #fbfaff; }
+    .teacher { fill: #ede9fe; stroke: #6d28d9; stroke-width: 2; rx: 14; }
+    .student { fill: #e0f2fe; stroke: #0284c7; stroke-width: 2; rx: 14; }
+    .data { fill: #fef3c7; stroke: #d97706; stroke-width: 2; rx: 14; }
+    .smallbox { fill: #ffffff; stroke: #cbd5e1; stroke-width: 1.5; rx: 10; }
+    .arrow { stroke: #4c1d95; stroke-width: 2; fill: none; marker-end: url(#arrow); }
+    .dash { stroke: #0284c7; stroke-width: 2; fill: none; stroke-dasharray: 6 4; marker-end: url(#arrow); }
+    .amber { stroke: #b45309; stroke-width: 2; fill: none; marker-end: url(#arrow); }
+    .txt { font-family: Inter, Arial, sans-serif; font-size: 15px; fill: #1f2937; }
+    .small { font-family: Inter, Arial, sans-serif; font-size: 12px; fill: #4b5563; }
+    .label { font-family: Inter, Arial, sans-serif; font-size: 14px; font-weight: 700; fill: #5b21b6; }
+    .mono { font-family: "JetBrains Mono", monospace; font-size: 12px; fill: #4c1d95; }
+    .badge { font-family: Inter, Arial, sans-serif; font-size: 11px; font-weight: 700; fill: #ffffff; }
+  </style>
+  <defs>
+    <marker id="arrow" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse">
+      <path d="M 0 0 L 10 5 L 0 10 z" fill="#4c1d95"/>
+    </marker>
+  </defs>
+  <rect class="bg" width="900" height="470"/>
+  <text class="label" x="30" y="32">A. Stronger teacher → Gemma 4 12B</text>
+  <text class="label" x="310" y="32">B. Gemma 4 12B → E4B / E2B</text>
+  <text class="label" x="620" y="32">C. Gemma 4 12B as data teacher</text>
+
+  <!-- A -->
+  <g transform="translate(30,55)">
+    <rect class="teacher" x="0" y="0" width="120" height="74"/>
+    <text class="txt" x="14" y="26">Gemma 4 31B</text>
+    <text class="small" x="14" y="46">Qwen3.8-27B</text>
+    <text class="small" x="14" y="62">DeepSeek / 12B self</text>
+    <path class="arrow" d="M120 38 H190"/>
+    <rect class="student" x="190" y="0" width="125" height="74"/>
+    <text class="txt" x="204" y="26">Gemma 4 12B</text>
+    <text class="small" x="204" y="46">student</text>
+    <text class="mono" x="204" y="63">262k vocab</text>
+    <text class="small" x="330" y="24">logit KD if same</text>
+    <text class="small" x="330" y="40">tokenizer; else</text>
+    <text class="small" x="330" y="56">sequence KD</text>
+  </g>
+
+  <!-- B -->
+  <g transform="translate(310,55)">
+    <rect class="teacher" x="0" y="0" width="120" height="74"/>
+    <text class="txt" x="14" y="26">Gemma 4 12B</text>
+    <text class="small" x="14" y="46">teacher</text>
+    <text class="mono" x="14" y="63">262k vocab</text>
+    <path class="arrow" d="M120 38 H190"/>
+    <rect class="student" x="190" y="0" width="125" height="74"/>
+    <text class="txt" x="204" y="24">E4B / E2B</text>
+    <text class="small" x="204" y="44">4.5B / 2.3B</text>
+    <text class="small" x="204" y="60">effective</text>
+    <text class="small" x="330" y="24">logit KD is</text>
+    <text class="small" x="330" y="40">valid: same</text>
+    <text class="small" x="330" y="56">tokenizer</text>
+  </g>
+
+  <!-- C -->
+  <g transform="translate(620,55)">
+    <rect class="teacher" x="0" y="0" width="120" height="74"/>
+    <text class="txt" x="14" y="26">Gemma 4 12B</text>
+    <text class="small" x="14" y="46">teacher server</text>
+    <text class="mono" x="14" y="63">MLX / llama.cpp</text>
+    <path class="amber" d="M120 38 H190"/>
+    <rect class="data" x="190" y="0" width="90" height="74"/>
+    <text class="txt" x="200" y="26">traces</text>
+    <text class="small" x="200" y="46">JSONL</text>
+    <text class="small" x="200" y="62">verified</text>
+    <path class="amber" d="M280 38 H330"/>
+    <rect class="student" x="330" y="0" width="90" height="74"/>
+    <text class="txt" x="342" y="26">student</text>
+    <text class="small" x="342" y="46">any model</text>
+    <text class="small" x="342" y="62">SFT</text>
+  </g>
+
+  <!-- bottom: teacher/student boxes with traits -->
+  <g transform="translate(30,180)">
+    <rect class="teacher" x="0" y="0" width="260" height="105"/>
+    <text class="txt" x="18" y="28">White-box teacher</text>
+    <text class="small" x="18" y="50">logits, hidden states, attention</text>
+    <text class="small" x="18" y="68">needs weights and memory</text>
+    <text class="mono" x="18" y="88">L = KL(p_T || p_S)</text>
+
+    <rect class="data" x="290" y="0" width="260" height="105"/>
+    <text class="txt" x="308" y="28">Black-box teacher</text>
+    <text class="small" x="308" y="50">text responses only</text>
+    <text class="small" x="308" y="68">works across tokenizers</text>
+    <text class="mono" x="308" y="88">L = CE(y_teacher)</text>
+
+    <rect class="student" x="580" y="0" width="260" height="105"/>
+    <text class="txt" x="598" y="28">Student</text>
+    <text class="small" x="598" y="50">same tokenizer for logit KD</text>
+    <text class="small" x="598" y="68">any tokenizer for sequence KD</text>
+    <text class="mono" x="598" y="88">deploy what you trained</text>
+  </g>
+
+  <text class="small" x="30" y="330">Key constraint: logit KD needs identical token IDs. Gemma 4 12B, 31B, E4B and E2B all use the same 262,144-token tokenizer.</text>
+  <text class="small" x="30" y="352">Their chat templates still differ (E2B/E4B vs 12B/31B), so validate the rendered prompt before trusting teacher logits.</text>
+  <text class="small" x="30" y="374">Sequence KD works with any teacher API and is the practical 32 GB path.</text>
+
+  <rect class="smallbox" x="30" y="398" width="810" height="48"/>
+  <text class="small" x="46" y="420">On 32 GB: sequence KD into 12B, or logit KD 12B → E4B/E2B with a custom trainer. A 31B teacher + 12B student is a GPU job.</text>
+</svg>

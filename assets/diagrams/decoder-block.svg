@@ -1,0 +1,70 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 900 430" role="img" aria-labelledby="title desc">
+  <title id="title">A pre-norm decoder block</title>
+  <desc id="desc">Token embeddings enter a residual stream. Each block applies RMSNorm then attention, adds the residual, applies RMSNorm then a gated MLP, and adds again. A final RMSNorm feeds the language-model head.</desc>
+  <style>
+    .bg { fill: #fbfaff; }
+    .box { fill: #ffffff; stroke: #6d28d9; stroke-width: 2; rx: 10; }
+    .soft { fill: #f3e8ff; stroke: #a78bfa; stroke-width: 1.5; rx: 10; }
+    .res { fill: #ede9fe; stroke: #7c3aed; stroke-width: 1.5; rx: 8; }
+    .arrow { stroke: #4c1d95; stroke-width: 2; fill: none; marker-end: url(#arrow); }
+    .txt { font-family: Inter, Arial, sans-serif; font-size: 18px; fill: #1f2937; }
+    .small { font-family: Inter, Arial, sans-serif; font-size: 15px; fill: #4b5563; }
+    .mono { font-family: "JetBrains Mono", monospace; font-size: 15px; fill: #4c1d95; }
+    .label { font-family: Inter, Arial, sans-serif; font-size: 16px; font-weight: 600; fill: #5b21b6; }
+  </style>
+  <defs>
+    <marker id="arrow" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse">
+      <path d="M 0 0 L 10 5 L 0 10 z" fill="#4c1d95"/>
+    </marker>
+  </defs>
+  <rect class="bg" width="900" height="430"/>
+  <text class="label" x="30" y="30">Decoder block (pre-norm, one of L identical layers)</text>
+
+  <rect class="soft" x="30" y="180" width="120" height="54"/>
+  <text class="txt" x="48" y="204">embedding</text>
+  <text class="mono" x="48" y="222">x [B,T,d]</text>
+
+  <path class="arrow" d="M150 207 H190"/>
+
+  <rect class="res" x="190" y="120" width="22" height="210"/>
+  <text class="small" x="216" y="112">residual stream</text>
+
+  <path class="arrow" d="M212 207 H260"/>
+  <rect class="box" x="260" y="180" width="110" height="54"/>
+  <text class="txt" x="278" y="205">RMSNorm</text>
+  <text class="mono" x="278" y="223">γ₁ ⊙ x / rms(x)</text>
+
+  <path class="arrow" d="M370 207 H420"/>
+  <rect class="box" x="420" y="160" width="150" height="94"/>
+  <text class="txt" x="438" y="187">attention</text>
+  <text class="mono" x="438" y="208">Q = XW_Q, K = XW_K</text>
+  <text class="mono" x="438" y="226">V = XW_V, O = AV</text>
+  <text class="small" x="438" y="244">causal + GQA + RoPE</text>
+
+  <path class="arrow" d="M570 207 H620"/>
+  <circle cx="630" cy="207" r="10" fill="#ffffff" stroke="#4c1d95" stroke-width="2"/>
+  <path d="M626 203 L634 211 M634 203 L626 211" stroke="#4c1d95" stroke-width="1.5"/>
+  <text class="small" x="646" y="211">add</text>
+
+  <path class="arrow" d="M640 207 H690"/>
+  <rect class="box" x="690" y="180" width="110" height="54"/>
+  <text class="txt" x="708" y="205">RMSNorm</text>
+  <text class="mono" x="708" y="223">γ₂ ⊙ u / rms(u)</text>
+
+  <path class="arrow" d="M800 207 H850"/>
+  <path class="arrow" d="M850 207 V275 H740"/>
+
+  <rect class="box" x="560" y="275" width="180" height="94"/>
+  <text class="txt" x="578" y="300">gated MLP</text>
+  <text class="mono" x="578" y="320">W_d(σ(W_g x) ⊙ W_u x)</text>
+  <text class="small" x="578" y="340">SwiGLU (Qwen) / GeGLU (Gemma)</text>
+
+  <path class="arrow" d="M560 322 H500"/>
+  <circle cx="490" cy="322" r="10" fill="#ffffff" stroke="#4c1d95" stroke-width="2"/>
+  <path d="M486 318 L494 326 M494 318 L486 326" stroke="#4c1d95" stroke-width="1.5"/>
+  <text class="small" x="420" y="318">add</text>
+  <path class="arrow" d="M480 322 H212 V330"/>
+
+  <text class="small" x="30" y="400">u = x + Attn(Norm(x))   ·   y = u + MLP(Norm(u))   ·   output = Norm_final(y)</text>
+  <text class="small" x="30" y="418">Every block has its own parameters; the residual stream is the shared highway.</text>
+</svg>

@@ -1,0 +1,80 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 900 380" role="img" aria-labelledby="title desc">
+  <title id="title">Multi-head and grouped-query attention shapes</title>
+  <desc id="desc">Left: multi-head attention with one key and value per query head. Right: grouped-query attention with eight query heads sharing two key/value heads. A 5:1 ratio and a 2:1 ratio are shown.</desc>
+  <style>
+    .bg { fill: #fbfaff; }
+    .q { fill: #ddd6fe; stroke: #7c3aed; stroke-width: 1.5; }
+    .kv { fill: #fef3c7; stroke: #d97706; stroke-width: 1.5; }
+    .grp { fill: none; stroke: #6d28d9; stroke-width: 1.5; stroke-dasharray: 5 4; rx: 8; }
+    .txt { font-family: Inter, Arial, sans-serif; font-size: 17px; fill: #1f2937; }
+    .small { font-family: Inter, Arial, sans-serif; font-size: 15px; fill: #4b5563; }
+    .label { font-family: Inter, Arial, sans-serif; font-size: 16px; font-weight: 600; fill: #5b21b6; }
+    .mono { font-family: "JetBrains Mono", monospace; font-size: 14px; fill: #4c1d95; }
+  </style>
+  <rect class="bg" width="900" height="380"/>
+  <text class="label" x="30" y="30">MHA: H query heads, H KV heads</text>
+  <text class="label" x="480" y="30">GQA: H query heads, G KV heads (G &lt; H)</text>
+
+  <!-- MHA -->
+  <g>
+    <rect class="q" x="30" y="55" width="34" height="28"/><text class="small" x="40" y="74">Q1</text>
+    <rect class="q" x="72" y="55" width="34" height="28"/><text class="small" x="82" y="74">Q2</text>
+    <rect class="q" x="114" y="55" width="34" height="28"/><text class="small" x="124" y="74">Q3</text>
+    <rect class="q" x="156" y="55" width="34" height="28"/><text class="small" x="166" y="74">Q4</text>
+    <rect class="q" x="198" y="55" width="34" height="28"/><text class="small" x="208" y="74">Q5</text>
+    <text class="small" x="245" y="74">…</text>
+
+    <rect class="kv" x="30" y="140" width="34" height="28"/><text class="small" x="40" y="159">K1</text>
+    <rect class="kv" x="72" y="140" width="34" height="28"/><text class="small" x="82" y="159">K2</text>
+    <rect class="kv" x="114" y="140" width="34" height="28"/><text class="small" x="124" y="159">K3</text>
+    <rect class="kv" x="156" y="140" width="34" height="28"/><text class="small" x="166" y="159">K4</text>
+    <rect class="kv" x="198" y="140" width="34" height="28"/><text class="small" x="208" y="159">K5</text>
+    <text class="small" x="245" y="159">…</text>
+
+    <path d="M47 83 V140" stroke="#7c3aed" stroke-width="1.2"/>
+    <path d="M89 83 V140" stroke="#7c3aed" stroke-width="1.2"/>
+    <path d="M131 83 V140" stroke="#7c3aed" stroke-width="1.2"/>
+    <path d="M173 83 V140" stroke="#7c3aed" stroke-width="1.2"/>
+    <path d="M215 83 V140" stroke="#7c3aed" stroke-width="1.2"/>
+    <text class="small" x="30" y="200">cache: 2 · H · d_h · T per layer</text>
+    <text class="small" x="30" y="220">quality: maximal, memory: maximal</text>
+  </g>
+
+  <!-- GQA 5:1 -->
+  <g transform="translate(480,0)">
+    <rect class="grp" x="20" y="45" width="230" height="48"/>
+    <rect class="q" x="30" y="55" width="34" height="28"/><text class="small" x="40" y="74">Q1</text>
+    <rect class="q" x="72" y="55" width="34" height="28"/><text class="small" x="82" y="74">Q2</text>
+    <rect class="q" x="114" y="55" width="34" height="28"/><text class="small" x="124" y="74">Q3</text>
+    <rect class="q" x="156" y="55" width="34" height="28"/><text class="small" x="166" y="74">Q4</text>
+    <rect class="q" x="198" y="55" width="34" height="28"/><text class="small" x="208" y="74">Q5</text>
+
+    <rect class="kv" x="105" y="145" width="46" height="28"/><text class="small" x="113" y="164">KV1</text>
+    <text class="small" x="30" y="200">5 query heads share one KV head</text>
+    <text class="small" x="30" y="220">cache / 5, quality close to MHA</text>
+
+    <path d="M47 83 V145 H105" stroke="#7c3aed" stroke-width="1.2" fill="none"/>
+    <path d="M89 83 V145 H105" stroke="#7c3aed" stroke-width="1.2" fill="none"/>
+    <path d="M131 83 V145 H105" stroke="#7c3aed" stroke-width="1.2" fill="none"/>
+    <path d="M173 83 V145 H105" stroke="#7c3aed" stroke-width="1.2" fill="none"/>
+    <path d="M215 83 V145 H151" stroke="#7c3aed" stroke-width="1.2" fill="none"/>
+  </g>
+
+  <!-- GQA 2:1 -->
+  <g transform="translate(480,240)">
+    <text class="label" x="20" y="0">GQA 2:1 (Gemma 4 12B: 16 Q / 8 KV)</text>
+    <rect class="q" x="30" y="15" width="34" height="28"/><text class="small" x="40" y="34">Q1</text>
+    <rect class="q" x="72" y="15" width="34" height="28"/><text class="small" x="82" y="34">Q2</text>
+    <rect class="q" x="120" y="15" width="34" height="28"/><text class="small" x="130" y="34">Q3</text>
+    <rect class="q" x="162" y="15" width="34" height="28"/><text class="small" x="172" y="34">Q4</text>
+    <rect class="kv" x="47" y="80" width="46" height="28"/><text class="small" x="55" y="99">KV1</text>
+    <rect class="kv" x="137" y="80" width="46" height="28"/><text class="small" x="145" y="99">KV2</text>
+    <path d="M47 43 V80" stroke="#7c3aed" stroke-width="1.2"/>
+    <path d="M89 43 V80" stroke="#7c3aed" stroke-width="1.2"/>
+    <path d="M137 43 V80" stroke="#7c3aed" stroke-width="1.2"/>
+    <path d="M179 43 V80" stroke="#7c3aed" stroke-width="1.2"/>
+  </g>
+
+  <text class="small" x="30" y="300">Qwen3-14B: 40 Q / 8 KV (5:1)  ·  Qwen2.5-Coder-14B: 40 Q / 8 KV  ·  Gemma 4 12B: 16 Q / 8 KV (2:1)</text>
+  <text class="small" x="30" y="322">The KV cache is what makes long context expensive. GQA is the main architectural lever.</text>
+</svg>
