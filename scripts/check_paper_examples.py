@@ -32,6 +32,7 @@ MODULES = [
     "ch59_glossary.py",
     "ch60_data_prep.py",
     "ch61_frameworks.py",
+    "ch62_integration.py",
     "ch63_applications.py",
 ]
 

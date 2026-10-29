@@ -169,6 +169,7 @@ nav:
           - Agents: 52-ai-agents.md
           - MCP: 58-ai-mcp.md
           - Agent frameworks: 61-ai-agent-frameworks.md
+          - Integrating agents: 62-ai-agent-integration.md
           - Real-world applications: 63-ai-agent-applications.md
           - Fine-tuning: 53-ai-fine-tuning.md
       - Shipping:
