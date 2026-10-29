@@ -101,6 +101,7 @@ A GitBook-style table of contents, mirrored by the site navigation.
 - [Agents and tool use](52-ai-agents.md)
 - [MCP: the Model Context Protocol](58-ai-mcp.md)
 - [Agent frameworks: what to use, when and why](61-ai-agent-frameworks.md)
+- [Agents in the real world: twelve applications](63-ai-agent-applications.md)
 - [Fine-tuning and model adaptation](53-ai-fine-tuning.md)
 
 ### Shipping
